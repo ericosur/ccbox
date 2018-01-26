@@ -1,0 +1,17 @@
+{
+    "test": [
+        "apple.png",
+        "ball.png",
+        "cat.png",
+        "dog.png"
+    ],
+    "query": {
+        "result": {
+            "item": [
+                "cathy",
+                "kolin",
+                "moma"
+            ]
+        }
+    }
+}
