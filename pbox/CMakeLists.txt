@@ -4,6 +4,9 @@ set(CMAKE_VERBOSE_MAKEFILE OFF)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_FLAGS "-Wall -O3")
 set(CMAKE_C_FLAGS "-Wall -O3")
+set(CMAKE_CXX_FLAGS "-Wno-unused-function")
+
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # Define project name
 set(PN "pbox")
