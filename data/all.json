@@ -1,0 +1,149 @@
+{
+    "query": {
+        "count": 1,
+        "created": "2018-02-06T05:39:50Z",
+        "lang": "en-US",
+        "results": {
+            "channel": {
+                "astronomy": {
+                    "sunrise": "6:34 am",
+                    "sunset": "5:42 pm"
+                },
+                "atmosphere": {
+                    "humidity": "58",
+                    "pressure": "33965.49",
+                    "rising": "0",
+                    "visibility": "25.91"
+                },
+                "description": "Yahoo! Weather for Taipei City, Taipei City, TW",
+                "image": {
+                    "height": "18",
+                    "link": "http://weather.yahoo.com",
+                    "title": "Yahoo! Weather",
+                    "url": "http://l.yimg.com/a/i/brand/purplelogo//uh/us/news-wea.gif",
+                    "width": "142"
+                },
+                "item": {
+                    "condition": {
+                        "code": "26",
+                        "date": "Tue, 06 Feb 2018 01:00 PM CST",
+                        "temp": "11",
+                        "text": "Cloudy"
+                    },
+                    "description": "<![CDATA[<img src=\"http://l.yimg.com/a/i/us/we/52/26.gif\"/>\n<BR />\n<b>Current Conditions:</b>\n<BR />Cloudy\n<BR />\n<BR />\n<b>Forecast:</b>\n<BR /> Tue - Cloudy. High: 11Low: 8\n<BR /> Wed - Scattered Showers. High: 15Low: 10\n<BR /> Thu - Showers. High: 14Low: 11\n<BR /> Fri - Mostly Cloudy. High: 20Low: 14\n<BR /> Sat - Scattered Showers. High: 16Low: 12\n<BR />\n<BR />\n<a href=\"http://us.rd.yahoo.com/dailynews/rss/weather/Country__Country/*https://weather.yahoo.com/country/state/city-2306179/\">Full Forecast at Yahoo! Weather</a>\n<BR />\n<BR />\n<BR />\n]]>",
+                    "forecast": [
+                        {
+                            "code": "26",
+                            "date": "06 Feb 2018",
+                            "day": "Tue",
+                            "high": "11",
+                            "low": "8",
+                            "text": "Cloudy"
+                        },
+                        {
+                            "code": "39",
+                            "date": "07 Feb 2018",
+                            "day": "Wed",
+                            "high": "15",
+                            "low": "10",
+                            "text": "Scattered Showers"
+                        },
+                        {
+                            "code": "11",
+                            "date": "08 Feb 2018",
+                            "day": "Thu",
+                            "high": "14",
+                            "low": "11",
+                            "text": "Showers"
+                        },
+                        {
+                            "code": "28",
+                            "date": "09 Feb 2018",
+                            "day": "Fri",
+                            "high": "20",
+                            "low": "14",
+                            "text": "Mostly Cloudy"
+                        },
+                        {
+                            "code": "39",
+                            "date": "10 Feb 2018",
+                            "day": "Sat",
+                            "high": "16",
+                            "low": "12",
+                            "text": "Scattered Showers"
+                        },
+                        {
+                            "code": "30",
+                            "date": "11 Feb 2018",
+                            "day": "Sun",
+                            "high": "12",
+                            "low": "8",
+                            "text": "Partly Cloudy"
+                        },
+                        {
+                            "code": "34",
+                            "date": "12 Feb 2018",
+                            "day": "Mon",
+                            "high": "14",
+                            "low": "8",
+                            "text": "Mostly Sunny"
+                        },
+                        {
+                            "code": "34",
+                            "date": "13 Feb 2018",
+                            "day": "Tue",
+                            "high": "19",
+                            "low": "10",
+                            "text": "Mostly Sunny"
+                        },
+                        {
+                            "code": "30",
+                            "date": "14 Feb 2018",
+                            "day": "Wed",
+                            "high": "22",
+                            "low": "11",
+                            "text": "Partly Cloudy"
+                        },
+                        {
+                            "code": "30",
+                            "date": "15 Feb 2018",
+                            "day": "Thu",
+                            "high": "22",
+                            "low": "15",
+                            "text": "Partly Cloudy"
+                        }
+                    ],
+                    "guid": {
+                        "isPermaLink": "false"
+                    },
+                    "lat": "25.086",
+                    "link": "http://us.rd.yahoo.com/dailynews/rss/weather/Country__Country/*https://weather.yahoo.com/country/state/city-2306179/",
+                    "long": "121.560997",
+                    "pubDate": "Tue, 06 Feb 2018 01:00 PM CST",
+                    "title": "Conditions for Taipei City, Taipei City, TW at 01:00 PM CST"
+                },
+                "language": "en-us",
+                "lastBuildDate": "Tue, 06 Feb 2018 01:39 PM CST",
+                "link": "http://us.rd.yahoo.com/dailynews/rss/weather/Country__Country/*https://weather.yahoo.com/country/state/city-2306179/",
+                "location": {
+                    "city": "Taipei City",
+                    "country": "Taiwan",
+                    "region": " Taipei City"
+                },
+                "title": "Yahoo! Weather - Taipei City, Taipei City, TW",
+                "ttl": "60",
+                "units": {
+                    "distance": "km",
+                    "pressure": "mb",
+                    "speed": "km/h",
+                    "temperature": "C"
+                },
+                "wind": {
+                    "chill": "48",
+                    "direction": "45",
+                    "speed": "28.97"
+                }
+            }
+        }
+    }
+}

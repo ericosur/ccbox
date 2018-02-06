@@ -1,0 +1,10 @@
+{
+    "appnames": [
+        "alpha",
+        "beta",
+        "gamma",
+        "delta"
+    ],
+    "alpha": "apple",
+    "beta": "ball"
+}
