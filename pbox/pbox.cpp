@@ -1,12 +1,25 @@
-#include "foo.h"
+#include "pbox.h"
 
-#include <unistd.h>
 #include <fstream>
 #include <iostream>
 #include <json.hpp>
+#include <stdlib.h>
+#include <unistd.h>
+
+namespace pbox {
 
 using namespace std;
 using namespace nlohmann;
+
+std::string get_home()
+{
+    char* path = getenv("HOME");
+    if (path == NULL) {
+        return "";
+    } else {
+        return path;
+    }
+}
 
 bool is_file_exist(const char* fname)
 {
@@ -402,3 +415,6 @@ void test()
     get_value_from_json(j, keys, p);
     cout << "p: " << p << endl;
 }
+
+
+}   // namespace pbox

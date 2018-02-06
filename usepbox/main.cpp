@@ -1,21 +1,35 @@
-#include "foo.h"
+#include "pbox.h"
 #include <iostream>
-#include <stdio.h>
 #include <vector>
+#include <stdio.h>
+#include <assert.h>
 
-#define JSONFILE "/home/rasmus/src/ccbox/usepbox/test.json"
+#define DATAPATH "src/ccbox/data/"
+#define JSONFILE "usepbox.json"
 
-//#define USE_DEMO1
+#define USE_DEMO1
 #define USE_DEMO2
 
 void test();
+
+std::string get_jsonpath()
+{
+    std::string jsonfile = pbox::get_home() + "/" + DATAPATH + JSONFILE;
+    if (pbox::is_file_exist(jsonfile)) {
+        return jsonfile;
+    } else {
+        std::cerr << "file not found: " << jsonfile << std::endl;
+        assert(0);
+        return "";
+    }
+}
 
 void mytest(const std::vector<std::string>& k)
 {
     using namespace std;
 
     vector<string> strings;
-    strings = get_vector_from_jsonfile(JSONFILE, k);
+    strings = pbox::get_vector_from_jsonfile(get_jsonpath(), k);
     cout << "test:" << endl;
 #if __cplusplus >= 201103L
     for (string s : strings) {
@@ -47,8 +61,10 @@ int demo1()
 #ifdef USE_DEMO1
     using namespace std;
 
+    std::string jsonfile = get_jsonpath();
+
     print_banner("dump_jsonfile");
-    dump_jsonfile(JSONFILE);
+    pbox::dump_jsonfile(jsonfile);
     print_banner("get_vector_from_jsonfile");
     vector<string> k;
     // .test
@@ -69,7 +85,7 @@ int demo1()
     k.push_back("values");
     k.push_back("pi");
     printf("double from .values.pi: %lf\n",
-           get_double_from_jsonfile(JSONFILE, k));
+           pbox::get_double_from_jsonfile(jsonfile, k));
 #endif
     return 0;
 }
@@ -93,7 +109,7 @@ void demo2()
     // } else {
     //     printf("failed to read value\n");
     // }
-    dd = get_double_from_jsonfile(JSONFILE, k);
+    dd = pbox::get_double_from_jsonfile(JSONFILE, k);
     cout << dd << endl;
 
 #endif  // USE_DEMO2

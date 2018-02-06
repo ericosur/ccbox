@@ -20,12 +20,12 @@ set(LIB_NAME ${PN})
 
 # source files
 file(GLOB LIB_SOURCES
-        foo.cpp
+        pbox.cpp
         hsv2rgb.cpp
     )
 # header files for install
 file(GLOB LIB_HEADERS
-        foo.h
+        pbox.h
     )
 
 # Create static library
