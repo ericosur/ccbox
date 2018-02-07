@@ -12,7 +12,7 @@ set(CMAKE_CXX_FLAGS "-Wall -O3")
 include_directories("$ENV{HOME}/src/github/rapidjson/include/")
 
 # pbox library
-include_directories("/usr/local/include/pbox")
+include_directories("/usr/local/include")
 link_directories("/usr/local/lib/pbox")
 
 add_executable(
