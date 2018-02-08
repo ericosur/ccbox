@@ -29,10 +29,10 @@ file(GLOB LIB_HEADERS
     )
 
 # Create static library
-add_library(${LIB_NAME} STATIC ${LIB_SOURCES})
+#add_library(${LIB_NAME} STATIC ${LIB_SOURCES})
 
 # Create shared library
-#add_library(${LIB_NAME} SHARED ${LIB_SOURCES})
+add_library(${LIB_NAME} SHARED ${LIB_SOURCES})
 
 # Install library
 install(TARGETS ${LIB_NAME} DESTINATION /usr/local/lib/${PN})
