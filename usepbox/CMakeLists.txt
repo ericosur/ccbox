@@ -17,5 +17,6 @@ add_executable(${PN} main.cpp)
 
 target_link_libraries(
     ${PN}
-    libpbox.a
+#    libpbox.a
+    libpbox.so
 )
