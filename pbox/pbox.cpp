@@ -1,4 +1,5 @@
 #include "pbox.h"
+#include "pbox_internal.h"
 
 #include <fstream>
 #include <iostream>

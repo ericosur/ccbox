@@ -27,37 +27,7 @@ bool get_value_from_jsonfile(const std::string& json_file,
                         std::vector<std::string> keys,
                         T& value);
 
-
-class Person
-{
-public:
-    void setName(const std::string& s) {
-        name = s;
-    }
-    std::string getName() const {
-        return name;
-    }
-    void setAddress(const std::string& s) {
-        address = s;
-    }
-    std::string getAddress() const {
-        return address;
-    }
-    void setAge(int i) {
-        age = i;
-    }
-    int getAge() const {
-        return age;
-    }
-    bool operator==(const Person& rhs) {
-        return (name == rhs.name) && (address == rhs.address) && (age == rhs.age);
-    }
-private:
-    std::string name;
-    std::string address;
-    int age;
-};
-
+int get_timeepoch();
 
 }   // namespace pbox
 

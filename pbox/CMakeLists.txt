@@ -13,7 +13,7 @@ set(PN "pbox")
 project(${PN})
 
 # json.hpp
-include_directories("$ENV{HOME}/src/github/json/src/")
+include_directories("$ENV{HOME}/src/github/json/single_include/")
 
 ################################################################
 set(LIB_NAME ${PN})
@@ -22,7 +22,9 @@ set(LIB_NAME ${PN})
 file(GLOB LIB_SOURCES
         pbox.cpp
         hsv2rgb.cpp
+        ptz.cpp
     )
+
 # header files for install
 file(GLOB LIB_HEADERS
         pbox.h
