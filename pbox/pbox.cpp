@@ -22,6 +22,7 @@ std::string get_home()
     }
 }
 
+// just a stupid function to check file existence
 bool is_file_exist(const char* fname)
 {
     if ( access(fname, F_OK) != -1 ) {
@@ -31,12 +32,30 @@ bool is_file_exist(const char* fname)
     }
 }
 
-bool is_file_exist(const string& fname)
+// overloaded function to use std::string file name
+bool is_file_exist(const std::string& fname)
 {
     return is_file_exist(fname.c_str());
 }
 
-bool get_json_from_file(const string& json_file, json& j)
+/**
+ * dump() is a simple stupid dump function to see buffer in HEX
+ * @param buf  [in] buffer to see
+ * @param size [in] buffer size
+ */
+void dump(const char* buf, int size)
+{
+    for (int i=0; i<size; i++) {
+        printf("%02X ", (unsigned char)buf[i]);
+        if (i%16==15) {
+            printf("\n");
+        }
+    }
+    printf("\n");
+}
+
+
+bool get_json_from_file(const std::string& json_file, json& j)
 {
     if ( !is_file_exist(json_file.c_str()) ) {
         return false;
@@ -53,6 +72,7 @@ bool get_json_from_file(const string& json_file, json& j)
 
     return false;
 }
+
 
 template<class T>
 bool get_value_from_jsonfile(const std::string& json_file,
