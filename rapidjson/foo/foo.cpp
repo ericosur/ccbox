@@ -7,18 +7,25 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "rapidjson/filereadstream.h"
+#include "rapidjson/reader.h"
+#include "rapidjson/writer.h"
+#include "rapidjson/prettywriter.h"
 #include "rapidjson/document.h"
+#include "rapidjson/encodings.h"
+#include "rapidjson/filereadstream.h"
+#include "rapidjson/filewritestream.h"
 
 using namespace rapidjson;
 using namespace std;
 
 #define DATAPATH    "src/ccbox/data/"
 #define JSONFILE    "test.json"
+#define TEST_OUTPUT_JSON    "/tmp/zzz.json"
 
 typedef char byte;
 const int BUFFER_SIZE = 4096;
 
+// returns the path to settings
 std::string get_jsonfile()
 {
     string json_file = pbox::get_home() + '/' + DATAPATH + JSONFILE;
@@ -45,39 +52,94 @@ bool read_file(const char* fn, byte* buffer)
 
 void show_value(const Document& doc)
 {
-    cout << doc["description"]["name"].GetString() << endl;
+    cout << __func__ << ": " << doc["description"]["name"].GetString() << endl;
 }
 
-void read_stream(const string& fn)
+bool read_stream(const string& fn, Document& d)
 {
     FILE* fp = fopen(fn.c_str(), "rb"); // non-Windows use "r"
+    if (fp == NULL) {
+        return false;
+    }
     char readBuffer[BUFFER_SIZE];
     FileReadStream is(fp, readBuffer, sizeof(readBuffer));
-    Document d;
     d.ParseStream(is);
     fclose(fp);
-    show_value(d);
+    return true;
 }
 
-void get_description(const string& fn)
+bool write_stream(const string& fn, const Document& d)
+{
+    FILE* fp = fopen(fn.c_str(), "wb");
+    if (fp == NULL) {
+        return false;
+    }
+    bool putBOM = false;
+    const UTFType useType = kUTF8;
+    char buffer[BUFFER_SIZE];
+    FileWriteStream os(fp, buffer, BUFFER_SIZE);
+
+    typedef AutoUTFOutputStream<unsigned, FileWriteStream> OutputStream;
+    OutputStream eos(os, useType, putBOM);
+    PrettyWriter<OutputStream, UTF8<>, AutoUTF<unsigned> > writer(eos);
+    //Writer<FileWriteStream> writer(os);
+
+    d.Accept(writer);
+    fclose(fp);
+    return true;
+}
+
+bool read_file_and_get_doc(const string& fn, Document& d)
 {
     byte buffer[BUFFER_SIZE];
     if ( read_file(fn.c_str(), buffer) ) {
         //cerr << "buffer: " << buffer << endl;
-        Document doc;
-        doc.Parse(buffer);
-        assert(doc.IsObject());
-        show_value(doc);
+        d.Parse(buffer);
+        if (d.IsObject()) {
+            return true;
+        }
+
     } else {
         cerr << "error reading\n";
-        return ;
     }
-
+    return false;
 }
 
 void test()
 {
     std::string fn = get_jsonfile();
-    read_stream(fn);
-    get_description(fn);
+    cout << "read value from: " << fn << "\n";
+
+    assert(pbox::is_file_exist(fn));
+
+    Document d;
+
+    cout << "method #1\n";
+    read_stream(fn, d);
+    show_value(d);
+
+    cout << "method #2\n";
+    read_file_and_get_doc(fn, d);
+    show_value(d);
+
+    // assign a raw string
+    cout << "test output json...\n";
+    char str[] = R"(
+        {
+            "name": "writer_test",
+            "description": "a test json for writer test",
+            "result": {
+                "name": "test1",
+                "score": 100,
+                "ustring": "中文輸入法"
+            }
+        }
+    )";
+    // parse as json document
+    d.Parse(str);
+    // output one data member
+    if ( d.HasMember("result") ) {
+        cout << "result.ustring: " << d["result"]["ustring"].GetString() << "\n";
+    }
+    write_stream("TEST_OUTPUT_JSON", d);
 }
