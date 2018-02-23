@@ -174,6 +174,19 @@ void test_write()
     if ( d.HasMember("result") ) {
         cout << "result.ustring: " << d["result"]["ustring"].GetString() << "\n";
     }
+
+    Value contact(kObjectType);
+    contact.AddMember("name", "Milo", d.GetAllocator());
+    contact.AddMember("married", true, d.GetAllocator());
+
+    d.AddMember("author", contact, d.GetAllocator());
+
+#if 0
+    // explicit parameters
+    Value key("key", d.GetAllocator()); // copy string name
+    Value val(42);                      // some value
+    contact.AddMember(key, val, document.GetAllocator());
+#endif
     write_stream(TEST_OUTPUT_JSON, d);
 
 }
