@@ -25,6 +25,12 @@ using namespace std;
 typedef char byte;
 const int BUFFER_SIZE = 4096;
 
+
+void show_banner(const string& s)
+{
+    cout << "***** " << s << " *****\n";
+}
+
 // returns the path to settings
 std::string get_jsonfile()
 {
@@ -105,23 +111,49 @@ bool read_file_and_get_doc(const string& fn, Document& d)
     return false;
 }
 
-void test()
+void show_array(const Document& d)
 {
-    std::string fn = get_jsonfile();
-    cout << "read value from: " << fn << "\n";
+    if ( d.HasMember("extra") ) {
+        if ( d["extra"].IsArray() ) {
+            cerr << "extra array ok\n";
+            const Value& a = d["extra"];
+            for (Value::ConstValueIterator itr = a.Begin(); itr != a.End(); ++itr) {
+                const Value& o = (*itr);
+                if ( o["lang"].IsString() ) {
+                    cout << "lang: " << o["lang"].GetString()
+                        << "data: " << o["data"].GetString()
+                        << "\n";
+                } else {
+                    cout << "encounter null\n";
+                }
 
-    assert(pbox::is_file_exist(fn));
+            }
+        } else {
+            cerr << "extra array nok\n";
+        }
+    } else {
+        cerr << "not such section\n";
+    }
+}
 
+void test_read(const string& fn)
+{
     Document d;
 
+    show_banner(__func__);
     cout << "method #1\n";
     read_stream(fn, d);
-    show_value(d);
+    show_array(d);
 
     cout << "method #2\n";
     read_file_and_get_doc(fn, d);
     show_value(d);
 
+}
+
+void test_write()
+{
+    show_banner(__func__);
     // assign a raw string
     cout << "test output json...\n";
     char str[] = R"(
@@ -136,10 +168,23 @@ void test()
         }
     )";
     // parse as json document
+    Document d;
     d.Parse(str);
     // output one data member
     if ( d.HasMember("result") ) {
         cout << "result.ustring: " << d["result"]["ustring"].GetString() << "\n";
     }
-    write_stream("TEST_OUTPUT_JSON", d);
+    write_stream(TEST_OUTPUT_JSON, d);
+
+}
+
+void test()
+{
+    std::string fn = get_jsonfile();
+    cout << "read value from: " << fn << "\n";
+    assert(pbox::is_file_exist(fn));
+
+    test_read(fn);
+    test_write();
+
 }
