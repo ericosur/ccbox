@@ -34,6 +34,8 @@ bool get_value_from_jsonfile(const std::string& json_file,
 
 int get_timeepoch();
 
+std::string get_version_string();
+
 #ifdef USE_REALSENSE
 
 void init_realsense();

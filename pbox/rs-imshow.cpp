@@ -121,7 +121,7 @@ int get_color_mat_from_realsense(cv::Mat& image)
     const int w = color.as<rs2::video_frame>().get_width();
     const int h = color.as<rs2::video_frame>().get_height();
 
-    printf("%s: w=%d, h=%d\n", __func__, w, h);
+    //printf("%s: w=%d, h=%d\n", __func__, w, h);
 
     Mat color_image(Size(w, h), CV_8UC3, (void*)color.get_data());
     color_image.copyTo(image);

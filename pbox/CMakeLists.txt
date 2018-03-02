@@ -34,6 +34,7 @@ file(GLOB LIB_SOURCES
         pbox.cpp
         hsv2rgb.cpp
         ptz.cpp
+        util.cpp
         rs-imshow.cpp
     )
 

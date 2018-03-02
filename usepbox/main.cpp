@@ -16,6 +16,7 @@
 #define USE_DEMO2
 
 void test();
+void test_get_version();
 
 std::string get_jsonpath()
 {
@@ -129,15 +130,16 @@ void get_image_and_show()
     pbox::get_color_mat_from_realsense(img);
     cv::imshow("fuck", img);
 }
-#else
-#error "no realsense"
 #endif
 
 int main()
 {
+    test_get_version();
+
     // demo1();
     // demo2();
 
+#ifdef USE_REALSENSE
     // const int maxx = 640;
     // const int maxy = 480;
     pbox::init_realsense();
@@ -147,6 +149,7 @@ int main()
             break;
         }
     }
+#endif
 
     return 0;
 }
