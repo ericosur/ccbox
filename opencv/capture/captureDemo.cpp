@@ -45,6 +45,7 @@ bool is_file_exist(const string& fn)
 
 bool load_json(const string& json_file)
 {
+    cout << "load settings from: " << json_file << "\n";
     if (!is_file_exist(JSON_FILE)) {
         cout << "json not found..." << endl;
         return false;
@@ -54,7 +55,7 @@ bool load_json(const string& json_file)
         ifstream infile(JSON_FILE);
         infile >> json;
 
-        video_id = json.at["video_id"];
+        video_id = json.at("video_id");
         cout << "video_id: " << video_id << endl;
     } catch (nlohmann::json::parse_error& e) {
         cout << "parse json error: " << e.what();
@@ -301,23 +302,27 @@ int demoTest()
     const string WIN_EDGE = "edges";
 
 #ifdef USE_JSON
-    if ( !load_json(JSON_FILE) )
-#else
-    video_id = 0;
+    if ( !load_json(JSON_FILE) ) {
+        video_id = 0;
+    }
 #endif
 
     VideoCapture cap;
     cap.open(video_id);
     if (!cap.isOpened()) {
-        cout << "open capture device failed\n";
+        cout << "open capture device failed: " << video_id << "\n";
         return -1;
+    } else {
+        cout << "use video_id: " << video_id << "\n";
     }
 
     Mat cameraFeed;
     Mat edges;
 
     namedWindow(WIN_FEED, WINDOW_AUTOSIZE);
+    moveWindow(WIN_FEED, 50, 50);
     namedWindow(WIN_EDGE, WINDOW_AUTOSIZE);
+    moveWindow(WIN_EDGE, 50, 300);
 
     //set height and width of capture frame
     cap.set(CV_CAP_PROP_FRAME_WIDTH, FRAME_WIDTH);
