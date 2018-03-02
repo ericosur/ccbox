@@ -4,6 +4,11 @@
 #include <stdio.h>
 #include <assert.h>
 
+#ifdef USE_REALSENSE
+#include <opencv2/opencv.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#endif
+
 #define DATAPATH "src/ccbox/data/"
 #define JSONFILE "usepbox.json"
 
@@ -117,10 +122,31 @@ void demo2()
 
 }
 
+#ifdef USE_REALSENSE
+void get_image_and_show()
+{
+    cv::Mat img;
+    pbox::get_color_mat_from_realsense(img);
+    cv::imshow("fuck", img);
+}
+#else
+#error "no realsense"
+#endif
+
 int main()
 {
-    demo1();
-    demo2();
+    // demo1();
+    // demo2();
+
+    // const int maxx = 640;
+    // const int maxy = 480;
+    pbox::init_realsense();
+    while (true) {
+        get_image_and_show();
+        if ( cv::waitKey(1) == 27 ) {
+            break;
+        }
+    }
 
     return 0;
 }

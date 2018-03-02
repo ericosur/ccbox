@@ -4,6 +4,11 @@
 #include <string>
 #include <vector>
 
+#ifdef USE_REALSENSE
+#include <opencv2/opencv.hpp>   // Include OpenCV API
+#endif
+
+
 namespace pbox {
 
 
@@ -28,6 +33,15 @@ bool get_value_from_jsonfile(const std::string& json_file,
                         T& value);
 
 int get_timeepoch();
+
+#ifdef USE_REALSENSE
+
+void init_realsense();
+float get_dist_from_point(int x, int y);
+int get_color_mat_from_realsense(cv::Mat& image);
+int test_realsense();
+
+#endif
 
 }   // namespace pbox
 
