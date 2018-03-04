@@ -1,5 +1,6 @@
-#include <opencv2/core/core.hpp>
-#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/opencv.hpp>
+//#include <opencv2/core/core.hpp>
+//#include <opencv2/highgui/highgui.hpp>
 using namespace cv;
 
 #define WINNAME     "image"
@@ -7,11 +8,11 @@ using namespace cv;
 int test()
 {
     // Create black empty images
-    int maxx = 800;
+    int maxx = 640;
     int maxy = 480;
     Mat image = Mat::zeros( maxy, maxx, CV_8UC3 );
-    int w = 3;
-    int h = 2;
+    int w = 10;
+    int h = 6;
     int startx = 0;
     int starty = 0;
     int colsize = 32;
