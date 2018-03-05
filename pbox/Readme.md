@@ -2,6 +2,10 @@
 
 pbox is a static library for re-used functions.
 
+## json.hpp
+
+json.hpp is copied from https://github.com/nlohmann/json.git
+
 ## c++11 raw string literal
 
 At "foo.cpp", function test uses **Raw string literal** to store a
