@@ -15,7 +15,7 @@ set(PN "pbox")
 project(${PN})
 
 # json.hpp
-include_directories("$ENV{HOME}/src/github/json/single_include/")
+#include_directories("$ENV{HOME}/src/github/json/single_include/")
 
 # realsense2
 if(APPLY_REALSENSE)
