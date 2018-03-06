@@ -116,11 +116,14 @@ void demo2()
     val = pbox::get_string_from_jsonfile(get_jsonpath(), "comment");
     cout << "comment: " << val << endl;
 
+    double pp = pbox::get_double_from_jsonfile(get_jsonpath(), "possibility");
+    cout << "possibility: " << pp << endl;
+
 #if 0   // still buggy
     print_banner("get_value_from_jsonfile");
-    double pi;
-    if ( pbox::get_value_from_jsonfile(JSONFILE, k, pi) ) {
-        cout << "pi: " << pi << "\n";
+    double p;
+    if ( pbox::get_value_from_jsonfile(JSONFILE, "possibility", p) ) {
+        cout << "possibility: " << p << "\n";
     }
 #endif
 
