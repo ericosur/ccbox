@@ -26,14 +26,24 @@ std::vector<std::string> get_vector_from_jsonfile(const std::string& fn,
 std::string get_string_from_jsonfile(const std::string& fn, const std::string& key);
 
 double get_double_from_jsonfile(const std::string& fn,
-                              std::vector<std::string> keys);
+                                std::vector<std::string> keys);
+
+double get_double_from_jsonfile(const std::string& fn,
+                                const std::string& key);
+
 int get_int_from_jsonfile(const std::string& fn,
                           std::vector<std::string> keys);
 
+int get_int_from_jsonfile(const std::string& fn,
+                          const std::string& keys);
+
 template<class T>
 bool get_value_from_jsonfile(const std::string& json_file,
-                        std::vector<std::string> keys,
-                        T& value);
+                             std::vector<std::string> keys,
+                             T& value);
+template<class T>
+bool get_value_from_jsonfile(const std::string& json_file,
+                             const std::string& key, T& value);
 
 int get_timeepoch();
 

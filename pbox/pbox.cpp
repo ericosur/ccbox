@@ -129,6 +129,31 @@ bool get_value_from_jsonfile(const std::string& json_file,
     return false;
 }
 
+template<class T>
+bool get_value_from_jsonfile(const std::string& json_file,
+                             const std::string& key, T& value)
+{
+    json j;
+
+    if (!get_json_from_file(json_file, j)) {
+        return false;
+    }
+
+    //cout << "read " << json_file << endl;
+    try {
+        value = j.at(key).get<T>();
+        return true;
+    } catch (json::type_error& e) {
+        cout << "[get_value_from_jsonfile] type error:" << e.what() << endl;
+    } catch (json::parse_error& e) {
+        cout << "[get_value_from_jsonfile] parse error:" << e.what() << endl;
+    } catch (json::out_of_range& e) {
+        cout << "[get_value_from_jsonfile] out of range:" << e.what() << endl;
+    }
+    return false;
+}
+
+
 void dump_jsonfile(const std::string& fn)
 {
     json r;
@@ -183,7 +208,7 @@ int get_int_from_json(json& j, vector<string> keys)
 
 double get_double_from_json(json& j, vector<string> keys)
 {
-    float empty = 0;
+    double empty = 0.0;
     try {
         json kk = j;
         for (string i : keys) {
@@ -270,6 +295,25 @@ double get_double_from_jsonfile(const std::string& fn,
         return empty;
     }
 }
+
+double get_double_from_jsonfile(const std::string& fn, const std::string& key)
+{
+    double empty = 0.0;
+    try {
+        json j;
+        if (get_json_from_file(fn, j)) {
+            return j.at(key).get<double>();
+        }
+    } catch (json::type_error& e) {
+        cout << "[get_vector_from_json] type error:" << e.what() << endl;
+    } catch (json::parse_error& e) {
+        cout << "[get_vector_from_json] parse error:" << e.what() << endl;
+    } catch (json::out_of_range& e) {
+        cout << "[get_vector_from_json] out of range:" << e.what() << endl;
+    }
+    return empty;
+}
+
 
 std::string get_string_from_jsonfile(const std::string& fn,
                                      const std::string& key)
