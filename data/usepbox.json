@@ -1,4 +1,8 @@
 {
+    "name": "usepbox.json",
+    "comment": "a json file used for testing read json functions",
+    "score": 79323846,
+    "possibility": 0.75,
     "test": [
         "apple.png",
         "ball.png",

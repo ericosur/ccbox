@@ -12,6 +12,10 @@ namespace pbox {
 using namespace std;
 using namespace nlohmann;
 
+string cached_fn;
+json   cached_json;
+bool   isCached = false;
+
 std::string get_home()
 {
     char* path = getenv("HOME");
@@ -57,15 +61,38 @@ void dump(const char* buf, int size)
 
 bool get_json_from_file(const std::string& json_file, json& j)
 {
-    if ( !is_file_exist(json_file.c_str()) ) {
+    if ( !is_file_exist(json_file) ) {
+        cerr << "file not existed: " << json_file << "\n";
+        isCached = false;
+        cached_fn = "";
+        cached_json.clear();
         return false;
+    }
+
+    // file exists, but changed
+    if (cached_fn != json_file) {
+        isCached = false;
+        cached_fn = "";
+        cached_json.clear();
     }
 
     //cout << "read " << json_file << endl;
     try {
-        ifstream inf(json_file);
-        inf >> j;
+        if (!isCached) {
+            ifstream inf(json_file);
+            inf >> j;
+            isCached = true;
+            cached_fn = json_file;
+            cached_json = j;
+        } else {
+            // isCached,
+            if (cached_fn == json_file) {
+                j = cached_json;
+            }
+        }
+
         return true;
+
     } catch (json::parse_error& e) {
         cout << "[get_json_from_file] parse error:" << e.what() << endl;
     }
@@ -86,8 +113,6 @@ bool get_value_from_jsonfile(const std::string& json_file,
 
     //cout << "read " << json_file << endl;
     try {
-        ifstream inf(json_file);
-        inf >> j;
         json kk = j;
         for (string i : keys) {
             kk = kk.at(i);
@@ -175,6 +200,20 @@ double get_double_from_json(json& j, vector<string> keys)
     return empty;
 }
 
+std::string get_string_from_json(const json& j, const std::string& key)
+{
+    std::string value;
+    try {
+        value = j.at(key).get<std::string>();
+    } catch (json::type_error& e) {
+        cout << "[get_vector_from_json] type error:" << e.what() << endl;
+    } catch (json::parse_error& e) {
+        cout << "[get_vector_from_json] parse error:" << e.what() << endl;
+    } catch (json::out_of_range& e) {
+        cout << "[get_vector_from_json] out of range:" << e.what() << endl;
+    }
+    return value;
+}
 
 template<class T>
 T get_value_from_json(json& j, vector<string> keys, T& value)
@@ -227,6 +266,18 @@ double get_double_from_jsonfile(const std::string& fn,
     double empty = 0.0;
     if (get_json_from_file(fn, j)) {
         return get_double_from_json(j, keys);
+    } else {
+        return empty;
+    }
+}
+
+std::string get_string_from_jsonfile(const std::string& fn,
+                                     const std::string& key)
+{
+    json j;
+    std::string empty;
+    if (get_json_from_file(fn, j)) {
+        return get_string_from_json(j, key);
     } else {
         return empty;
     }

@@ -22,6 +22,9 @@ void test();
 void dump_jsonfile(const std::string& fn);
 std::vector<std::string> get_vector_from_jsonfile(const std::string& fn,
                                                   std::vector<std::string> keys);
+
+std::string get_string_from_jsonfile(const std::string& fn, const std::string& key);
+
 double get_double_from_jsonfile(const std::string& fn,
                               std::vector<std::string> keys);
 int get_int_from_jsonfile(const std::string& fn,

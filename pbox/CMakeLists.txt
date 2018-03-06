@@ -8,7 +8,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-function")
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-set(APPLY_REALSENSE    1)
+set(APPLY_REALSENSE    0)
 
 # Define project name
 set(PN "pbox")
