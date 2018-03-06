@@ -179,7 +179,7 @@ double get_double_from_json(json& j, vector<string> keys)
 template<class T>
 T get_value_from_json(json& j, vector<string> keys, T& value)
 {
-    T empty;
+    T empty = T();
     try {
         json kk = j;
         for (string i : keys) {

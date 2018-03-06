@@ -36,6 +36,9 @@ int get_timeepoch();
 
 std::string get_version_string();
 
+void mylog(const char* name, const char* format, ...);
+
+
 #ifdef USE_REALSENSE
 
 void init_realsense();
