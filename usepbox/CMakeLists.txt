@@ -4,7 +4,9 @@ set(CMAKE_VERBOSE_MAKEFILE OFF)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_FLAGS "-Wall -O3")
 set(CMAKE_C_FLAGS "-Wall -O3")
-set(APPLY_REALSENSE  1)
+set(APPLY_DEMO1      1)
+set(APPLY_DEMO2      1)
+set(APPLY_REALSENSE  0)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
@@ -13,6 +15,18 @@ set(PN "foo")
 project(${PN})
 
 find_package( OpenCV REQUIRED )
+
+# DEMO1
+if(APPLY_DEMO1)
+    message("turn on demo1")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_DEMO1")
+endif()
+
+# DEMO2
+if(APPLY_DEMO2)
+    message("turn on demo2")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_DEMO2")
+endif()
 
 # realsense2
 if(APPLY_REALSENSE)
@@ -34,8 +48,7 @@ add_executable(${PN}
 
 target_link_libraries(
     ${PN}
-#    libpbox.a
     libpbox.so
-    realsense2
+    ${DEPENDENCIES}
     ${OpenCV_LIBS}
 )

@@ -12,9 +12,6 @@
 #define DATAPATH "src/ccbox/data/"
 #define JSONFILE "usepbox.json"
 
-#define USE_DEMO1
-#define USE_DEMO2
-
 void test();
 void test_get_version();
 
@@ -104,19 +101,28 @@ void demo2()
     using namespace std;
     vector<string> k;
 
-    print_banner("get_value_from_jsonfile");
+    print_banner("get_double_from_jsonfile");
     // .values.pi
     k.clear();
     k.push_back("values");
     k.push_back("pi");
     double dd;
-    // if ( get_value_from_jsonfile(JSONFILE, k, dd) ) {
-    //     printf("float from .values.pi: %lf\n", dd);
-    // } else {
-    //     printf("failed to read value\n");
-    // }
-    dd = pbox::get_double_from_jsonfile(JSONFILE, k);
+    dd = pbox::get_double_from_jsonfile(get_jsonpath(), k);
     cout << dd << endl;
+
+    print_banner("get_string_from_jsonfile");
+    string val = pbox::get_string_from_jsonfile(get_jsonpath(), "name");
+    cout << "name: " << val << endl;
+    val = pbox::get_string_from_jsonfile(get_jsonpath(), "comment");
+    cout << "comment: " << val << endl;
+
+#if 0   // still buggy
+    print_banner("get_value_from_jsonfile");
+    double pi;
+    if ( pbox::get_value_from_jsonfile(JSONFILE, k, pi) ) {
+        cout << "pi: " << pi << "\n";
+    }
+#endif
 
 #endif  // USE_DEMO2
 
@@ -136,8 +142,8 @@ int main()
 {
     test_get_version();
 
-    // demo1();
-    // demo2();
+    demo1();
+    demo2();
 
 #ifdef USE_REALSENSE
     // const int maxx = 640;
