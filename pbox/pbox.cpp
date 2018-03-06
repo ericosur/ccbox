@@ -284,6 +284,25 @@ int get_int_from_jsonfile(const std::string& fn,
     }
 }
 
+int get_int_from_jsonfile(const std::string& fn,
+                          const std::string& key)
+{
+    json j;
+    int empty = 0;
+    try {
+        if (get_json_from_file(fn, j)) {
+            return j.at(key).get<int>();
+        }
+    } catch (json::type_error& e) {
+        cout << "[get_vector_from_json] type error:" << e.what() << endl;
+    } catch (json::parse_error& e) {
+        cout << "[get_vector_from_json] parse error:" << e.what() << endl;
+    } catch (json::out_of_range& e) {
+        cout << "[get_vector_from_json] out of range:" << e.what() << endl;
+    }
+    return empty;
+}
+
 double get_double_from_jsonfile(const std::string& fn,
                                 std::vector<std::string> keys)
 {
