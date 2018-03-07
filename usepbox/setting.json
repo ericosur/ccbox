@@ -1,0 +1,6 @@
+{
+    "path": "/home/rasmus/Dropbox/ComputerVision_DeepLearning/testdist",
+    "answer": "answer.json",
+    "pattern": "rawdepth-%04d.bin",
+    "number": 13
+}

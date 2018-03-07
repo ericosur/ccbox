@@ -4,9 +4,10 @@ set(CMAKE_VERBOSE_MAKEFILE OFF)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_FLAGS "-Wall -O3")
 set(CMAKE_C_FLAGS "-Wall -O3")
-set(APPLY_DEMO1      1)
-set(APPLY_DEMO2      1)
+set(APPLY_DEMO1      0)
+set(APPLY_DEMO2      0)
 set(APPLY_REALSENSE  0)
+set(TEST_DIST        1)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
@@ -36,6 +37,10 @@ if(APPLY_REALSENSE)
     set(DEPENDENCIES realsense2 )
 endif()
 
+if(TEST_DIST)
+    message("test get dist from raw")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_TESTDIST")
+endif()
 
 # pbox library
 include_directories("/usr/local/include/pbox")
@@ -44,6 +49,7 @@ link_directories("/usr/local/lib/pbox")
 add_executable(${PN}
     main.cpp
     getver.cpp
+    getdist.cpp
 )
 
 target_link_libraries(

@@ -15,6 +15,7 @@
 void test();
 void test_get_version();
 
+
 std::string get_jsonpath()
 {
     std::string jsonfile = pbox::get_home() + "/" + DATAPATH + JSONFILE;
@@ -26,6 +27,66 @@ std::string get_jsonpath()
         return "";
     }
 }
+
+#ifdef USE_TESTDIST
+
+const int DEFAULT_WIDTH = 640;
+const int DEFAULT_HEIGHT = 480;
+
+bool read_raw_from_bin(const char* fn, uint16_t* buffer, int w, int h);
+float get_dist_from_raw(uint16_t* buffer, int w, int h, int x, int y);
+
+std::string get_distsetting()
+{
+    std::string jsonfile = pbox::get_home() + "/src/ccbox/usepbox/setting.json";
+    if (pbox::is_file_exist(jsonfile)) {
+        return jsonfile;
+    } else {
+        std::cerr << "file not found: " << jsonfile << std::endl;
+        assert(0);
+        return "";
+    }
+}
+
+void test_dist_func()
+{
+    using namespace std;
+    string jsonfile = get_distsetting();
+    string path = pbox::get_string_from_jsonfile(jsonfile, "path");
+    string answer = pbox::get_string_from_jsonfile(jsonfile, "answer");
+    string pattern = pbox::get_string_from_jsonfile(jsonfile, "pattern");
+    int number = pbox::get_int_from_jsonfile(jsonfile, "number");
+    cout << "path:" << path << endl;
+    cout << "answer:" << answer << endl;
+    cout << "pattern:" << pattern << endl;
+    cout << "number:" << number << endl;
+
+#if 1
+    uint16_t buffer[DEFAULT_WIDTH*DEFAULT_HEIGHT];
+    char rawfn[DEFAULT_HEIGHT];
+    char fn[DEFAULT_HEIGHT];
+    string answer_json = path + "/" + answer;
+    char key[20];
+
+    for (int idx = 0; idx < number; ++idx) {
+        snprintf(rawfn, DEFAULT_HEIGHT, pattern.c_str(), idx);
+        snprintf(fn, DEFAULT_HEIGHT, "%s/%s", path.c_str(), rawfn);
+        //printf("fn: %s\n", fn);
+
+        read_raw_from_bin(fn, (uint16_t*)buffer, DEFAULT_WIDTH, DEFAULT_HEIGHT);
+        float rdist = get_dist_from_raw((uint16_t*)buffer, DEFAULT_WIDTH, DEFAULT_HEIGHT,
+            DEFAULT_WIDTH/2, DEFAULT_HEIGHT/2);
+
+        printf("rdist: %.3f\n", rdist);
+        snprintf(key, sizeof(key), "%d", idx);
+        double ans = pbox::get_double_from_jsonfile(answer_json, key);
+        printf("ans = %.3f\n", ans);
+    }
+
+#endif
+}
+
+#endif  // USE_TESTDIST
 
 void mytest(const std::vector<std::string>& k)
 {
@@ -159,6 +220,10 @@ int main()
         }
     }
 #endif
+
+#ifdef USE_TESTDIST
+    test_dist_func();
+#endif  // USE_TESTDIST
 
     return 0;
 }
