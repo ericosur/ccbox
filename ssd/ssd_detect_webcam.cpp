@@ -352,7 +352,7 @@ void Detector::SetMean(const string& mean_file, const string& mean_value) {
       float value = std::atof(item.c_str());
       values.push_back(value);
     }
-    CHECK(values.size() == 1 || values.size() == num_channels_) <<
+    CHECK(values.size() == 1 || values.size() == (size_t)num_channels_) <<
       "Specify either 1 mean_value or as many as channels: " << num_channels_;
 
     std::vector<cv::Mat> channels;
@@ -556,8 +556,8 @@ std::string show_detection_box(cv::Mat& cv_img,
 {
   char buffer[BUFFER_SIZE];
   int detected = 0;
-  printf("%s\n", __func__);
-  for (int i = 0; i < detections.size(); ++i) {
+  //printf("%s\n", __func__);
+  for (size_t i = 0; i < detections.size(); ++i) {
     const vector<float>& d = detections[i];
     // Detection format: [image_id, label, score, xmin, ymin, xmax, ymax].
     CHECK_EQ(d.size(), 7);
@@ -610,8 +610,11 @@ std::string show_detection_box(cv::Mat& cv_img,
           fontface, scale, CV_RGB(0, 0, 0), thickness, 8);
     }
   }
-  std::string r = std::string("detected: " + std::to_string(detected));
-  std::cout << r << "\n";
+  std::string r;
+  if (detected) {
+    r = std::string("detected: " + std::to_string(detected));
+    std::cout << r << "\n";
+  }
   return r;
 }
 
@@ -629,7 +632,7 @@ bool load_bin_to_buffer(const char* fn, uint8_t* buffer, size_t buffer_size)
 
 uint16_t get_dpeth_pt(uint16_t* buffer, int x, int y)
 {
-    uint16_t pt;
+    uint16_t pt = 0;
     for (int j = 0; j < y; j++) {
         for (int i = 0; i < x; i++) {
             pt = *buffer ++;
@@ -820,10 +823,10 @@ IPC_Put_TAG_INT32("dog_warning", 0)
             snprintf(rgbfn, sizeof(rgbfn), "rgb%d.bin", img_idx);
             snprintf(depfn, sizeof(depfn), "depth%d.bin", img_idx);
           }
+          printf("[%d] cmd: %s\n", __LINE__, cmd.c_str());
+          printf("here rgbfn: %s\ndepfn: %s\n", rgbfn, depfn);
         }
 
-        printf("[%d] cmd: %s\n", __LINE__, cmd.c_str());
-        printf("here rgbfn: %s\ndepfn: %s\n", rgbfn, depfn);
         if (cmd == "quit" || cmd == "exit") {
           printf("exit...\n");
           v.push_back("got quit @" + pbox::get_timestring());
@@ -873,7 +876,7 @@ IPC_Put_TAG_INT32("dog_warning", 0)
           continue;
         }
 
-        printf("col: %d, row: %d\n", cv_img.cols, cv_img.rows);
+        //printf("col: %d, row: %d\n", cv_img.cols, cv_img.rows);
         cv::TickMeter tm;
         tm.start();
         std::vector<vector<float> > detections = detector.Detect(cv_img);
