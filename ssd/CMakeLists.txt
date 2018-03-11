@@ -14,13 +14,16 @@ message("CAFFE_ROOT: ${CAFFE_ROOT}")
 
 # pbox library
 include_directories("/usr/local/include/pbox")
+include_directories("/usr/local/include")
 link_directories("/usr/local/lib/pbox")
 
 set(testdir $ENV{CAFFE_ROOT})
-if(EXISTS testdir)
+if(IS_DIRECTORY ${testdir})
     set(caffe_root ${testdir})
+    message("use caffe_root: ${caffe_root}")
 else()
     set(caffe_root $ENV{HOME}/src/github/intel/caffe)
+    message("use home local: ${caffe_root}")
 endif()
 
 # caffe library
@@ -53,6 +56,7 @@ if(APPLY_REALSENSE)
     set(DEPENDENCIES ${DEPENDENCIES} realsense2 gflags ${OpenCV_LIBS})
 
     link_directories($ENV{HOME}/src/github/librealsense/build)
+    link_directories($ENV{HOME}/src/librealsense/build)
 endif()
 
 if(APPLY_OPENCV_CAPTURE)

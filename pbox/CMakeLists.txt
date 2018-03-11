@@ -24,6 +24,15 @@ if(APPLY_REALSENSE)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_REALSENSE")
     find_package( OpenCV REQUIRED )
     set(DEPENDENCIES realsense2 ${OpenCV_LIBS})
+
+    include_directories("$ENV{HOME}/src/github/librealsense/i
+nclude")
+    include_directories("$ENV{HOME}/src/librealsense/include"
+)
+    link_directories("$ENV{HOME}/src/github/librealsense/buil
+d")
+    link_directories("$ENV{HOME}/src/librealsense/build")
+
 endif()
 
 ################################################################
