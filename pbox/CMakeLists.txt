@@ -8,7 +8,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-function")
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-set(APPLY_REALSENSE    0)
+set(APPLY_REALSENSE    1)
 
 # Define project name
 set(PN "pbox")
@@ -36,11 +36,14 @@ file(GLOB LIB_SOURCES
         ptz.cpp
         util.cpp
         rs-imshow.cpp
+        MY_IPC.cpp
     )
 
 # header files for install
 file(GLOB LIB_HEADERS
         pbox.h
+        MY_IPC.hpp
+        UEFIType.h
     )
 
 # Create static library
@@ -54,3 +57,4 @@ install(TARGETS ${LIB_NAME} DESTINATION /usr/local/lib/${PN})
 
 # Install library headers
 install(FILES ${LIB_HEADERS} DESTINATION /usr/local/include/${PN})
+
