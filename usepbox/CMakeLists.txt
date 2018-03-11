@@ -6,8 +6,8 @@ set(CMAKE_CXX_FLAGS "-Wall -O3")
 set(CMAKE_C_FLAGS "-Wall -O3")
 set(APPLY_DEMO1      0)
 set(APPLY_DEMO2      0)
-set(APPLY_REALSENSE  0)
-set(TEST_DIST        1)
+set(APPLY_REALSENSE  1)
+set(TEST_DIST        0)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 

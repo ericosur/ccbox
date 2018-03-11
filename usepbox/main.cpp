@@ -202,6 +202,79 @@ void get_image_and_show()
 }
 #endif
 
+bool load_rgbbin_to_buffer(const char* fn, uint8_t* buffer, size_t buffer_size)
+{
+    FILE* fptr = fopen(fn, "rb");
+    if (fptr == NULL) {
+        return false;
+    }
+    size_t rs = fread(buffer, sizeof(uint8_t), buffer_size, fptr);
+    printf("rs: %d\n", (int)rs);
+    fclose(fptr);
+    return true;
+}
+
+bool load_depthbin_to_buffer(const char* fn, uint8_t* buffer, size_t buffer_size)
+{
+    FILE* fptr = fopen(fn, "rb");
+    if (fptr == NULL) {
+        return false;
+    }
+    size_t rs = fread(buffer, sizeof(uint8_t), buffer_size, fptr);
+    fclose(fptr);
+    return true;
+}
+
+uint16_t get_dpeth_pt(uint16_t* buffer, int x, int y)
+{
+    uint16_t pt;
+    for (int j = 0; j < y; j++) {
+        for (int i = 0; i < x; i++) {
+            pt = *buffer ++;
+        }
+    }
+    return pt;
+}
+
+void test_read_bin()
+{
+    using namespace cv;
+
+    const int max_width = 640;
+    const int max_height = 480;
+    const int rgb_byte = 3;
+    const int depth_byte = 2;
+    const int max_str_len = 256;
+
+    char rgbfn[max_str_len];
+    char depfn[max_str_len];
+
+    size_t buffer_size =  max_width*max_height*rgb_byte;
+    uint8_t rgb_buffer[buffer_size];
+    size_t dep_buffer_size = max_width*max_height*depth_byte;
+    uint8_t dep_buffer[dep_buffer_size];
+    const char dir[] = "/home/rasmus/realcam";
+    for (int i = 0; i<6; ++i) {
+        snprintf(rgbfn, max_str_len, "%s/rgb%d.bin", dir, i);
+        snprintf(depfn, max_str_len, "%s/depth%d.bin", dir, i);
+        load_rgbbin_to_buffer(rgbfn, rgb_buffer, buffer_size);
+        load_depthbin_to_buffer(depfn, dep_buffer, dep_buffer_size);
+
+        cv::Mat cimg(cv::Size(max_width, max_height), CV_8UC3, (void*)rgb_buffer);
+
+        for (int ii=0; ii<10; ++ii) {
+            int x=ii*10;
+            int y=100;
+            printf("depth: %d, %d, %d\n", x, y, (int)get_dpeth_pt((uint16_t*)dep_buffer, x, y));
+        }
+
+        cv::cvtColor(cimg, cimg, cv::COLOR_RGB2BGR);
+        cv::imshow("read", cimg);
+        cv::namedWindow("read", WINDOW_AUTOSIZE);
+        cv::waitKey(0);
+    }
+}
+
 int main()
 {
     test_get_version();
@@ -209,6 +282,10 @@ int main()
     demo1();
     demo2();
 
+    test_read_bin();
+
+
+#if 0
 #ifdef USE_REALSENSE
     // const int maxx = 640;
     // const int maxy = 480;
@@ -224,6 +301,7 @@ int main()
 #ifdef USE_TESTDIST
     test_dist_func();
 #endif  // USE_TESTDIST
+#endif
 
     return 0;
 }
