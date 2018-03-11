@@ -8,6 +8,7 @@
 #include <opencv2/opencv.hpp>   // Include OpenCV API
 #endif
 
+#include "MY_IPC.hpp"
 
 namespace pbox {
 
@@ -35,7 +36,8 @@ int get_int_from_jsonfile(const std::string& fn,
                           std::vector<std::string> keys);
 
 int get_int_from_jsonfile(const std::string& fn,
-                          const std::string& keys);
+                          const std::string& key,
+                          int _default=0);
 
 template<class T>
 bool get_value_from_jsonfile(const std::string& json_file,
@@ -46,18 +48,27 @@ bool get_value_from_jsonfile(const std::string& json_file,
                              const std::string& key, T& value);
 
 int get_timeepoch();
-
+std::string get_timestring();
 std::string get_version_string();
 
 void mylog(const char* name, const char* format, ...);
 
+void output_status(const std::string& ofn, const std::vector<std::string>& v);
+
+
 
 #ifdef USE_REALSENSE
 
+bool isInterestedLabel(int label_id);
+std::string get_label_name(int label_id);
+std::string output_detections(const std::string& ofn, const std::vector< std::vector<float> >& detections, int img_cols, int img_rows);
+
 void init_realsense();
 float get_dist_from_point(int x, int y);
+bool get_color_mat(cv::Mat& image);
 int get_color_mat_from_realsense(cv::Mat& image);
 int test_realsense();
+void draw_aim(cv::Mat& img, int x, int y, int w, int h);
 
 #endif
 

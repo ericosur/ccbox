@@ -9,7 +9,7 @@ namespace pbox {
 
 std::string get_version_string()
 {
-    return "v2018.03.06";
+    return "v2018.03.11";
 }
 
 void mylog(const char* name, const char* format, ...)

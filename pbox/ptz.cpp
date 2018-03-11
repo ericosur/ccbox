@@ -2,7 +2,9 @@
 #define _GNU_SOURCE /* for tm_gmtoff and tm_zone */
 #endif
 
+#include <stdio.h>
 #include <time.h>
+#include <string>
 
 namespace pbox {
 
@@ -13,6 +15,18 @@ int get_timeepoch()
     // will same as "date +%s"
     //printf("%d\n", (int)t);
     return (int)t;
+}
+
+std::string get_timestring()
+{
+    time_t rawtime;
+    struct tm* timeinfo;
+    char buffer[128];
+
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    strftime(buffer, sizeof(buffer), "%x %X", timeinfo);
+    return std::string(buffer);
 }
 
 /*

@@ -12,6 +12,8 @@ namespace pbox {
 using namespace std;
 using namespace nlohmann;
 
+#define OUTPUT_SSD_JSON     "/tmp/ssd.json"
+
 string cached_fn;
 json   cached_json;
 bool   isCached = false;
@@ -285,10 +287,11 @@ int get_int_from_jsonfile(const std::string& fn,
 }
 
 int get_int_from_jsonfile(const std::string& fn,
-                          const std::string& key)
+                          const std::string& key,
+                          int _default)
 {
     json j;
-    int empty = 0;
+    int empty = _default;
     try {
         if (get_json_from_file(fn, j)) {
             return j.at(key).get<int>();
@@ -491,6 +494,107 @@ void test_addon()
         cout << "parse error:" << e.what() << endl;
     }
 }
+
+bool isInterestedLabel(int label_id)
+{
+  bool result = false;
+  switch (label_id) {
+    case 8: // cat
+      result = true;
+      break;
+    case 12:  // dog
+      result = true;
+      break;
+    case 15:  // person
+      result = true;
+      break;
+    default:
+      break;
+  }
+  return result;
+}
+
+std::string get_label_name(int label_id)
+{
+  std::string result;
+  switch (label_id) {
+    case 8: // cat
+      result = "dog";
+      break;
+    case 12:  // dog
+      result = "dog";
+      break;
+    case 15:  // person
+      result = "man";
+      break;
+    default:
+      result = "null";
+      break;
+  }
+  return result;
+}
+
+void output_status(const std::string& ofn, const std::vector<std::string>& v)
+{
+    json jarray = json::array();
+
+    jarray.push_back("epoch: " + std::to_string(get_timeepoch()));
+    for (std::string s: v) {
+        jarray.push_back(s);
+    }
+
+    std::ofstream o(ofn);
+    o << std::setw(4) << jarray << std::endl;
+}
+
+std::string output_detections(const std::string& ofn, const std::vector< std::vector<float> >& detections, int img_cols, int img_rows)
+{
+  json jarray = json::array();
+  int detected = 0;
+  for (size_t i = 0; i < detections.size(); ++i) {
+    const vector<float>& d = detections[i];
+    // Detection format: [image_id, label, score, xmin, ymin, xmax, ymax].
+    if (d.size() != 7) {
+        continue;
+    }
+    const int label = int(d[1]);
+    const float score = d[2];
+    const int box_x1 = static_cast<int>(d[3] * img_cols) ;
+    const int box_y1 = static_cast<int>(d[4] * img_rows) ;
+    const int box_x2 = static_cast<int>(d[5] * img_cols) ;
+    const int box_y2 = static_cast<int>(d[6] * img_rows) ;
+
+    const float confidence_threshold = 0.33;
+    if (score >= confidence_threshold && isInterestedLabel(label)) {
+        detected ++;
+        // Detection format: [image_id, label, score, xmin, ymin, xmax, ymax].
+        int qx = box_x1 + (box_x2 - box_x1) / 2;
+        int qy = box_y1 + (box_y2 - box_y1) / 2;
+        //printf("qx/qy:%d/%d\n", qx, qy);
+
+        json j;
+        j["label_name"] = get_label_name(label);
+        j["x"] = box_x1;
+        j["y"] = box_y1;
+        j["w"] = box_x2 - box_x1;
+        j["h"] = box_y2 - box_y1;
+        j["qx"] = qx;
+        j["qy"] = qy;
+        j["score"] = score;
+
+        jarray.push_back(j);
+    }
+  }
+
+  std::string s = std::string("detected: ") + std::to_string(detected);
+  if (jarray.size()) {
+      std::cout << jarray.dump() << std::endl;
+  }
+  std::ofstream o(ofn);
+  o << std::setw(4) << jarray << std::endl;
+  return s;
+}
+
 
 void test()
 {

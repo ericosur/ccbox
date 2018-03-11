@@ -77,33 +77,40 @@ bool show_info()
 }
 
 bool isInited = false;
+bool isAssigned = false;
 rs2::pipeline pipe;
-rs2::frameset data;
+rs2::frameset g_data;
 
 void init_realsense()
 {
-    show_info();
-    rs2::config cfg;
-    //Add desired streams to configuration
-    cfg.enable_stream(RS2_STREAM_COLOR, DEFAULT_WIDTH, DEFAULT_HEIGHT, RS2_FORMAT_BGR8, 30);
-    cfg.enable_stream(RS2_STREAM_DEPTH, DEFAULT_WIDTH, DEFAULT_HEIGHT, RS2_FORMAT_Z16);
-    // Declare RealSense pipeline, encapsulating the actual device and sensors
-    // Start streaming with default recommended configuration
-    pipe.start(cfg);
+    if (isInited) {
+        // do nothing and exit
+    } else {
+        show_info();
+        rs2::config cfg;
+        //Add desired streams to configuration
+        cfg.enable_stream(RS2_STREAM_COLOR, DEFAULT_WIDTH, DEFAULT_HEIGHT, RS2_FORMAT_BGR8, 30);
+        cfg.enable_stream(RS2_STREAM_DEPTH, DEFAULT_WIDTH, DEFAULT_HEIGHT, RS2_FORMAT_Z16);
+        // Declare RealSense pipeline, encapsulating the actual device and sensors
+        // Start streaming with default recommended configuration
+        pipe.start(cfg);
 
-    for (auto i = 0; i < 45; ++i)
-        pipe.wait_for_frames();
+        for (auto i = 0; i < 45; ++i)
+            pipe.wait_for_frames();
 
-    isInited = true;
+        isInited = true;
+    }
 }
 
 float get_dist_from_point(int x, int y)
 {
+    float dist = 0.0;
     //printf("try to %s\n", __func__);
     // get distance of center point
-    float dist = data.get_depth_frame().get_distance(x, y);
+    dist = g_data.get_depth_frame().get_distance(x, y);
     return dist;
 }
+
 
 int get_color_mat_from_realsense(cv::Mat& image)
 {
@@ -113,9 +120,8 @@ int get_color_mat_from_realsense(cv::Mat& image)
     // for (auto i = 0; i < 30; ++i)
     //     pipe.wait_for_frames();
 
-    data = pipe.wait_for_frames(); // Wait for next set of frames from the camera
-    rs2::frame color = data.get_color_frame();
-
+    g_data = pipe.wait_for_frames(); // Wait for next set of frames from the camera
+    rs2::frame color = g_data.get_color_frame();
 
     // Query frame size (width and height)
     const int w = color.as<rs2::video_frame>().get_width();
