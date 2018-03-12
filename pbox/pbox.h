@@ -59,7 +59,8 @@ void output_status(const std::string& ofn, const std::vector<std::string>& v);
 
 #ifdef USE_REALSENSE
 
-bool isInterestedLabel(int label_id);
+bool is_dog(int label_id);
+bool is_person(int label_id);
 std::string get_label_name(int label_id);
 std::string output_detections(const std::string& ofn, const std::vector< std::vector<float> >& detections, int img_cols, int img_rows);
 

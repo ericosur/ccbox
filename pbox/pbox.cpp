@@ -495,23 +495,23 @@ void test_addon()
     }
 }
 
-bool isInterestedLabel(int label_id)
+bool is_dog(int label_id)
 {
-  bool result = false;
-  switch (label_id) {
-    case 8: // cat
-      result = true;
-      break;
-    case 12:  // dog
-      result = true;
-      break;
-    case 15:  // person
-      result = true;
-      break;
-    default:
-      break;
-  }
-  return result;
+    if (label_id == 8 || label_id == 12) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool is_person(int label_id)
+{
+    // person
+    if (label_id == 15) {
+        return true;
+    } else {
+        return false;
+    }
 }
 
 std::string get_label_name(int label_id)
@@ -547,6 +547,7 @@ void output_status(const std::string& ofn, const std::vector<std::string>& v)
     o << std::setw(4) << jarray << std::endl;
 }
 
+// will output result to json file
 std::string output_detections(const std::string& ofn, const std::vector< std::vector<float> >& detections, int img_cols, int img_rows)
 {
   json jarray = json::array();
@@ -565,24 +566,28 @@ std::string output_detections(const std::string& ofn, const std::vector< std::ve
     const int box_y2 = static_cast<int>(d[6] * img_rows) ;
 
     const float confidence_threshold = 0.33;
-    if (score >= confidence_threshold && isInterestedLabel(label)) {
-        detected ++;
-        // Detection format: [image_id, label, score, xmin, ymin, xmax, ymax].
-        int qx = box_x1 + (box_x2 - box_x1) / 2;
-        int qy = box_y1 + (box_y2 - box_y1) / 2;
-        //printf("qx/qy:%d/%d\n", qx, qy);
+    if ( score >= confidence_threshold ) {
+        if (is_dog(label)) {
+            return "dog";
+        } else if (is_person(label)) {
+            detected ++;
+            // Detection format: [image_id, label, score, xmin, ymin, xmax, ymax].
+            int qx = box_x1 + (box_x2 - box_x1) / 2;
+            int qy = box_y1 + (box_y2 - box_y1) / 2;
+            //printf("qx/qy:%d/%d\n", qx, qy);
 
-        json j;
-        j["label_name"] = get_label_name(label);
-        j["x"] = box_x1;
-        j["y"] = box_y1;
-        j["w"] = box_x2 - box_x1;
-        j["h"] = box_y2 - box_y1;
-        j["qx"] = qx;
-        j["qy"] = qy;
-        j["score"] = score;
+            json j;
+            j["label_name"] = get_label_name(label);
+            j["x"] = box_x1;
+            j["y"] = box_y1;
+            j["w"] = box_x2 - box_x1;
+            j["h"] = box_y2 - box_y1;
+            j["qx"] = qx;
+            j["qy"] = qy;
+            j["score"] = score;
 
-        jarray.push_back(j);
+            jarray.push_back(j);
+        }
     }
   }
 
@@ -595,6 +600,27 @@ std::string output_detections(const std::string& ofn, const std::vector< std::ve
   return s;
 }
 
+bool load_depthbin_to_buffer(const char* fn, uint8_t* buffer, size_t buffer_size)
+{
+    FILE* fptr = fopen(fn, "rb");
+    if (fptr == NULL) {
+        return false;
+    }
+    size_t rs = fread(buffer, sizeof(uint8_t), buffer_size, fptr);
+    fclose(fptr);
+    return true;
+}
+
+uint16_t get_dpeth_pt(uint16_t* buffer, int x, int y)
+{
+    uint16_t pt;
+    for (int j = 0; j < y; j++) {
+        for (int i = 0; i < x; i++) {
+            pt = *buffer ++;
+        }
+    }
+    return pt;
+}
 
 void test()
 {
