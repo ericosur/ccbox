@@ -607,13 +607,14 @@ bool load_depthbin_to_buffer(const char* fn, uint8_t* buffer, size_t buffer_size
         return false;
     }
     size_t rs = fread(buffer, sizeof(uint8_t), buffer_size, fptr);
+    (void)rs;
     fclose(fptr);
     return true;
 }
 
 uint16_t get_dpeth_pt(uint16_t* buffer, int x, int y)
 {
-    uint16_t pt;
+    uint16_t pt = 0;
     for (int j = 0; j < y; j++) {
         for (int i = 0; i < x; i++) {
             pt = *buffer ++;
