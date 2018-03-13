@@ -9,6 +9,7 @@
     "direct_use_realsense": 1,
     "wait_msgq": 0,
     "wait_myipc": 0,
+    "wait_myipc_tag": "photo_index",
     "do_imshow": 1,
     "show_fps": 1,
     "testraw": 0,
