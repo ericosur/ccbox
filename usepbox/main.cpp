@@ -221,13 +221,14 @@ bool load_depthbin_to_buffer(const char* fn, uint8_t* buffer, size_t buffer_size
         return false;
     }
     size_t rs = fread(buffer, sizeof(uint8_t), buffer_size, fptr);
+    (void)rs;
     fclose(fptr);
     return true;
 }
 
 uint16_t get_dpeth_pt(uint16_t* buffer, int x, int y)
 {
-    uint16_t pt;
+    uint16_t pt = 0;
     for (int j = 0; j < y; j++) {
         for (int i = 0; i < x; i++) {
             pt = *buffer ++;
@@ -238,6 +239,7 @@ uint16_t get_dpeth_pt(uint16_t* buffer, int x, int y)
 
 void test_read_bin()
 {
+#ifdef USE_TESTDIST
     using namespace cv;
 
     const int max_width = 640;
@@ -273,11 +275,31 @@ void test_read_bin()
         cv::namedWindow("read", WINDOW_AUTOSIZE);
         cv::waitKey(0);
     }
+#endif  // USE_TESTDIST
+}
+
+
+void show_features()
+{
+    printf("demo features:\n");
+#ifdef USE_DEMO1
+    printf("USE_DEMO1\n");
+#endif
+#ifdef USE_DEMO2
+    printf("USE_DEMO2\n");
+#endif
+#ifdef USE_REALSENSE
+    printf("USE_REALSENSE\n");
+#endif
+#ifdef USE_TESTDIST
+    printf("USE_TESTDIST\n");
+#endif
 }
 
 int main()
 {
     test_get_version();
+    show_features();
 
     demo1();
     demo2();

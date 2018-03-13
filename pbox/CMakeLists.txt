@@ -18,16 +18,23 @@ project(${PN})
 # realsense2
 if(APPLY_REALSENSE)
 
-    message("apply intel realsense2")
-    #include_directories()
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_REALSENSE")
-    find_package( OpenCV REQUIRED )
-    set(DEPENDENCIES realsense2 ${OpenCV_LIBS})
+    find_library(
+        REALSENSE_LIB
+        NAMES realsense2
+        PATHS /usr/lib /usr/libx86_64-linux-gnu /usr/local/lib)
 
-    include_directories("$ENV{HOME}/src/github/librealsense/i
-nclude")
-    include_directories("$ENV{HOME}/src/librealsense/include"
-)
+    if (REALSENSE_LIB)
+        message("apply intel realsense2")
+        #include_directories()
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_REALSENSE")
+        find_package( OpenCV REQUIRED )
+        set(DEPENDENCIES realsense2 ${OpenCV_LIBS})
+
+        include_directories("$ENV{HOME}/src/github/librealsense/include")
+        include_directories("$ENV{HOME}/src/librealsense/include")
+    else()
+        set(APPLY_REALSENSE    0)
+    endif()
 
 endif()
 
