@@ -27,7 +27,7 @@
 #include <vector>
 
 #include <pbox/pbox.h>
-#include <pbox/MY_IPC.hpp>
+#include "MY_IPC.hpp"
 
 #ifdef USE_OPENCV
 using namespace caffe;  // NOLINT(build/namespaces)
@@ -36,6 +36,8 @@ using namespace caffe;  // NOLINT(build/namespaces)
 #ifdef USE_DISTWIN
 #define DIST_WINDOW   "dist"
 #endif
+
+#define DETECTION_WIN "detections"
 
 #define NO_REALSENSE
 #define RASMUS_HACK
@@ -504,9 +506,9 @@ bool show_fps(cv::Mat& cv_img, double elapsed_time)
           fontface, scale, CV_RGB(0, 0, 0), thickness, 8);
 
     if (settings.do_imshow) {
-      cv::imshow("detections", cv_img);
+      cv::imshow(DETECTION_WIN, cv_img);
     } else {
-      printf("no show\n");
+      //printf("no show\n");
     }
 
     // int key = cv::waitKey(1);
@@ -906,7 +908,7 @@ IPC_Put_TAG_INT32("dog_warning", 0)
         if (settings.do_imshow) {
           r = show_detection_box(cv_img, detections, hasRealsenseOn);
           if (r != "") {
-            imshow("result", cv_img);
+            imshow(DETECTION_WIN, cv_img);
           }
         } else {
           r = pbox::output_detections(ofn, detections, cv_img.cols, cv_img.rows);
