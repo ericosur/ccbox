@@ -8,8 +8,6 @@
 #include <opencv2/opencv.hpp>   // Include OpenCV API
 #endif
 
-#include "MY_IPC.hpp"
-
 namespace pbox {
 
 
