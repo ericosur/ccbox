@@ -11,5 +11,6 @@
     "wait_myipc": 0,
     "do_imshow": 1,
     "show_fps": 1,
-    "testraw": 0
+    "testraw": 0,
+    "rawbin_dir": "/tmp"
 }

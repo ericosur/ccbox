@@ -198,9 +198,11 @@ public:
       direct_use_realsense = pbox::get_int_from_jsonfile(json_file, "direct_use_realsense");
       wait_msgq = pbox::get_int_from_jsonfile(json_file, "wait_msgq");
       wait_myipc = pbox::get_int_from_jsonfile(json_file, "wait_myipc");
+      wait_myipc_tag = pbox::get_string_from_jsonfile(json_file, "wait_myipc_tag");
       do_imshow = pbox::get_int_from_jsonfile(json_file, "do_imshow");
       show_fps = pbox::get_int_from_jsonfile(json_file, "show_fps");
       testraw = pbox::get_int_from_jsonfile(json_file, "testraw");
+      rawbin_dir = pbox::get_string_from_jsonfile(json_file, "rawbin_dir");
       return true;
     } else {
       fprintf(stderr, "%s\n", "specified json not found...");
@@ -218,9 +220,11 @@ public:
   int direct_use_realsense = 0;
   int wait_msgq = 1;
   int wait_myipc = 0;
+  string wait_myipc_tag = "photo_index";
   int do_imshow = 0;
   int show_fps = 1;
   int testraw = 1;
+  string rawbin_dir = "/tmp";
 };
 
 
@@ -556,6 +560,7 @@ std::string show_detection_box(cv::Mat& cv_img,
 {
   char buffer[BUFFER_SIZE];
   int detected = 0;
+  bool is_dog = false;
   //printf("%s\n", __func__);
   for (size_t i = 0; i < detections.size(); ++i) {
     const vector<float>& d = detections[i];
@@ -571,49 +576,56 @@ std::string show_detection_box(cv::Mat& cv_img,
 
     float dist = 0.0;
 
-    if (score >= settings.confidence_threshold && pbox::isInterestedLabel(label)) {
+    if (score >= settings.confidence_threshold) {
 
-      detected ++;
-      // Detection format: [image_id, label, score, xmin, ymin, xmax, ymax].
-      const cv::Scalar& color = cv::Scalar( 255, 255, 255 );
+      if (pbox::is_dog(label)) {
+        is_dog = true;
+      }
+      if (is_dog || pbox::is_person(label)) {
 
-#if 0
-      if (query_distance) {
-        int qx = box_x1 + (box_x2 - box_x1) / 2;
-        int qy = box_y1 + (box_y2 - box_y1) / 2;
-        if (settings.direct_use_realsense) {
-          dist = pbox::get_dist_from_point(qx, qy);
-          pbox::draw_aim(cv_img, box_x1, box_y1, (box_x2 - box_x1), (box_y2 - box_y1));
-          show_dist(dist);
+        detected ++;
+        // Detection format: [image_id, label, score, xmin, ymin, xmax, ymax].
+        const cv::Scalar& color = cv::Scalar( 255, 255, 255 );
+
+        if (settings.direct_use_realsense && query_distance) {
+          int qx = box_x1 + (box_x2 - box_x1) / 2;
+          int qy = box_y1 + (box_y2 - box_y1) / 2;
+          if (settings.direct_use_realsense) {
+            dist = pbox::get_dist_from_point(qx, qy);
+            pbox::draw_aim(cv_img, box_x1, box_y1, (box_x2 - box_x1), (box_y2 - box_y1));
+            show_dist(dist);
+          }
         }
-      }
-#endif
-      //draw box
-      cv::Point top_left_pt(box_x1, box_y1);
-      cv::Point bottom_right_pt(box_x2, box_y2);
-      cv::Point bottom_left_pt(box_x1, box_y2);
 
-      cv::rectangle(cv_img, top_left_pt, bottom_right_pt, color, 4);
-      if (query_distance) {
-        snprintf(buffer, sizeof(buffer), "%s(%d):%.2f,%.2f", pbox::get_label_name(label).c_str(),
-                 label, dist, score);
-      } else {
-        snprintf(buffer, sizeof(buffer), "%s(%d):%.2f", pbox::get_label_name(label).c_str(),
-                 label, score);
-      }
-      cv::Size text = cv::getTextSize(buffer, fontface, scale, thickness, &baseline);
+        //draw box
+        cv::Point top_left_pt(box_x1, box_y1);
+        cv::Point bottom_right_pt(box_x2, box_y2);
+        cv::Point bottom_left_pt(box_x1, box_y2);
 
-      cv::rectangle(cv_img, bottom_left_pt + cv::Point(0, 0),
-          bottom_left_pt + cv::Point(text.width, -text.height-baseline),
-          color, CV_FILLED);
-      cv::putText(cv_img, buffer, bottom_left_pt - cv::Point(0, baseline),
-          fontface, scale, CV_RGB(0, 0, 0), thickness, 8);
+        cv::rectangle(cv_img, top_left_pt, bottom_right_pt, color, 4);
+        if (query_distance) {
+          snprintf(buffer, sizeof(buffer), "%s(%d):%.2f,%.2f", pbox::get_label_name(label).c_str(),
+                   label, dist, score);
+        } else {
+          snprintf(buffer, sizeof(buffer), "%s(%d):%.2f", pbox::get_label_name(label).c_str(),
+                   label, score);
+        }
+        cv::Size text = cv::getTextSize(buffer, fontface, scale, thickness, &baseline);
+
+        cv::rectangle(cv_img, bottom_left_pt + cv::Point(0, 0),
+            bottom_left_pt + cv::Point(text.width, -text.height-baseline),
+            color, CV_FILLED);
+        cv::putText(cv_img, buffer, bottom_left_pt - cv::Point(0, baseline),
+            fontface, scale, CV_RGB(0, 0, 0), thickness, 8);
+      }
     }
   }
+
   std::string r;
-  if (detected) {
+  if (is_dog) {
+    r = "dog";
+  } else if (detected) {
     r = std::string("detected: " + std::to_string(detected));
-    std::cout << r << "\n";
   }
   return r;
 }
@@ -625,7 +637,8 @@ bool load_bin_to_buffer(const char* fn, uint8_t* buffer, size_t buffer_size)
         return false;
     }
     size_t rs = fread(buffer, sizeof(uint8_t), buffer_size, fptr);
-    printf("rs: %d\n", (int)rs);
+    //printf("rs: %d\n", (int)rs);
+    (void)rs;
     fclose(fptr);
     return true;
 }
@@ -802,29 +815,31 @@ IPC_Put_TAG_INT32("dog_warning", 0)
         if (settings.direct_use_realsense) {
           //cmd = "realsense";
         } else {
-          if (settings.wait_msgq) {
+
+          if (settings.wait_msgq) { // use msgq for IPC
             cmd = wait_msgq();
-            //memset(rgbfn, 0, sizeof(rgbfn));
-            //strncpy(rgbfn, cmd.c_str(), sizeof(rgbfn)-2);
-            //printf("msgq got: %s\n", cmd.c_str());
-            const char dir[] = "/home/rasmus/realcam";
+            // TODO: make dir configurable
             if (settings.testraw) {
-              snprintf(rgbfn, 256, "%s/rgb%s.bin", dir, cmd.c_str());
-              snprintf(depfn, 256, "%s/depth%s.bin", dir, cmd.c_str());
+              snprintf(rgbfn, 256, "%s/rgb%s.bin", settings.rawbin_dir.c_str(), cmd.c_str());
+              snprintf(depfn, 256, "%s/depth%s.bin", settings.rawbin_dir.c_str(), cmd.c_str());
             } else {
+              // will use full file path
               snprintf(rgbfn, 256, "%s", cmd.c_str());
             }
+
             printf("wait_msgq got: %s\n%s\n", rgbfn, depfn);
             v.clear();
             v.push_back("wait for msgq");
-          } else if (settings.wait_myipc) {
+
+          } else if (settings.wait_myipc) { // use MY IPC as IPC
             cmd = "myipc";
-            img_idx = ipc->IPC_Get_TAG_INT32("ssd_index", 0); // will block here
-            snprintf(rgbfn, sizeof(rgbfn), "rgb%d.bin", img_idx);
-            snprintf(depfn, sizeof(depfn), "depth%d.bin", img_idx);
+            img_idx = ipc->IPC_Get_TAG_INT32(settings.wait_myipc_tag.c_str(), 0); // will block here
+            snprintf(rgbfn, sizeof(rgbfn), "%s/rgb%d.bin", settings.rawbin_dir.c_str(), img_idx);
+            snprintf(depfn, sizeof(depfn), "%s/depth%d.bin", settings.rawbin_dir.c_str(), img_idx);
+            printf("wait_myipc: got %d\n", img_idx);
           }
-          printf("[%d] cmd: %s\n", __LINE__, cmd.c_str());
-          printf("here rgbfn: %s\ndepfn: %s\n", rgbfn, depfn);
+          //printf("[%d] IPC cmd: %s\n", __LINE__, cmd.c_str());
+          //printf("here rgbfn: %s\ndepfn: %s\n", rgbfn, depfn);
         }
 
         if (cmd == "quit" || cmd == "exit") {
@@ -847,7 +862,7 @@ IPC_Put_TAG_INT32("dog_warning", 0)
           pbox::get_color_mat_from_realsense(cv_img);
           pbox::output_status(OUTPUT_SSD_JSON, v);
         } else if (pbox::is_file_exist(rgbfn)) {
-          printf("rgbfn: %s\n", rgbfn);
+          //printf("rgbfn: %s\n", rgbfn);
           v.clear();
           v.push_back("read from " + std::string(rgbfn));
           const int max_width = 640;
@@ -856,20 +871,22 @@ IPC_Put_TAG_INT32("dog_warning", 0)
           const int buffer_size = max_width*max_height*rgb_byte;
           uint8_t buffer[buffer_size];
           if (settings.wait_myipc || settings.testraw) {
-            printf("myipc or testraw\n");
+            //printf("myipc or testraw\n");
             load_bin_to_buffer(rgbfn, buffer, buffer_size);
             cv_img = cv::Mat(cv::Size(max_width, max_height), CV_8UC3, (void*)buffer);
             cv::cvtColor(cv_img, cv_img, cv::COLOR_RGB2BGR);
-            cv::imshow("raw", cv_img);
+            //cv::imshow("raw", cv_img);
             //cv::namedWindow("raw", WINDOW_AUTOSIZE);
-            cv::waitKey(0);
+            //cv::waitKey(0);
           } else if (settings.wait_msgq) {
             printf("read image from: %s\n", rgbfn);
             cv_img = cv::imread(cmd);
             //imshow("test", cv_img);
           }
-            ofn = cmd + ".json";
-            cmd = "";
+
+          ofn = cmd + ".json";
+          cmd = "";
+
         } else {
           printf("file not found: %s\n", rgbfn);
           //pbox::output_status(OUTPUT_SSD_JSON, v);
@@ -884,12 +901,22 @@ IPC_Put_TAG_INT32("dog_warning", 0)
 
         v.push_back("take time: " + std::to_string(tm.getTimeMilli()));
 
-        // draw detected box
+        // show detection result
+        std::string r;
         if (settings.do_imshow) {
-          show_detection_box(cv_img, detections, hasRealsenseOn);
+          r = show_detection_box(cv_img, detections, hasRealsenseOn);
+          if (r != "") {
+            imshow("result", cv_img);
+          }
         } else {
-          std::string r = pbox::output_detections(ofn, detections, cv_img.cols, cv_img.rows);
+          r = pbox::output_detections(ofn, detections, cv_img.cols, cv_img.rows);
           v.push_back(r);
+        }
+        if (r == "dog") {
+          ipc->IPC_Put_TAG_INT32("dog_warning", 1);
+          std::cout << "=====>" << r << "!!!!!!!\n";
+        } else {
+          //ipc->IPC_Put_TAG_INT32("dog_warning", 0);
         }
         //query_dist_from_detection_box(detections, cv_img.cols, cv_img.rows);
 

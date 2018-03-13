@@ -69,6 +69,7 @@ message("DEPENDENCIES: ${DEPENDENCIES}")
 add_executable(
     ${PN}
     ssd_detect_webcam.cpp
+    MY_IPC.cpp
 )
 
 target_link_libraries(
