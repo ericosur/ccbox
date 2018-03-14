@@ -547,58 +547,6 @@ void output_status(const std::string& ofn, const std::vector<std::string>& v)
     o << std::setw(4) << jarray << std::endl;
 }
 
-// will output result to json file
-std::string output_detections(const std::string& ofn, const std::vector< std::vector<float> >& detections, int img_cols, int img_rows)
-{
-  json jarray = json::array();
-  int detected = 0;
-  for (size_t i = 0; i < detections.size(); ++i) {
-    const vector<float>& d = detections[i];
-    // Detection format: [image_id, label, score, xmin, ymin, xmax, ymax].
-    if (d.size() != 7) {
-        continue;
-    }
-    const int label = int(d[1]);
-    const float score = d[2];
-    const int box_x1 = static_cast<int>(d[3] * img_cols) ;
-    const int box_y1 = static_cast<int>(d[4] * img_rows) ;
-    const int box_x2 = static_cast<int>(d[5] * img_cols) ;
-    const int box_y2 = static_cast<int>(d[6] * img_rows) ;
-
-    const float confidence_threshold = 0.33;
-    if ( score >= confidence_threshold ) {
-        if (is_dog(label)) {
-            return "dog";
-        } else if (is_person(label)) {
-            detected ++;
-            // Detection format: [image_id, label, score, xmin, ymin, xmax, ymax].
-            int qx = box_x1 + (box_x2 - box_x1) / 2;
-            int qy = box_y1 + (box_y2 - box_y1) / 2;
-            //printf("qx/qy:%d/%d\n", qx, qy);
-
-            json j;
-            j["label_name"] = get_label_name(label);
-            j["x"] = box_x1;
-            j["y"] = box_y1;
-            j["w"] = box_x2 - box_x1;
-            j["h"] = box_y2 - box_y1;
-            j["qx"] = qx;
-            j["qy"] = qy;
-            j["score"] = score;
-
-            jarray.push_back(j);
-        }
-    }
-  }
-
-  std::string s = std::string("detected: ") + std::to_string(detected);
-  if (jarray.size()) {
-      std::cout << jarray.dump() << std::endl;
-  }
-  std::ofstream o(ofn);
-  o << std::setw(4) << jarray << std::endl;
-  return s;
-}
 
 bool load_depthbin_to_buffer(const char* fn, uint8_t* buffer, size_t buffer_size)
 {
