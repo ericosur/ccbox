@@ -3,46 +3,11 @@
 
 #ifdef USE_REALSENSE
 
+#include "cvutil.h"
+
 #include <librealsense2/rs.hpp> // Include RealSense Cross Platform API
-#include <opencv2/opencv.hpp>   // Include OpenCV API
-#include <stdio.h>
+#include <cstdio>
 #include <iostream>
-
-const int fontface = cv::FONT_HERSHEY_SIMPLEX;
-const double scale = 1;
-const int thickness = 2;
-int baseline = 0;
-const int DEFAULT_WIDTH = 640;
-const int DEFAULT_HEIGHT = 480;
-
-void draw_aim(cv::Mat& img, int w, int h)
-{
-    using namespace cv;
-
-    const int radius = 30;
-    const int tail = 5;
-    Scalar white = Scalar(255, 255, 255);
-    int cx = w/2;
-    int cy = h/2;
-
-    circle(img, Point(w/2, h/2), radius, white, thickness);
-    line(img, Point(cx-radius-tail, cy), Point(cx+radius+tail, cy), white, thickness);
-    line(img, Point(cx, cy-radius-tail), Point(cx, cy+radius+tail), white, thickness);
-}
-
-void draw_dist(cv::Mat& img, float dist)
-{
-    const int buffer_size = 128;
-    using namespace cv;
-    char buffer[buffer_size];
-
-    snprintf(buffer, buffer_size, "dist: %.3fm", dist);
-    cv::Size text = cv::getTextSize(buffer, fontface, scale, thickness, &baseline);
-    cv::rectangle(img, cv::Point(0, 0),cv::Point(text.width, text.height + baseline),
-          CV_RGB(255, 255, 255), CV_FILLED);
-    cv::putText(img, buffer, cv::Point(0, text.height + baseline / 2.),
-          fontface, scale, CV_RGB(0, 0, 0), thickness, 8);
-}
 
 bool show_info()
 {
@@ -77,6 +42,7 @@ bool show_info()
 int test_realsense() try
 {
     using namespace cv;
+
     const auto depth_window = "Depth Image";
     const auto rgb_window = "RGB Image";
     namedWindow(depth_window, WINDOW_AUTOSIZE);
@@ -121,9 +87,9 @@ int test_realsense() try
         Mat depth_image(Size(w, h), CV_8UC3, (void*)depth.get_data(), Mat::AUTO_STEP);
         Mat color_image(Size(w, h), CV_8UC3, (void*)color.get_data());
 
-        draw_aim(depth_image, w, h);
-        draw_aim(color_image, w, h);
-        draw_dist(depth_image, dist);
+        pbox::draw_aim(depth_image, w, h);
+        pbox::draw_aim(color_image, w, h);
+        pbox::draw_dist(depth_image, dist);
 
         // Update the window with new data
         imshow(depth_window, depth_image);

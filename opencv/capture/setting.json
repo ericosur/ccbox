@@ -1,6 +1,6 @@
 {
-    "use_realsense": true,
-    "video_id": 2,
+    "use_realsense": false,
+    "video_id": 3,
     "description": "will use /dev/video${video_id}"
 }
 
