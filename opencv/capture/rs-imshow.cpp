@@ -43,12 +43,21 @@ int test_realsense() try
 {
     using namespace cv;
 
+    bool use_dep_win = true;
+
     const auto depth_window = "Depth Image";
     const auto rgb_window = "RGB Image";
-    namedWindow(depth_window, WINDOW_AUTOSIZE);
+    const auto crop_window = "crop";
+
+    if (use_dep_win) {
+        namedWindow(depth_window, WINDOW_AUTOSIZE);
+        moveWindow(depth_window, 0, 0);
+    }
     namedWindow(rgb_window, WINDOW_AUTOSIZE);
-    moveWindow(depth_window, 0, 0);
+    namedWindow(crop_window, WINDOW_AUTOSIZE);
+
     moveWindow(rgb_window, DEFAULT_WIDTH+50, 0);
+    moveWindow(crop_window, 0, DEFAULT_HEIGHT+50);
 
     if ( !show_info() ) {
         printf("no Intel Realsense camera, exit...\n");
@@ -69,7 +78,7 @@ int test_realsense() try
     // Declare depth colorizer for pretty visualization of depth data
     rs2::colorizer color_map;
 
-    while (waitKey(1) < 0 && cvGetWindowHandle(depth_window))
+    while (waitKey(1) < 0 /*&& cvGetWindowHandle(rgb_window)*/)
     {
         rs2::frameset data = pipe.wait_for_frames(); // Wait for next set of frames from the camera
         rs2::frame depth = color_map(data.get_depth_frame());
@@ -86,14 +95,28 @@ int test_realsense() try
         // Create OpenCV matrix of size (w,h) from the colorized depth data
         Mat depth_image(Size(w, h), CV_8UC3, (void*)depth.get_data(), Mat::AUTO_STEP);
         Mat color_image(Size(w, h), CV_8UC3, (void*)color.get_data());
+        Mat new_img;
 
-        pbox::draw_aim(depth_image, w, h);
+        if (use_dep_win) {
+            pbox::draw_aim(depth_image, w, h);
+            pbox::draw_dist(depth_image, dist);
+        }
+
         pbox::draw_aim(color_image, w, h);
-        pbox::draw_dist(depth_image, dist);
+        pbox::draw_aim(color_image, w, h);
 
         // Update the window with new data
-        imshow(depth_window, depth_image);
+        if (use_dep_win) {
+            imshow(depth_window, depth_image);
+        }
+
         imshow(rgb_window, color_image);
+
+        const int max_repeat = 3;
+        for (int ii=0; ii<max_repeat; ++ii) {
+            pbox::crop_image(color_image, new_img);
+            imshow(crop_window, new_img);
+        }
     }
 
     return EXIT_SUCCESS;

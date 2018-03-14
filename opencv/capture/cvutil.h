@@ -16,7 +16,8 @@ const int thickness = 2;
 
 void draw_aim(cv::Mat& img, int w, int h);
 void draw_dist(cv::Mat& img, float dist);
-
+void crop_image(const cv::Mat& orig, cv::Mat& new_img, int x, int y, int w, int h);
+void crop_image(const cv::Mat& orig, cv::Mat& new_img);
 
 }   // namespace pbox
 

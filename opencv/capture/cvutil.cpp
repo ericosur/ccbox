@@ -1,5 +1,12 @@
 #include "cvutil.h"
 
+#include <cstdlib>
+#include <iostream>
+#include <ctime>
+
+#define DEFAULT_CROP_WIDTH      240
+#define DEFAULT_CROP_HEIGHT     240
+
 namespace pbox {
 
 int baseline = 0;
@@ -34,6 +41,34 @@ void draw_dist(cv::Mat& img, float dist)
           fontface, scale, CV_RGB(0, 0, 0), thickness, 8);
 }
 
+void crop_image(const cv::Mat& orig, cv::Mat& new_img, int x, int y, int w, int h)
+{
+    using namespace cv;
+
+    cv::Rect roi(x, y, DEFAULT_CROP_WIDTH, DEFAULT_CROP_HEIGHT);
+    new_img = orig(roi);
+
+
+}
+
+void crop_image(const cv::Mat& orig, cv::Mat& new_img)
+{
+    static bool isInited = false;
+
+    if (!isInited) {
+        std::srand(std::time(nullptr)); // use current time as seed for random generator
+        isInited = true;
+    } else {
+        // no need to srand again;
+    }
+
+    int rx = std::rand() % (DEFAULT_WIDTH - DEFAULT_CROP_WIDTH);
+    int base_y = DEFAULT_HEIGHT / 3;    // one-thrid of image
+    int ry = base_y + std::rand() % (DEFAULT_HEIGHT - DEFAULT_CROP_HEIGHT - base_y);
+
+    std::cout << "rx/ry:" << rx << ", " << ry << "\n";
+    crop_image(orig, new_img, rx, ry, DEFAULT_CROP_WIDTH, DEFAULT_CROP_HEIGHT);
+}
 
 
 }   // namespace pbox
