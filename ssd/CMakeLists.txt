@@ -55,8 +55,16 @@ if(APPLY_REALSENSE)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_REALSENSE")
     set(DEPENDENCIES ${DEPENDENCIES} realsense2 gflags ${OpenCV_LIBS})
 
-    link_directories($ENV{HOME}/src/github/librealsense/build)
-    link_directories($ENV{HOME}/src/librealsense/build)
+    set(librealsense_dir "$ENV{HOME}/src/github/librealsense/build")
+    if ( IS_DIRECTORY librealsense_dir )
+        link_directories(librealsense_dir)
+    endif()
+
+    set(librealsense_dir "$ENV{HOME}/src/librealsense/build")
+    if ( IS_DIRECTORY librealsense_dir )
+        link_directories(librealsense_dir)
+    endif()
+
 endif()
 
 if(APPLY_OPENCV_CAPTURE)
