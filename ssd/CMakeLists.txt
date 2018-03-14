@@ -78,6 +78,7 @@ add_executable(
     ${PN}
     ssd_detect_webcam.cpp
     MY_IPC.cpp
+    cvutil.cpp
 )
 
 target_link_libraries(

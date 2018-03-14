@@ -27,6 +27,7 @@
 #include <vector>
 
 #include <pbox/pbox.h>
+#include "cvutil.h"
 #include "MY_IPC.hpp"
 
 #ifdef USE_OPENCV
@@ -63,6 +64,8 @@ using namespace caffe;  // NOLINT(build/namespaces)
 
 #define OUTPUT_SSD_JSON    "/tmp/ssd.json"
 
+bool showDebug = false;
+
 typedef uint8_t byte;
 
 struct mymsgbuf {
@@ -81,7 +84,6 @@ std::string wait_msgq()
     int msgqueue_id;
     struct mymsgbuf qbuf;
     std::string result;
-    bool debug_msg = false;
 
     //key = ftok(MSGQ_FILE, 'm');
     int type = MESSAGE_TYPE;
@@ -89,7 +91,7 @@ std::string wait_msgq()
         perror("msgsnd: msgget");
         return "error"; // error here
     }
-    if (debug_msg)
+    if (showDebug)
       printf("msgq key:0x%08x\n", msgqueue_id);
     while ( true ) {
         qbuf.mtype = MESSAGE_TYPE;
@@ -120,6 +122,7 @@ void remove_msgq()
 
 void remove_shm()
 {
+    if (showDebug)
     printf("%s\n", __func__);
     int shm_id;
     // get id of shm
@@ -205,6 +208,10 @@ public:
       show_fps = pbox::get_int_from_jsonfile(json_file, "show_fps");
       testraw = pbox::get_int_from_jsonfile(json_file, "testraw");
       rawbin_dir = pbox::get_string_from_jsonfile(json_file, "rawbin_dir");
+      test_crop = pbox::get_int_from_jsonfile(json_file, "test_crop");
+      show_debug = pbox::get_int_from_jsonfile(json_file, "show_debug");
+      showDebug = (show_debug!=0);
+      max_crop_try = pbox::get_int_from_jsonfile(json_file, "max_crop_try");
       return true;
     } else {
       fprintf(stderr, "%s\n", "specified json not found...");
@@ -227,6 +234,9 @@ public:
   int show_fps = 1;
   int testraw = 1;
   string rawbin_dir = "/tmp";
+  int test_crop = 0;
+  int show_debug = 0;
+  int max_crop_try = 3;
 };
 
 
@@ -454,7 +464,7 @@ double scale = 0.75;
 int thickness = 2;
 int baseline = 0;
 
-void show_dist(float dist)
+void show_distwin(float dist)
 {
 #ifdef USE_DISTWIN
   // will show dist into another window
@@ -472,9 +482,6 @@ void show_dist(float dist)
   }
   putText(img, str, Point(10, 100), fontface, sz, c);
   imshow(DIST_WINDOW, img);
-#else
-  // just print out into log
-  pbox::mylog("ssd", "show_dist: %.2f", dist);
 #endif
 }
 
@@ -557,13 +564,17 @@ float query_dist_from_detection_box(const std::vector< std::vector<float> >& det
 
 
 std::string show_detection_box(cv::Mat& cv_img,
+                        bool hasCrop, cv::Mat& crop_img,
                         const std::vector< std::vector<float> >& detections,
-                        bool query_distance=false)
+                        bool query_distance=false, int rx=0, int ry=0)
 {
-  char buffer[BUFFER_SIZE];
+  char buffer[BUFFER_SIZE] = {0};
   int detected = 0;
-  bool is_dog = false;
-  //printf("%s\n", __func__);
+  bool hasDog = false;
+
+  if (showDebug)
+  printf("%s\n", __func__);
+
   for (size_t i = 0; i < detections.size(); ++i) {
     const vector<float>& d = detections[i];
     // Detection format: [image_id, label, score, xmin, ymin, xmax, ymax].
@@ -571,32 +582,68 @@ std::string show_detection_box(cv::Mat& cv_img,
     const int label = int(d[1]);
     const float score = d[2];
 
-    const int box_x1 = static_cast<int>(d[3] * cv_img.cols) ;
-    const int box_y1 = static_cast<int>(d[4] * cv_img.rows) ;
-    const int box_x2 = static_cast<int>(d[5] * cv_img.cols) ;
-    const int box_y2 = static_cast<int>(d[6] * cv_img.rows) ;
+    int cols;
+    int rows;
+    int x1, x2;
+    int y1, y2;
+    int box_x1, box_x2;
+    int box_y1, box_y2;
+
+    bool hasDog = pbox::is_dog(label);
+    bool hasPerson = pbox::is_person(label);
+
+    if (hasCrop) {
+      cols = crop_img.cols;
+      rows = crop_img.rows;
+    } else {
+      cols = cv_img.cols;
+      rows = cv_img.rows;
+    }
+
+    x1 = static_cast<int>(d[3] * cols);
+    y1 = static_cast<int>(d[4] * rows);
+    x2 = static_cast<int>(d[5] * cols);
+    y2 = static_cast<int>(d[6] * rows);
+
+    if (hasCrop) {
+      box_x1 = rx + x1;
+      box_x2 = rx + x2;
+      box_y1 = ry + y1;
+      box_y2 = ry + y2;
+    } else {
+      box_x1 = x1;
+      box_x2 = x2;
+      box_y1 = y1;
+      box_y2 = y2;
+    }
 
     float dist = 0.0;
+    const cv::Scalar& color = cv::Scalar( 255, 255, 255 );
 
-    if (score >= settings.confidence_threshold) {
+    if ( score >= settings.confidence_threshold
+         && (hasDog || hasPerson) ) {
 
-      if (pbox::is_dog(label)) {
-        is_dog = true;
+      if (showDebug) {
+        printf("from: c%dr%d_%d %d %d %d\n", cols, rows, box_x1, box_x2, box_y1, box_y2);
       }
-      if (is_dog || pbox::is_person(label)) {
 
-        detected ++;
-        // Detection format: [image_id, label, score, xmin, ymin, xmax, ymax].
-        const cv::Scalar& color = cv::Scalar( 255, 255, 255 );
+      detected ++;
 
-        if (settings.direct_use_realsense && query_distance) {
+//
+// Detection format: [image_id, label, score, xmin, ymin, xmax, ymax].
+//
+
+        int ww = box_x2 - box_x1;
+        int hh = box_y2 - box_y1;
+
+        if (settings.direct_use_realsense || query_distance) {
           int qx = box_x1 + (box_x2 - box_x1) / 2;
           int qy = box_y1 + (box_y2 - box_y1) / 2;
-          if (settings.direct_use_realsense) {
-            dist = pbox::get_dist_from_point(qx, qy);
-            pbox::draw_aim(cv_img, box_x1, box_y1, (box_x2 - box_x1), (box_y2 - box_y1));
-            show_dist(dist);
-          }
+          //if (settings.direct_use_realsense) {
+          dist = pbox::get_dist_from_point(qx, qy);
+          pbox::draw_aim(cv_img, box_x1, box_y1, ww, hh);
+          show_distwin(dist);
+          //}
         }
 
         //draw box
@@ -619,18 +666,22 @@ std::string show_detection_box(cv::Mat& cv_img,
             color, CV_FILLED);
         cv::putText(cv_img, buffer, bottom_left_pt - cv::Point(0, baseline),
             fontface, scale, CV_RGB(0, 0, 0), thickness, 8);
-      }
     }
   }
 
+  if (strlen(buffer)) {
+    printf("%s\n", buffer);
+  }
+
   std::string r;
-  if (is_dog) {
+  if (hasDog) {
     r = "dog";
   } else if (detected) {
-    r = std::string("detected: " + std::to_string(detected));
+    r = buffer;
   }
   return r;
 }
+
 
 bool load_bin_to_buffer(const char* fn, uint8_t* buffer, size_t buffer_size)
 {
@@ -658,7 +709,6 @@ uint16_t get_dpeth_pt(uint16_t* buffer, int x, int y)
 
 int main(int argc, char** argv)
 {
-  signal(SIGINT, my_handle_ctrlc);
 
   //::google::InitGoogleLogging(argv[0]);
   // Print output to stderr (while still logging)
@@ -681,32 +731,34 @@ int main(int argc, char** argv)
       pbox::mylog("ssd", "read settings finished\n");
     } else {
       pbox::mylog("ssd", "read settings failed\n");
-      exit(-1);
+      return __LINE__;
     }
   } else if (argc < 7) {
     //gflags::ShowUsageWithFlagsRestrict(argv[0], "examples/ssd/ssd_detect");
     pbox::mylog("ssd", "insufficient number of arguments\n");
-    exit(-1);
+    return __LINE__;
   } else {
     // will use arguments from cli
     if ( settings.fill_values(argc, argv) ) {
       pbox::mylog("ssd", "%s\n", "settings.fill_values ok");
     } else {
       pbox::mylog("ssd", "%s\n", "settings.fill_values failed");
-      exit(-1);
+      return __LINE__;
     }
   }
 
+  signal(SIGINT, my_handle_ctrlc);
 
   const string& mean_file = FLAGS_mean_file;
   const string& mean_value = FLAGS_mean_value;
-  const string& out_file = FLAGS_out_file;
 
   pbox::mylog("ssd", "start init Detector...\n");
   // Initialize the network.
   Detector detector(settings.model_file, settings.weights_file, mean_file, mean_value);
   pbox::mylog("ssd", "end init Detector...\n");
 
+#if 0
+  const string& out_file = FLAGS_out_file;
   // Set the output mode.
   std::streambuf* buf = std::cout.rdbuf();
   std::ofstream outfile;
@@ -717,10 +769,12 @@ int main(int argc, char** argv)
     }
   }
   std::ostream out(buf);
+#endif
 
     if (settings.file_type == "image") {
 
       // Process image one by one.
+      cv::Mat p;
       while (true) {
         cv::Mat cv_img = cv::imread(argv[7], -1);
         CHECK(!cv_img.empty()) << "Unable to decode image " << argv[7];
@@ -729,7 +783,7 @@ int main(int argc, char** argv)
         std::vector<vector<float> > detections = detector.Detect(cv_img);
         tm.stop();
         // draw detected box
-        show_detection_box(cv_img, detections, false);
+        show_detection_box(cv_img, false, p, detections, false);
         //show fps
         if ( settings.show_fps && !show_fps(cv_img, tm.getTimeMilli()) ) {
           break;
@@ -895,37 +949,76 @@ IPC_Put_TAG_INT32("dog_warning", 0)
           continue;
         }
 
-        //printf("col: %d, row: %d\n", cv_img.cols, cv_img.rows);
         cv::TickMeter tm;
-        tm.start();
-        std::vector<vector<float> > detections = detector.Detect(cv_img);
-        tm.stop();
+        int img_try = 0;
+        const cv::Mat original_img = cv_img;
+        int rx = 0;
+        int ry = 0;
+        bool isCrop = false;
 
-        v.push_back("take time: " + std::to_string(tm.getTimeMilli()));
+        do {
+          if (showDebug)
+          printf("col: %d, row: %d\n", cv_img.cols, cv_img.rows);
 
-        // show detection result
-        std::string r;
-        if (settings.do_imshow) {
-          r = show_detection_box(cv_img, detections, hasRealsenseOn);
-          if (r != "") {
-            imshow(DETECTION_WIN, cv_img);
+          tm.start();
+          std::vector<vector<float> > detections = detector.Detect(cv_img);
+          tm.stop();
+
+          //v.push_back("take time: " + std::to_string(tm.getTimeMilli()));
+
+          // show detection result
+          std::string r;
+          {
+            // use gui to show results
+            cv::Mat result_img = original_img.clone();
+            if (isCrop) {
+              cv::Mat partial_img = cv_img.clone();
+              //printf("=====> rx:%d ry:%d\n", rx, ry);
+              r = show_detection_box(result_img, isCrop, partial_img, detections, hasRealsenseOn, rx, ry);
+              rx = 0;
+              ry = 0;
+              isCrop = false;
+              // if (settings.do_imshow) {
+              //   imshow("cooo", cv_img);
+              // }
+            } else {
+              cv::Mat p;
+              r = show_detection_box(result_img, false, p, detections, hasRealsenseOn);
+            }
+
+            if (r != "") {
+              if (settings.do_imshow) {
+                imshow(DETECTION_WIN, result_img);
+              }
+              // show fps
+              if ( settings.show_fps) {
+                show_fps(result_img, tm.getTimeMilli());
+              }
+            }
           }
-        } else {
-          r = pbox::output_detections(ofn, detections, cv_img.cols, cv_img.rows);
-          v.push_back(r);
-        }
-        if (r == "dog") {
-          ipc->IPC_Put_TAG_INT32("dog_warning", 1);
-          std::cout << "=====>" << r << "!!!!!!!\n";
-        } else {
-          //ipc->IPC_Put_TAG_INT32("dog_warning", 0);
-        }
+
+          //if (showDebug)
+          //pbox::mylog("ssd", "[%d] msg...", __LINE__);
+          if ( r != "" ) {
+            if (r == "dog") {
+              if (settings.wait_myipc) {
+                ipc->IPC_Put_TAG_INT32("dog_warning", 1);
+              }
+              std::cout << "=====>" << r << "!!!!!!!\n";
+            }
+            break;
+          } else {
+            if (showDebug)
+            pbox::mylog("ssd", "img_try: %d", img_try);
+            img_try ++;
+            isCrop = true;
+            pbox::crop_image(original_img, cv_img, rx, ry,
+                             false /*settings.do_imshow*/);
+          }
+        } while ( img_try < settings.max_crop_try );
+
         //query_dist_from_detection_box(detections, cv_img.cols, cv_img.rows);
 
-        // show fps
-        if ( settings.show_fps && settings.do_imshow) {
-          show_fps(cv_img, tm.getTimeMilli());
-        }
         int k = cv::waitKey(1);
         if (k == 27 || k == 'q') {
           break;
@@ -935,7 +1028,7 @@ IPC_Put_TAG_INT32("dog_warning", 0)
       v.push_back("break at " + pbox::get_timestring());
       pbox::output_status(OUTPUT_SSD_JSON, v);
 
-    }
+    } // REALSENSE if (settings.file_type == "realsense")
 #ifdef USE_OPENCV_CAPTURE
     else if (settings.file_type == "webcam") {
       cv::VideoCapture cap;

@@ -11,7 +11,10 @@
     "wait_myipc": 0,
     "wait_myipc_tag": "photo_index",
     "do_imshow": 1,
-    "show_fps": 1,
+    "show_fps": 0,
     "testraw": 0,
-    "rawbin_dir": "/tmp"
+    "rawbin_dir": "/tmp",
+    "test_crop": 0,
+    "show_debug": 0,
+    "max_crop_try": 3
 }
