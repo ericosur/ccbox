@@ -63,7 +63,7 @@ std::string get_label_name(int label_id);
 std::string output_detections(const std::string& ofn, const std::vector< std::vector<float> >& detections, int img_cols, int img_rows);
 
 void init_realsense();
-float get_dist_from_point(int x, int y);
+int get_dist_from_point(int x, int y);
 bool get_color_mat(cv::Mat& image);
 int get_color_mat_from_realsense(cv::Mat& image);
 int test_realsense();

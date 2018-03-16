@@ -102,13 +102,15 @@ void init_realsense()
     }
 }
 
-float get_dist_from_point(int x, int y)
+int get_dist_from_point(int x, int y)
 {
-    float dist = 0.0;
+    float _dist = 0.0;
     //printf("try to %s\n", __func__);
     // get distance of center point
-    dist = g_data.get_depth_frame().get_distance(x, y);
-    return dist;
+    _dist = g_data.get_depth_frame().get_distance(x, y);
+    _dist = _dist * 100.0;  // make it as cm
+    int ret = (int)_dist;
+    return ret;
 }
 
 
