@@ -55,7 +55,6 @@ void crop_image(const cv::Mat& orig, cv::Mat& new_img, int& rx, int& ry,
     bool do_imshow=false)
 {
     static bool isInited = false;
-    bool bShowDebug = false;
 
     if (!isInited) {
         std::srand(std::time(nullptr)); // use current time as seed for random generator
