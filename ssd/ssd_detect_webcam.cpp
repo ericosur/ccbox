@@ -387,7 +387,7 @@ float query_dist_from_detection_box(const std::vector< std::vector<float> >& det
     const int box_x2 = static_cast<int>(d[5] * img_cols) ;
     const int box_y2 = static_cast<int>(d[6] * img_rows) ;
     float dist = 0.0;
-    if (score >= settings.confidence_threshold && pbox::isInterestedLabel(label)) {
+    if (score >= settings.confidence_threshold && (is_dog(label) || is_person(label))) {
       // Detection format: [image_id, label, score, xmin, ymin, xmax, ymax].
       int qx = box_x1 + (box_x2 - box_x1) / 2;
       int qy = box_y1 + (box_y2 - box_y1) / 2;
@@ -610,7 +610,6 @@ void issue_man_alert(int dist)
 
 int main(int argc, char** argv)
 {
-  return 0;
 
   //::google::InitGoogleLogging(argv[0]);
   // Print output to stderr (while still logging)
@@ -721,6 +720,10 @@ int main(int argc, char** argv)
           return 1;
         }
       }
+#endif
+
+#ifdef USE_REALSENSE
+      bool hasRealsenseOn = false;
 #endif
 
       while (true) {

@@ -12,6 +12,7 @@
     "wait_myipc_tag": "photo_index",
     "dog_warning_tag": "dog_warning",
     "audience_vol_tag": "audience_vol",
+    "volume_adjust_tag": "volume_adjust",
     "do_imshow": 1,
     "show_fps": 0,
     "testraw": 0,

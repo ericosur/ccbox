@@ -42,8 +42,8 @@ message(${caffe_root}/external/mkldnn/install/lib)
 find_package( OpenCV REQUIRED )
 set(DEPENDENCIES libboost_system.so gflags glog ${OpenCV_LIBS})
 
-set(APPLY_REALSENSE        0)
-set(APPLY_MYIPC            0)
+set(APPLY_REALSENSE        1)
+set(APPLY_MYIPC            1)
 
 
 
