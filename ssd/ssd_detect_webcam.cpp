@@ -30,8 +30,9 @@
 #include "cvutil.h"
 #include "ssd_setting.h"
 #include "MY_IPC.hpp"
+#include "ssdutil.h"
+#include "shmutil.h"
 
-#ifdef USE_OPENCV
 using namespace caffe;  // NOLINT(build/namespaces)
 
 //#define USE_DISTWIN
@@ -41,33 +42,25 @@ using namespace caffe;  // NOLINT(build/namespaces)
 
 #define DETECTION_WIN "detections"
 
-#define NO_REALSENSE
-#define RASMUS_HACK
 
-#ifdef RASMUS_HACK
-
-#ifdef USE_OPENCV_CAPTURE
-#error should not use opencv VideoCapture
-#endif
-
-#include <sys/ipc.h>
-#include <sys/shm.h>
-#include <sys/msg.h>
-#include <sys/types.h>
 #include <signal.h>
-
-#define MAX_SEND_SIZE           512
-#define MESSAGE_TYPE       9
-#define MESGQKEY        0x6789CAFE
-
-#define MAX_BUFFER_SIZE   (640*480*3)
-#define SHMKEY  0x0111C0DE
 
 #define OUTPUT_SSD_JSON    "/tmp/ssd.json"
 
+//#define USE_MYIPC
+
 bool showDebug = false;
+
 SsdSetting settings;
+
+#ifdef USE_MYIPC
 MY_IPC *ipc = NULL;
+#endif
+
+void issue_dog_alert();
+void issue_man_alert(int dist);
+
+
 const int max_width = 640;
 const int max_height = 480;
 const int rgb_byte = 3;
@@ -76,81 +69,10 @@ const int dep_buffer_size = max_width*max_height*2; // UINT16, 2bytes
 uint8_t rgb_buffer[rgb_buffer_size];
 uint8_t dep_buffer[dep_buffer_size];
 
-void issue_dog_alert();
-void issue_man_alert(int dist);
+
 int get_dpeth_pt(uint8_t* buffer, int x, int y);
 
-typedef uint8_t byte;
 
-struct mymsgbuf {
-    long mtype;
-    char mtext[MAX_SEND_SIZE];
-};
-
-struct shm_st {
-    uint32_t size;
-    byte buffer[MAX_BUFFER_SIZE];
-};
-
-std::string wait_msgq()
-{
-    key_t key = MESGQKEY;
-    int msgqueue_id;
-    struct mymsgbuf qbuf;
-    std::string result;
-
-    //key = ftok(MSGQ_FILE, 'm');
-    int type = MESSAGE_TYPE;
-    if((msgqueue_id = msgget(key, IPC_CREAT|0660)) == -1) {
-        perror("msgsnd: msgget");
-        return "error"; // error here
-    }
-    if (showDebug)
-      printf("msgq key:0x%08x\n", msgqueue_id);
-    while ( true ) {
-        qbuf.mtype = MESSAGE_TYPE;
-        int ret = msgrcv(msgqueue_id, (struct mymsgbuf *)&qbuf, MAX_SEND_SIZE, type, 0);
-        if (ret > 0) {
-          printf("recv text: %s\n", qbuf.mtext);
-          result = qbuf.mtext;
-          break;
-        }
-        usleep(250*1000);
-    }
-    return result;
-}
-
-void remove_msgq()
-{
-    int msg_id = msgget(MESGQKEY, IPC_EXCL|0660);
-    if(msg_id == -1) {
-        //perror("msgget");
-        // and exit...
-    } else if (msgctl(msg_id, IPC_RMID, NULL) == -1) {
-        perror("msgctl");
-        // and exit...
-    } else {
-      std::cerr << "msgq used by ssd is removed\n";
-    }
-}
-
-void remove_shm()
-{
-    if (showDebug)
-    printf("%s\n", __func__);
-    int shm_id;
-    // get id of shm
-    shm_id = shmget((key_t)SHMKEY, sizeof(shm_st), 0600 | IPC_EXCL);
-    if (shm_id == -1) {
-        perror("shmget");
-        return;
-    }
-    // destroy shared memory
-    if (shmctl(shm_id, IPC_RMID, 0) == -1) {
-        perror("shmctl");
-        return;
-    }
-}
 
 void my_handle_ctrlc(int s)
 {
@@ -158,35 +80,6 @@ void my_handle_ctrlc(int s)
   remove_msgq();
   exit(1);
 }
-
-bool read_from_shm(uint32_t& size, void* buffer)
-{
-    int shm_id;
-    shm_st *st;
-    // get the ID of shared memory,
-    // fail if specified shmem not created
-    shm_id = shmget((key_t)SHMKEY, sizeof(shm_st), 0600 | IPC_CREAT);
-    if (shm_id == -1) {
-        perror("shmget");
-        return false;
-    }
-    // attach shared memory
-    st = (shm_st*)shmat(shm_id, (void *)0, 0);
-    if (st == (void *)-1) {
-        perror("shmget");
-        return false;
-    }
-    size = st->size;
-    memcpy(buffer, st->buffer, size);
-    // detach shared memory
-    if (shmdt(st) == -1) {
-        perror("shmdt");
-        return false;
-    }
-    return true;
-}
-
-#endif // rasmus_hack
 
 
 
@@ -408,9 +301,9 @@ DEFINE_int32(device_id, 2,
 // rasmus hack, global variables
 const int BUFFER_SIZE = 100;
 
-int fontface = cv::FONT_HERSHEY_SIMPLEX;
-double scale = 0.75;
-int thickness = 2;
+//int fontface = cv::FONT_HERSHEY_SIMPLEX;
+//double scale = 0.75;
+//int thickness = 2;
 int baseline = 0;
 
 void show_distwin(float dist)
@@ -477,7 +370,7 @@ bool show_fps(cv::Mat& cv_img, double elapsed_time)
 }
 
 
-#ifndef NO_REALSENSE
+#ifdef USE_REALSENSE
 float query_dist_from_detection_box(const std::vector< std::vector<float> >& detections,
                                     int img_cols, int img_rows)
 {
@@ -509,7 +402,7 @@ float query_dist_from_detection_box(const std::vector< std::vector<float> >& det
   }
   return tmp;
 }
-#endif  // NO_REALSENSE
+#endif  // USE_REALSENSE
 
 
 std::string show_detection_box(cv::Mat& cv_img,
@@ -537,8 +430,8 @@ std::string show_detection_box(cv::Mat& cv_img,
     int x1, x2, y1, y2;
     int box_x1, box_x2, box_y1, box_y2;
 
-    hasDog = pbox::is_dog(label);
-    hasPerson = pbox::is_person(label);
+    hasDog = is_dog(label);
+    hasPerson = is_person(label);
 
     if (hasCrop) {
       cols = crop_img.cols;
@@ -583,11 +476,19 @@ std::string show_detection_box(cv::Mat& cv_img,
       const int qx = box_x1 + ww / 2;
       const int qy = box_y1 + hh / 2;
 
+#ifdef USE_REALSENSE
       if (settings.direct_use_realsense) {
         dist = pbox::get_dist_from_point(qx, qy);
-      } else {
+      }
+#elif defined(USE_MYIPC)
+      else {
         dist = get_dpeth_pt(dep_buffer, qx, qy);
       }
+#else
+      (void)qx;
+      (void)qy;
+      dist = 0;
+#endif
 
       if (hasDog) {
         issue_dog_alert();
@@ -596,7 +497,7 @@ std::string show_detection_box(cv::Mat& cv_img,
         issue_man_alert(dist);
       }
 
-      pbox::draw_aim(cv_img, box_x1, box_y1, ww, hh);
+      draw_aim(cv_img, box_x1, box_y1, ww, hh);
       show_distwin(dist);
 
       //draw box
@@ -607,7 +508,7 @@ std::string show_detection_box(cv::Mat& cv_img,
       cv::rectangle(cv_img, top_left_pt, bottom_right_pt, color, 4);
 
       snprintf(buffer, sizeof(buffer), "%s: %d, %.2f",
-               pbox::get_label_name(label).c_str(), dist, score);
+               get_label_name(label).c_str(), dist, score);
 
       cv::Size text = cv::getTextSize(buffer, fontface, scale, thickness, &baseline);
 
@@ -667,13 +568,18 @@ int get_dpeth_pt(uint8_t* buffer, int x, int y)
 
 void issue_dog_alert()
 {
+#ifdef USE_MYIPC
   if (settings.wait_myipc) {
     if (ipc != NULL) {
       ipc->IPC_Put_TAG_INT32(settings.dog_warning_tag.c_str(), 1);
     }
   }
   std::cout << "=====>" << settings.dog_warning_tag << " !!!!!\n";
+#else
+  pbox::mylog("ssd", "%s: dog detected !!!!", __func__);
+#endif
 }
+
 
 // dist in cm
 void issue_man_alert(int dist)
@@ -691,15 +597,20 @@ void issue_man_alert(int dist)
   //if (settings.show_debug) {
     pbox::mylog("man_alert", "dist:%d,vol=%d", dist, vol);
   //}
+#ifdef USE_MYIPC
   if (settings.wait_myipc) {
     if (ipc != NULL && vol != 0) {
       ipc->IPC_Put_TAG_INT32(settings.audience_vol_tag.c_str(), vol);
+      ipc->IPC_Put_TAG_INT32(settings.volume_adjust_tag.c_str(), 1);
     }
   }
+#endif  // USE_MYIPC
 }
+
 
 int main(int argc, char** argv)
 {
+  return 0;
 
   //::google::InitGoogleLogging(argv[0]);
   // Print output to stderr (while still logging)
@@ -749,6 +660,7 @@ int main(int argc, char** argv)
   // Initialize the network.
   Detector detector(settings.model_file, settings.weights_file, mean_file, mean_value);
   pbox::mylog("ssd", "end init Detector...\n");
+  settings.recordlog("end init Detector...\n");
 
 #if 0
   const string& out_file = FLAGS_out_file;
@@ -783,52 +695,6 @@ int main(int argc, char** argv)
         }
       }
     }
-#ifdef USE_OPENCV_CAPTURE
-    else if (settings.file_type == "video") {
-      // Process image one by one.
-      std::ifstream infile(argv[3]);
-      std::string file;
-      while (infile >> file) {
-        cv::VideoCapture cap(file);
-        if (!cap.isOpened()) {
-          LOG(FATAL) << "Failed to open video: " << file;
-        }
-        cv::Mat img;
-        int frame_count = 0;
-        while (true) {
-          bool success = cap.read(img);
-          if (!success) {
-            LOG(INFO) << "Process " << frame_count << " frames from " << file;
-            break;
-          }
-          CHECK(!img.empty()) << "Error when read frame";
-          std::vector<vector<float> > detections = detector.Detect(img);
-
-          /* Print the detection results. */
-          for (int i = 0; i < detections.size(); ++i) {
-            const vector<float>& d = detections[i];
-            // Detection format: [image_id, label, score, xmin, ymin, xmax, ymax].
-            CHECK_EQ(d.size(), 7);
-            const float score = d[2];
-            if (score >= settings.confidence_threshold) {
-              out << file << "_";
-              out << std::setfill('0') << std::setw(6) << frame_count << " ";
-              out << static_cast<int>(d[1]) << " ";
-              out << score << " ";
-              out << static_cast<int>(d[3] * img.cols) << " ";
-              out << static_cast<int>(d[4] * img.rows) << " ";
-              out << static_cast<int>(d[5] * img.cols) << " ";
-              out << static_cast<int>(d[6] * img.rows) << std::endl;
-            }
-          }
-          ++frame_count;
-        }
-        if (cap.isOpened()) {
-          cap.release();
-        }
-      }
-    }
-#endif  // USE_OPENCV_CAPTURE
     else if (settings.file_type == "realsense") {
       //cv::Mat cv_img = cv::Mat::zeros(640,480,CV_8UC3);
       //remove_shm();
@@ -837,7 +703,6 @@ int main(int argc, char** argv)
       char rgbfn[max_fnlen];
       char depfn[max_fnlen];
       std::string cmd;
-      bool hasRealsenseOn = false;
       std::string ofn;
       const std::string default_img_fn = "/tmp/rs.png";
 
@@ -845,9 +710,10 @@ int main(int argc, char** argv)
       //uint32_t readsize = 0;
       //byte buffer[MAX_BUFFER_SIZE];
       std::vector<std::string> v;
-      int img_idx = 0;
+      //int img_idx = 0;
       using namespace pbox;
 
+#ifdef USE_MYIPC
       if (settings.wait_myipc) {
         ipc = MY_IPC::MY_IPC_GetInstance();
         if (ipc == NULL) {
@@ -855,6 +721,7 @@ int main(int argc, char** argv)
           return 1;
         }
       }
+#endif
 
       while (true) {
         cv::Mat cv_img;
@@ -878,7 +745,9 @@ int main(int argc, char** argv)
             v.clear();
             v.push_back("wait for msgq");
 
-          } else if (settings.wait_myipc) { // use MY IPC as IPC
+          }
+#ifdef USE_MYIPC
+          else if (settings.wait_myipc) { // use MY IPC as IPC
             cmd = "myipc";
             // will block here
             if (ipc != NULL) {
@@ -890,6 +759,7 @@ int main(int argc, char** argv)
               printf("wait_myipc: got %d\tfn: %s\t%s\n", img_idx, rgbfn, depfn);
             }
           }
+#endif  // USE_MYIPC
           //printf("[%d] IPC cmd: %s\n", __LINE__, cmd.c_str());
           //printf("here rgbfn: %s\ndepfn: %s\n", rgbfn, depfn);
         }
@@ -898,7 +768,9 @@ int main(int argc, char** argv)
           printf("exit...\n");
           v.push_back("got quit @" + pbox::get_timestring());
           break;
-        } else if (settings.direct_use_realsense) {
+        }
+#ifdef USE_REALSENSE
+        else if (settings.direct_use_realsense) {
           v.clear();
           v.push_back(cmd);
 
@@ -913,7 +785,9 @@ int main(int argc, char** argv)
 
           pbox::get_color_mat_from_realsense(cv_img);
           pbox::output_status(OUTPUT_SSD_JSON, v);
-        } else if (pbox::is_file_exist(rgbfn)) {
+        }
+#endif// USE_REALSENSE
+        else if (pbox::is_file_exist(rgbfn)) {
           //printf("rgbfn: %s\n", rgbfn);
           v.clear();
           v.push_back("read from " + std::string(rgbfn));
@@ -998,7 +872,7 @@ int main(int argc, char** argv)
             pbox::mylog("ssd", "img_try: %d", img_try);
           img_try ++;
           isCrop = true;
-          pbox::crop_image(original_img, cv_img, rx, ry,
+          crop_image(original_img, cv_img, rx, ry,
                            false /*settings.do_imshow*/);
 
         } while ( img_try < settings.max_crop_try );
@@ -1035,7 +909,8 @@ int main(int argc, char** argv)
         std::vector<vector<float> > detections = detector.Detect(cv_img);
         tm.stop();
         // draw detected box
-        show_detection_box(cv_img, detections);
+        cv::Mat p;
+        show_detection_box(cv_img, false, p, detections);
         // show fps
         if ( settings.show_fps && !show_fps(cv_img, tm.getTimeMilli()) ) {
           break;
@@ -1051,8 +926,3 @@ int main(int argc, char** argv)
 
   return 0;
 }
-#else
-int main(int argc, char** argv) {
-  LOG(FATAL) << "This example requires OpenCV; compile with USE_OPENCV.";
-}
-#endif  // USE_OPENCV

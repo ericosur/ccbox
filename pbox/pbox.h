@@ -4,12 +4,11 @@
 #include <string>
 #include <vector>
 
-#ifdef USE_REALSENSE
+#ifdef USE_OPENCV
 #include <opencv2/opencv.hpp>   // Include OpenCV API
 #endif
 
 namespace pbox {
-
 
 std::string get_home();
 
@@ -22,20 +21,23 @@ void dump_jsonfile(const std::string& fn);
 std::vector<std::string> get_vector_from_jsonfile(const std::string& fn,
                                                   std::vector<std::string> keys);
 
-std::string get_string_from_jsonfile(const std::string& fn, const std::string& key);
+std::string get_string_from_jsonfile(const std::string& fn,
+                                     const std::string& key,
+                                     const std::string& default_value = "");
 
 double get_double_from_jsonfile(const std::string& fn,
                                 std::vector<std::string> keys);
 
 double get_double_from_jsonfile(const std::string& fn,
-                                const std::string& key);
+                                const std::string& key,
+                                const double default_value = 0.0);
 
 int get_int_from_jsonfile(const std::string& fn,
                           std::vector<std::string> keys);
 
 int get_int_from_jsonfile(const std::string& fn,
                           const std::string& key,
-                          int _default=0);
+                          const int default_value = 0);
 
 template<class T>
 bool get_value_from_jsonfile(const std::string& json_file,
@@ -57,9 +59,6 @@ void output_status(const std::string& ofn, const std::vector<std::string>& v);
 
 #ifdef USE_REALSENSE
 
-bool is_dog(int label_id);
-bool is_person(int label_id);
-std::string get_label_name(int label_id);
 std::string output_detections(const std::string& ofn, const std::vector< std::vector<float> >& detections, int img_cols, int img_rows);
 
 void init_realsense();
@@ -67,8 +66,11 @@ int get_dist_from_point(int x, int y);
 bool get_color_mat(cv::Mat& image);
 int get_color_mat_from_realsense(cv::Mat& image);
 int test_realsense();
-void draw_aim(cv::Mat& img, int x, int y, int w, int h);
 
+#endif
+
+#ifdef USE_OPENCV
+void draw_aim(cv::Mat& img, int x, int y, int w, int h);
 #endif
 
 }   // namespace pbox

@@ -288,10 +288,9 @@ int get_int_from_jsonfile(const std::string& fn,
 
 int get_int_from_jsonfile(const std::string& fn,
                           const std::string& key,
-                          int _default)
+                          const int default_value)
 {
     json j;
-    int empty = _default;
     try {
         if (get_json_from_file(fn, j)) {
             return j.at(key).get<int>();
@@ -303,7 +302,7 @@ int get_int_from_jsonfile(const std::string& fn,
     } catch (json::out_of_range& e) {
         cout << "[get_vector_from_json] out of range:" << e.what() << endl;
     }
-    return empty;
+    return default_value;
 }
 
 double get_double_from_jsonfile(const std::string& fn,
@@ -318,9 +317,10 @@ double get_double_from_jsonfile(const std::string& fn,
     }
 }
 
-double get_double_from_jsonfile(const std::string& fn, const std::string& key)
+double get_double_from_jsonfile(const std::string& fn,
+                                const std::string& key,
+                                const double default_value)
 {
-    double empty = 0.0;
     try {
         json j;
         if (get_json_from_file(fn, j)) {
@@ -333,19 +333,19 @@ double get_double_from_jsonfile(const std::string& fn, const std::string& key)
     } catch (json::out_of_range& e) {
         cout << "[get_vector_from_json] out of range:" << e.what() << endl;
     }
-    return empty;
+    return default_value;
 }
 
 
 std::string get_string_from_jsonfile(const std::string& fn,
-                                     const std::string& key)
+                                     const std::string& key,
+                                     const std::string& default_value)
 {
     json j;
-    std::string empty;
     if (get_json_from_file(fn, j)) {
         return get_string_from_json(j, key);
     } else {
-        return empty;
+        return default_value;
     }
 }
 
@@ -495,44 +495,6 @@ void test_addon()
     }
 }
 
-bool is_dog(int label_id)
-{
-    if (label_id == 8 || label_id == 12) {
-        return true;
-    } else {
-        return false;
-    }
-}
-
-bool is_person(int label_id)
-{
-    // person
-    if (label_id == 15) {
-        return true;
-    } else {
-        return false;
-    }
-}
-
-std::string get_label_name(int label_id)
-{
-  std::string result;
-  switch (label_id) {
-    case 8: // cat
-      result = "dog";
-      break;
-    case 12:  // dog
-      result = "dog";
-      break;
-    case 15:  // person
-      result = "man";
-      break;
-    default:
-      result = "null";
-      break;
-  }
-  return result;
-}
 
 void output_status(const std::string& ofn, const std::vector<std::string>& v)
 {

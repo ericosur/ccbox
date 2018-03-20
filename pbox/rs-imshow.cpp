@@ -102,6 +102,7 @@ void init_realsense()
     }
 }
 
+// need realsense
 int get_dist_from_point(int x, int y)
 {
     float _dist = 0.0;

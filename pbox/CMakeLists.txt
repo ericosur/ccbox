@@ -29,6 +29,7 @@ if(APPLY_REALSENSE)
         message("apply intel realsense2")
         #include_directories()
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_REALSENSE")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_OPENCV")
         find_package( OpenCV REQUIRED )
         set(DEPENDENCIES realsense2 ${OpenCV_LIBS})
 

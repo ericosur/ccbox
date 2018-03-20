@@ -7,9 +7,20 @@
 #define DEFAULT_CROP_WIDTH      240
 #define DEFAULT_CROP_HEIGHT     240
 
-namespace pbox {
+void draw_aim(cv::Mat& img, int x, int y, int w, int h)
+{
+    using namespace cv;
 
-int baseline = 0;
+    const int radius = 30;
+    const int tail = 5;
+    Scalar white = Scalar(255, 255, 255);
+    int cx = x + w/2;
+    int cy = y + h/2;
+
+    circle(img, Point(cx, cy), radius, white, thickness);
+    line(img, Point(cx-radius-tail, cy), Point(cx+radius+tail, cy), white, thickness);
+    line(img, Point(cx, cy-radius-tail), Point(cx, cy+radius+tail), white, thickness);
+}
 
 void draw_aim(cv::Mat& img, int w, int h)
 {
@@ -32,6 +43,7 @@ void draw_dist(cv::Mat& img, float dist)
     const int buffer_size = 128;
     using namespace cv;
     char buffer[buffer_size];
+    int baseline = 0;
 
     snprintf(buffer, buffer_size, "dist: %.3fm", dist);
     cv::Size text = cv::getTextSize(buffer, fontface, scale, thickness, &baseline);
@@ -80,5 +92,3 @@ void crop_image(const cv::Mat& orig, cv::Mat& new_img, int& rx, int& ry,
 
 }
 
-
-}   // namespace pbox

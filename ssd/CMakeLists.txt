@@ -39,13 +39,12 @@ link_directories(${caffe_root}/external//mkldnn/install/lib)
 link_directories(${caffe_root}/external/mkl/mklml_lnx_2018.0.1.20171227/lib)
 message(${caffe_root}/external/mkldnn/install/lib)
 
-set(DEPENDENCIES libboost_system.so gflags glog)
-
-set(APPLY_REALSENSE        1)
-set(APPLY_OPENCV_CAPTURE   0)
-
 find_package( OpenCV REQUIRED )
-#find_package( gflags REQUIRED )
+set(DEPENDENCIES libboost_system.so gflags glog ${OpenCV_LIBS})
+
+set(APPLY_REALSENSE        0)
+set(APPLY_MYIPC            0)
+
 
 
 # realsense2
@@ -65,21 +64,29 @@ if(APPLY_REALSENSE)
         link_directories(librealsense_dir)
     endif()
 
-endif()
+else()
 
-if(APPLY_OPENCV_CAPTURE)
     message("apply opencv video capturing")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_OPENCV_CAPTURE")
+
 endif()
+
+
+if(APPLY_MYIPC)
+    set(EXTRA_SOURCE    "MY_IPC.cpp")
+endif()
+
 
 message("DEPENDENCIES: ${DEPENDENCIES}")
 
 add_executable(
     ${PN}
     ssd_detect_webcam.cpp
-    MY_IPC.cpp
     cvutil.cpp
     ssd_setting.cpp
+    ssdutil.cpp
+    shmutil.cpp
+    ${EXTRA_SOURCE}
 )
 
 target_link_libraries(
