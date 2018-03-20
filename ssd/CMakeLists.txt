@@ -73,6 +73,7 @@ endif()
 
 
 if(APPLY_MYIPC)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_MYIPC")
     set(EXTRA_SOURCE    "MY_IPC.cpp")
 endif()
 

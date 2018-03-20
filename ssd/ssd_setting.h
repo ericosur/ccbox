@@ -9,13 +9,17 @@ using std::string;
 class SsdSetting
 {
 public:
-    SsdSetting();
+    static SsdSetting* getInstance();
     ~SsdSetting();
 
     bool fill_values(int argc, char** argv);
     bool read_values_from_json(const std::string& json_file);
 
     void recordlog(const char* format, ...);
+
+protected:
+    static SsdSetting* _instance;
+    SsdSetting();
 
 public:
     string errorlog = "/tmp/ssderror.log";

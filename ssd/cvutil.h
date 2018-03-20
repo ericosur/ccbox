@@ -17,6 +17,8 @@ void draw_dist(cv::Mat& img, float dist);
 void crop_image(const cv::Mat& orig, cv::Mat& new_img,
                 int x, int y, int w, int h);
 void crop_image(const cv::Mat& orig, cv::Mat& new_img,
-                int& rx, int& ry, bool do_imshow);
+                int& rx, int& ry,
+                //int& min_crop_width, int& min_crop_height,
+                bool do_imshow);
 
 #endif  // __UTIL_CV_UTIL_H__

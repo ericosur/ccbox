@@ -13,7 +13,8 @@ extern SsdSetting settings;
 
 void remove_shm()
 {
-    if (settings.show_debug){
+    SsdSetting* settings = SsdSetting::getInstance();
+    if (settings->show_debug){
         printf("%s\n", __func__);
     }
 
@@ -65,6 +66,7 @@ std::string wait_msgq()
     int msgqueue_id;
     struct mymsgbuf qbuf;
     std::string result;
+    SsdSetting* settings = SsdSetting::getInstance();
 
     //key = ftok(MSGQ_FILE, 'm');
     int type = MESSAGE_TYPE;
@@ -72,7 +74,7 @@ std::string wait_msgq()
         perror("msgsnd: msgget");
         return "error"; // error here
     }
-    if (settings.show_debug) {
+    if (settings->show_debug) {
       printf("msgq key:0x%08x\n", msgqueue_id);
     }
     while ( true ) {

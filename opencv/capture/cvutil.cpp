@@ -7,6 +7,8 @@
 #define DEFAULT_CROP_WIDTH      240
 #define DEFAULT_CROP_HEIGHT     240
 
+using namespace std;
+
 namespace pbox {
 
 int baseline = 0;
@@ -51,6 +53,42 @@ void crop_image(const cv::Mat& orig, cv::Mat& new_img, int x, int y, int w, int 
 
 }
 
+#if 1
+void crop_image(const cv::Mat& orig, cv::Mat& new_img
+    /*, int& rx, int& ry,
+    bool do_imshow=false */)
+{
+    static bool isInited = false;
+    int rx;
+    int ry;
+    bool do_imshow=true;
+
+    if (!isInited) {
+        std::srand(std::time(nullptr)); // use current time as seed for random generator
+        isInited = true;
+    } else {
+        // no need to srand again;
+    }
+
+    cout << "orig: " << orig.cols << " , " << orig.rows << endl;
+
+    int base_x = 80;
+    int base_y = 230;
+
+    rx = base_x + std::rand() % 320;
+    ry = base_y;
+
+    int min_crop_width = 240;
+    int min_crop_height = 90;
+
+    crop_image(orig, new_img, rx, ry, min_crop_width, min_crop_height);
+
+    // if (do_imshow) {
+    //     imshow("cooo", new_img);
+    // }
+}
+
+#else
 void crop_image(const cv::Mat& orig, cv::Mat& new_img)
 {
     static bool isInited = false;
@@ -69,6 +107,6 @@ void crop_image(const cv::Mat& orig, cv::Mat& new_img)
     std::cout << "rx/ry:" << rx << ", " << ry << "\n";
     crop_image(orig, new_img, rx, ry, DEFAULT_CROP_WIDTH, DEFAULT_CROP_HEIGHT);
 }
-
+#endif
 
 }   // namespace pbox

@@ -1,4 +1,5 @@
 #include "cvutil.h"
+#include "ssd_setting.h"
 
 #include <cstdlib>
 #include <iostream>
@@ -64,9 +65,11 @@ void crop_image(const cv::Mat& orig, cv::Mat& new_img, int x, int y, int w, int 
 }
 
 void crop_image(const cv::Mat& orig, cv::Mat& new_img, int& rx, int& ry,
+    //int& min_crop_width, int& min_crop_height,
     bool do_imshow=false)
 {
     static bool isInited = false;
+    SsdSetting* settings = SsdSetting::getInstance();
 
     if (!isInited) {
         std::srand(std::time(nullptr)); // use current time as seed for random generator
@@ -75,20 +78,25 @@ void crop_image(const cv::Mat& orig, cv::Mat& new_img, int& rx, int& ry,
         // no need to srand again;
     }
 
-    rx = std::rand() % (DEFAULT_WIDTH - DEFAULT_CROP_WIDTH);
-    int base_y = DEFAULT_HEIGHT / 3;    // one-thrid of image
-    ry = base_y + std::rand() % (DEFAULT_HEIGHT - DEFAULT_CROP_HEIGHT - base_y);
+    const int base_x = 80;
+    const int base_y = 230;
+    int min_crop_width = 220;
+    const int min_crop_height = 90;
 
-    crop_image(orig, new_img, rx, ry, DEFAULT_CROP_WIDTH, DEFAULT_CROP_HEIGHT);
-    // if (bShowDebug) {
+    rx = base_x + std::rand() % 320;
+    ry = base_y;
+
+
+    // if (settings->show_debug) {
     //     std::cout << "rx/ry:" << rx << ", " << ry
-    //         << "//" << rx+DEFAULT_WIDTH << "," << ry+DEFAULT_HEIGHT << "\n";
-    //     std::cout << "new_img:" << new_img.cols << "," << new_img.rows << "\n";
+    //         << "//" << rx+min_crop_width << "," << ry + min_crop_height << "\n";
+    //     std::cout << "min_crop_width:" << min_crop_width << "," << min_crop_height << "\n";
     // }
+
+    crop_image(orig, new_img, rx, ry, min_crop_width, min_crop_height);
 
     if (do_imshow) {
         imshow("cooo", new_img);
     }
-
 }
 

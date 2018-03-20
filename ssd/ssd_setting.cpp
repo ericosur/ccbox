@@ -4,6 +4,15 @@
 #include <stdio.h>
 #include <stdarg.h>
 
+SsdSetting* SsdSetting::_instance = NULL;
+SsdSetting* SsdSetting::getInstance()
+{
+    if (_instance == NULL) {
+        _instance = new SsdSetting();
+    }
+    return _instance;
+}
+
 SsdSetting::SsdSetting()
 {
     fptr = fopen(errorlog.c_str(), "at");
