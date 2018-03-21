@@ -48,6 +48,7 @@ public:
     int test_crop = 0;
     int show_debug = 0;
     int max_crop_try = 3;
+    int vol_per_ratio = 7;
 
 private:
     FILE* fptr = NULL;

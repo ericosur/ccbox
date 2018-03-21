@@ -500,7 +500,9 @@ std::string show_detection_box(cv::Mat& cv_img,
 
       if (hasDog) {
         if (ww*10/DEFAULT_WIDTH>3 || hh*10/DEFAULT_HEIGHT) {
-          printf("FALSE ALARM/hasDog: w(%d)h(%d)  ", ww, hh);
+          if (settings->show_debug) {
+            printf("FALSE ALARM/hasDog: w(%d)h(%d)  ", ww, hh);
+          }
           // take as false alarm
         } else {
           issue_dog_alert(dist);
@@ -516,7 +518,7 @@ std::string show_detection_box(cv::Mat& cv_img,
       }
 
       draw_aim(cv_img, box_x1, box_y1, ww, hh);
-      show_distwin(dist);
+      //show_distwin(dist);
 
       //draw box
       cv::Point top_left_pt(box_x1, box_y1);
@@ -621,9 +623,11 @@ int get_dpeth_pt2(uint8_t* buffer, int x, int y, int* array, int array_size)
   int keep[max_keep_size] = {0};
   SsdSetting* settings = SsdSetting::getInstance();
   int tmp;
-  const int threshold = 100;
-  int cdist = 0;
+  //const int threshold = 100;
+  //int cdist = 0;
 
+  memset(keep, 0, sizeof(int)*max_keep_size);
+  tmp = 0;
   for (int i=0; i<array_size; i++) {
 #ifdef USE_REALSENSE
     if (settings->direct_use_realsense) {
@@ -681,6 +685,7 @@ void issue_man_alert(int dist)
   const int level = 50;
   const int max_ratio = 9;
   const int threshold = 20;
+  const int vol_per_ratio = SsdSetting::getInstance()->vol_per_ratio;
 
   if (dist <= 0) {
     return;
@@ -705,10 +710,11 @@ void issue_man_alert(int dist)
     ratio --;
   }
 
-  vol = ratio * 8 + 5;
+  vol = ratio * vol_per_ratio + 5;
 
   if (dist > 0 && vol > 0) {
-    pbox::mylog("man_alert", "dist:%d,vol=%d", dist, vol);
+    pbox::mylog("man_alert", "d:%d/r:%d/v:%d/ov:%d ",
+                dist, ratio, vol, old_vol);
   }
 
   if (old_vol == 0) {
@@ -993,14 +999,12 @@ int main(int argc, char** argv)
               r = show_detection_box(result_img, false, p, detections);
             }
 
-            if (r != "") {
-              if (settings->do_imshow) {
-                imshow(DETECTION_WIN, result_img);
-              }
-              // show fps
-              if ( settings->show_fps) {
-                show_fps(result_img, tm.getTimeMilli());
-              }
+            if (settings->do_imshow) {
+              imshow(DETECTION_WIN, result_img);
+            }
+            // show fps
+            if ( settings->show_fps) {
+              show_fps(result_img, tm.getTimeMilli());
             }
           }
 

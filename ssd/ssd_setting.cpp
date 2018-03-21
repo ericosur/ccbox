@@ -85,10 +85,11 @@ bool SsdSetting::read_values_from_json(const std::string& json_file)
         do_imshow = pbox::get_int_from_jsonfile(json_file, "do_imshow");
         show_fps = pbox::get_int_from_jsonfile(json_file, "show_fps");
         testraw = pbox::get_int_from_jsonfile(json_file, "testraw");
-        rawbin_dir = pbox::get_string_from_jsonfile(json_file, "rawbin_dir");
+        rawbin_dir = pbox::get_string_from_jsonfile(json_file, "rawbin_dir", rawbin_dir);
         test_crop = pbox::get_int_from_jsonfile(json_file, "test_crop");
         show_debug = pbox::get_int_from_jsonfile(json_file, "show_debug");
-        max_crop_try = pbox::get_int_from_jsonfile(json_file, "max_crop_try");
+        max_crop_try = pbox::get_int_from_jsonfile(json_file, "max_crop_try", max_crop_try);
+        vol_per_ratio = pbox::get_int_from_jsonfile(json_file, "vol_per_ratio", vol_per_ratio);
         return true;
     } else {
         recordlog("%s\n", "specified json not found...");
