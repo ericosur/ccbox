@@ -480,15 +480,14 @@ std::string show_detection_box(cv::Mat& cv_img,
 
       const int DIST_ARRAY_SIZE = 25;
       int dist_array[DIST_ARRAY_SIZE];
+      if (settings->direct_use_realsense) {
 #ifdef USE_REALSENSE
-      uint8_t dep_buffer[dep_buffer_size];
+        dist = pbox::get_dist_from_point(qx, qy);
+#else
+        printf("USE_REALSENSE not set, will always 0\n");
 #endif
-// #ifdef USE_REALSENSE
-//       if (settings->direct_use_realsense) {
-//         dist = pbox::get_dist_from_point(qx, qy);
-//       }
-//       else
-// #endif
+      }
+      else
       {
         //dist = get_dpeth_pt(dep_buffer, qx, qy);
         dist = get_dpeth_pt2(dep_buffer, qx, qy, dist_array, DIST_ARRAY_SIZE);
@@ -499,22 +498,22 @@ std::string show_detection_box(cv::Mat& cv_img,
       // dist = 0;
 
       if (hasDog) {
-        if (ww*10/DEFAULT_WIDTH>3 || hh*10/DEFAULT_HEIGHT) {
-          if (settings->show_debug) {
-            printf("FALSE ALARM/hasDog: w(%d)h(%d)  ", ww, hh);
-          }
+        //if (ww*10/DEFAULT_WIDTH>3 || hh*10/DEFAULT_HEIGHT) {
+          //if (settings->show_debug) {
+            //printf("FALSE ALARM/hasDog: w(%d)h(%d)  ", ww, hh);
+          //}
           // take as false alarm
-        } else {
+        //} else {
           issue_dog_alert(dist);
-        }
+        //}
       }
       if (hasPerson) {
-        if (!hasCrop) {
+        //if (!hasCrop) {
           // take as false alarm
-        } else {
+        //} else {
           //printf("hasPerson: ww(%d) hh(%d) s(%.2f) ", ww, hh, score);
           issue_man_alert(dist);
-        }
+        //}
       }
 
       draw_aim(cv_img, box_x1, box_y1, ww, hh);
@@ -629,18 +628,20 @@ int get_dpeth_pt2(uint8_t* buffer, int x, int y, int* array, int array_size)
   memset(keep, 0, sizeof(int)*max_keep_size);
   tmp = 0;
   for (int i=0; i<array_size; i++) {
-#ifdef USE_REALSENSE
-    if (settings->direct_use_realsense) {
-      int qx = x+offset_x[i];
-      int qy = y+offset_y[i];
-      tmp = pbox::get_dist_from_point(qx, qy);
-    }
-#else
+//#ifdef USE_REALSENSE
+    // #error do not use here
+    // if (settings->direct_use_realsense) {
+    //   int qx = x+offset_x[i];
+    //   int qy = y+offset_y[i];
+    //   tmp = pbox::get_dist_from_point(qx, qy);
+    // }
+//#else
     tmp = get_dpeth_pt(buffer, x+offset_x[i], y+offset_y[i]);
-#endif
+//#endif
     if (tmp > 0 && tmp < 600) {
       keep[cnt] = tmp;
-      //printf("tmp(%d)  ", tmp);
+      if (settings->show_debug)
+      printf("tmp(%d)  ", tmp);
       cnt++;
     }
     if (cnt > max_keep_size) {
@@ -664,8 +665,9 @@ void issue_dog_alert(int dist)
   }
   std::cout << "=====>" << settings->dog_warning_tag << " !!!!!\n";
 #else
-  pbox::mylog("ssd", "%s: dog detected@ %d !!!!", __func__, dist);
+  //
 #endif
+  pbox::mylog("ssd", "%s: dog detected@ %d !!!!", __func__, dist);
 }
 
 void swap(int& m, int& n)
@@ -797,6 +799,16 @@ int main(int argc, char** argv)
   pbox::mylog("ssd", "end init Detector...\n");
   settings->recordlog("end init Detector...\n");
 
+#ifdef USE_MYIPC
+      if (settings->wait_myipc) {
+        ipc = MY_IPC::MY_IPC_GetInstance();
+        if (ipc == NULL) {
+          fprintf(stderr, "failed to init MY_IPC\n");
+          return 1;
+        }
+      }
+#endif
+
 #if 0
   const string& out_file = FLAGS_out_file;
   // Set the output mode.
@@ -848,15 +860,6 @@ int main(int argc, char** argv)
       //int img_idx = 0;
       using namespace pbox;
 
-#ifdef USE_MYIPC
-      if (settings->wait_myipc) {
-        ipc = MY_IPC::MY_IPC_GetInstance();
-        if (ipc == NULL) {
-          fprintf(stderr, "failed to init MY_IPC\n");
-          return 1;
-        }
-      }
-#endif
 
 #ifdef USE_REALSENSE
       bool hasRealsenseOn = false;
@@ -932,11 +935,13 @@ int main(int argc, char** argv)
           v.clear();
           v.push_back("read from " + std::string(rgbfn));
           if (settings->wait_myipc || settings->testraw) {
-            //printf("myipc or testraw\n");
+            printf("myipc or testraw\n");
             load_bin_to_buffer(rgbfn, rgb_buffer, rgb_buffer_size);
             cv_img = cv::Mat(cv::Size(max_width, max_height), CV_8UC3, (void*)rgb_buffer);
             cv::cvtColor(cv_img, cv_img, cv::COLOR_RGB2BGR);
             load_bin_to_buffer(depfn, dep_buffer, dep_buffer_size);
+            //imshow("wait_msgq", cv_img);
+            cv::waitKey(500);
           } else if (settings->wait_msgq) {
             printf("read image from: %s\n", rgbfn);
             cv_img = cv::imread(cmd);
@@ -967,9 +972,9 @@ int main(int argc, char** argv)
         bool isCrop = false;
 
         do {
-          if (showDebug && isCrop) {
-            printf("CROPPED!!! size: %d x %d\n", cv_img.cols, cv_img.rows);
-          }
+          // if (showDebug && isCrop) {
+          //   printf("CROPPED!!! size: %d x %d\n", cv_img.cols, cv_img.rows);
+          // }
 
           tm.start();
           std::vector<vector<float> > detections = detector.Detect(cv_img);
@@ -1013,7 +1018,7 @@ int main(int argc, char** argv)
             pbox::mylog("ssd", "img_try: %d", img_try);
           img_try ++;
           isCrop = true;
-          crop_image(original_img, cv_img, rx, ry,
+          crop_image(original_img, cv_img, rx, ry, img_try,
                            false /*settings.do_imshow*/);
 
         } while ( img_try < settings->max_crop_try );

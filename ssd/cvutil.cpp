@@ -66,6 +66,7 @@ void crop_image(const cv::Mat& orig, cv::Mat& new_img, int x, int y, int w, int 
 
 void crop_image(const cv::Mat& orig, cv::Mat& new_img, int& rx, int& ry,
     //int& min_crop_width, int& min_crop_height,
+    int idx = 0,
     bool do_imshow=false)
 {
     static bool isInited = false;
@@ -83,9 +84,10 @@ void crop_image(const cv::Mat& orig, cv::Mat& new_img, int& rx, int& ry,
     int min_crop_width = 220;
     const int min_crop_height = 90;
 
-    rx = base_x + std::rand() % 320;
+    //rx = base_x + std::rand() % 320;
+    rx = base_x + idx * 80;
     ry = base_y;
-
+    printf("%s: rx:%d,ry:%d\n", __func__, rx, ry);
 
     // if (settings->show_debug) {
     //     std::cout << "rx/ry:" << rx << ", " << ry
@@ -95,8 +97,8 @@ void crop_image(const cv::Mat& orig, cv::Mat& new_img, int& rx, int& ry,
 
     crop_image(orig, new_img, rx, ry, min_crop_width, min_crop_height);
 
-    if (do_imshow) {
-        imshow("cooo", new_img);
-    }
+    //if (do_imshow) {
+        //imshow("cooo", new_img);
+    //}
 }
 

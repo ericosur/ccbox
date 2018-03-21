@@ -19,6 +19,7 @@ void crop_image(const cv::Mat& orig, cv::Mat& new_img,
 void crop_image(const cv::Mat& orig, cv::Mat& new_img,
                 int& rx, int& ry,
                 //int& min_crop_width, int& min_crop_height,
+                int idx,
                 bool do_imshow);
 
 #endif  // __UTIL_CV_UTIL_H__
