@@ -1,23 +1,40 @@
 {
+    "version": "20180322",
+
     "model_file": "/home/rasmus/caffe_common/models/wing-people/240_mAP50/deploy.prototxt",
     "weights_file": "/home/rasmus/caffe_common/models/wing-people/240_mAP50/SqNet_VOC07122_SSD_240x240_iter_60000.caffemodel",
     "file_type": "realsense",
-    "confidence_threshold": 0.3,
+    "confidence_threshold": 0.33,
     "label_id": 15,
     "label_name": "person",
 
     "direct_use_realsense": 1,
     "wait_msgq": 0,
     "wait_myipc": 0,
+
+    "do_imshow": 1,
+    "show_fps": 0,
+    "testraw": 0,
+
+    "do_dog_alert": 0,
+    "dog_min_dist": 100,
+    "max_crop_try": 4,
+
+    "do_man_alert": 1,
+    "low_vol": 25,
+    "mid_vol": 50,
+    "high_vol": 95,
+    "max_vol": 100,
+    "pt1": 150,
+    "pt2": 250,
+    "pt3": 350,
+    "threshold": 35,
+
     "wait_myipc_tag": "photo_index",
     "dog_warning_tag": "dog_warning",
     "audience_vol_tag": "audience_vol",
     "volume_adjust_tag": "volume_adjust",
-    "do_imshow": 1,
-    "show_fps": 0,
-    "testraw": 0,
     "rawbin_dir": "/tmp",
     "test_crop": 0,
-    "show_debug": 0,
-    "max_crop_try": 3
+    "show_debug": 0
 }

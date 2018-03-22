@@ -22,4 +22,7 @@ void crop_image(const cv::Mat& orig, cv::Mat& new_img,
                 int idx,
                 bool do_imshow);
 
+bool in_the_range_of(const int pt, const int target, const int threshold);
+
+
 #endif  // __UTIL_CV_UTIL_H__

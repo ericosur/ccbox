@@ -17,6 +17,17 @@ public:
 
     void recordlog(const char* format, ...);
 
+    void set_vol_epoch();
+    void set_dist_epoch();
+    void set_last_dist(int dist) {
+        last_dist = dist;
+        set_dist_epoch();
+    }
+    void set_last_vol(int vol) {
+        last_vol = vol;
+        set_vol_epoch();
+    }
+
 protected:
     static SsdSetting* _instance;
     SsdSetting();
@@ -49,6 +60,26 @@ public:
     int show_debug = 0;
     int max_crop_try = 3;
     int vol_per_ratio = 7;
+
+    int dog_min_dist = 100;
+    int do_dog_alert = 1;
+    int do_man_alert = 1;
+
+    int low_vol = 25;
+    int mid_vol = 50;
+    int high_vol = 95;
+    int max_vol = 100;
+    int pt1 = 150;
+    int pt2 = 250;
+    int pt3 = 350;
+    int threshold = 35;
+
+    // not in json setting
+    int last_dist_epoch = 0;
+    int last_vol_epoch = 0;
+    int last_dist = 0;
+    int last_vol = 0;
+    int pass_threshold = 0;
 
 private:
     FILE* fptr = NULL;

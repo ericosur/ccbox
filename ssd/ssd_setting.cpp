@@ -90,9 +90,33 @@ bool SsdSetting::read_values_from_json(const std::string& json_file)
         show_debug = pbox::get_int_from_jsonfile(json_file, "show_debug");
         max_crop_try = pbox::get_int_from_jsonfile(json_file, "max_crop_try", max_crop_try);
         vol_per_ratio = pbox::get_int_from_jsonfile(json_file, "vol_per_ratio", vol_per_ratio);
+
+        dog_min_dist = pbox::get_int_from_jsonfile(json_file, "dog_min_dist", dog_min_dist);
+        do_dog_alert = pbox::get_int_from_jsonfile(json_file, "do_dog_alert", do_dog_alert);
+        do_man_alert = pbox::get_int_from_jsonfile(json_file, "do_man_alert", do_man_alert);
+
+        low_vol = pbox::get_int_from_jsonfile(json_file, "low_vol", low_vol);
+        mid_vol = pbox::get_int_from_jsonfile(json_file, "mid_vol", mid_vol);
+        high_vol = pbox::get_int_from_jsonfile(json_file, "high_vol", high_vol);
+        max_vol = pbox::get_int_from_jsonfile(json_file, "max_vol", max_vol);
+        pt1 = pbox::get_int_from_jsonfile(json_file, "pt1", pt1);
+        pt2 = pbox::get_int_from_jsonfile(json_file, "pt2", pt2);
+        pt3 = pbox::get_int_from_jsonfile(json_file, "pt3", pt3);
+        threshold = pbox::get_int_from_jsonfile(json_file, "threshold", threshold);
+
         return true;
     } else {
         recordlog("%s\n", "specified json not found...");
         return false;
     }
+}
+
+void SsdSetting::set_vol_epoch()
+{
+    last_vol_epoch = pbox::get_timeepoch();
+}
+
+void SsdSetting::set_dist_epoch()
+{
+    last_dist_epoch = pbox::get_timeepoch();
 }

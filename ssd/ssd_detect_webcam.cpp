@@ -25,6 +25,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <stdlib.h>
 
 #include <pbox/pbox.h>
 #include "cvutil.h"
@@ -57,10 +58,11 @@ MY_IPC *ipc = NULL;
 
 void issue_dog_alert(int dist);
 void issue_man_alert(int dist);
+bool issue_man_alert_v2(int dist);
+void reset_vol_level();
 
-
-const int max_width = 640;
-const int max_height = 480;
+const int max_width = DEFAULT_WIDTH;
+const int max_height = DEFAULT_HEIGHT;
 const int rgb_byte = 3;
 const int rgb_buffer_size = max_width*max_height*rgb_byte;
 const int dep_buffer_size = max_width*max_height*2; // UINT16, 2bytes
@@ -432,8 +434,6 @@ std::string show_detection_box(cv::Mat& cv_img,
     int x1, x2, y1, y2;
     int box_x1, box_x2, box_y1, box_y2;
 
-    hasDog = is_dog(label);
-    hasPerson = is_person(label);
 
     if (hasCrop) {
       cols = crop_img.cols;
@@ -462,7 +462,11 @@ std::string show_detection_box(cv::Mat& cv_img,
 
     const cv::Scalar& color = cv::Scalar( 255, 255, 255 );
 
-    if ( score >= settings->confidence_threshold && (hasDog || hasPerson) ) {
+    if ( score >= settings->confidence_threshold && (is_dog(label) || is_person(label)) ) {
+
+      bool hasDog = is_dog(label);
+      bool hasPerson = is_person(label);
+
       if (showDebug) {
         printf("from: c%dr%d_%d %d %d %d\n", cols, rows, box_x1, box_x2, box_y1, box_y2);
       }
@@ -477,14 +481,14 @@ std::string show_detection_box(cv::Mat& cv_img,
       const int hh = box_y2 - box_y1;
       const int qx = box_x1 + ww / 2;
       const int qy = box_y1 + hh / 2;
-
       const int DIST_ARRAY_SIZE = 25;
-      int dist_array[DIST_ARRAY_SIZE];
+      int dist_array[DIST_ARRAY_SIZE] = {0};
+
       if (settings->direct_use_realsense) {
 #ifdef USE_REALSENSE
         dist = pbox::get_dist_from_point(qx, qy);
 #else
-        printf("USE_REALSENSE not set, will always 0\n");
+        printf("USE_REALSENSE not set, dist will be always 0\n");
 #endif
       }
       else
@@ -497,7 +501,7 @@ std::string show_detection_box(cv::Mat& cv_img,
       // (void)qy;
       // dist = 0;
 
-      if (hasDog) {
+      if (settings->do_dog_alert && hasDog) {
         //if (ww*10/DEFAULT_WIDTH>3 || hh*10/DEFAULT_HEIGHT) {
           //if (settings->show_debug) {
             //printf("FALSE ALARM/hasDog: w(%d)h(%d)  ", ww, hh);
@@ -507,13 +511,13 @@ std::string show_detection_box(cv::Mat& cv_img,
           issue_dog_alert(dist);
         //}
       }
-      if (hasPerson) {
-        //if (!hasCrop) {
-          // take as false alarm
-        //} else {
-          //printf("hasPerson: ww(%d) hh(%d) s(%.2f) ", ww, hh, score);
-          issue_man_alert(dist);
-        //}
+      if (settings->do_man_alert) {
+        if (hasPerson) {
+          //printf("hasPerson: ww(%d) hh(%d) s(%.2f)\n", ww, hh, score);
+          //issue_man_alert(dist);
+          issue_man_alert_v2(dist);
+          /// man alert is issued
+        }
       }
 
       draw_aim(cv_img, box_x1, box_y1, ww, hh);
@@ -542,6 +546,14 @@ std::string show_detection_box(cv::Mat& cv_img,
   if (strlen(buffer) && settings->show_debug) {
     printf("%s: %s\n", __func__, buffer);
   }
+
+  if (abs(pbox::get_timeepoch() - settings->last_vol_epoch) > 3) {
+    // long time no man
+    reset_vol_level();
+  } else {
+    //printf("timer check: %d\n", pbox::get_timeepoch());
+  }
+
 
   std::string r;
   if (hasDog) {
@@ -656,8 +668,14 @@ int get_dpeth_pt2(uint8_t* buffer, int x, int y, int* array, int array_size)
 
 void issue_dog_alert(int dist)
 {
-#ifdef USE_MYIPC
   SsdSetting* settings = SsdSetting::getInstance();
+
+  if (dist <= settings->dog_min_dist) {
+    printf("issue_dog_alert: skip, dist<=%d\n", settings->dog_min_dist  );
+    return;
+  }
+#ifdef USE_MYIPC
+  //SsdSetting* settings = SsdSetting::getInstance();
   if (settings->wait_myipc) {
     if (ipc != NULL) {
       ipc->IPC_Put_TAG_INT32(settings->dog_warning_tag.c_str(), 1);
@@ -678,6 +696,105 @@ void swap(int& m, int& n)
     n = tmp;
   }
 }
+
+void reset_vol_level()
+{
+  SsdSetting* settings = SsdSetting::getInstance();
+  int vol = settings->max_vol;
+  if (settings->last_vol != vol) {
+    printf("%s: reset vol level to %d\n", __func__, vol);
+#ifdef USE_MYIPC
+      if (settings->wait_myipc && ipc != NULL) {
+        ipc->IPC_Put_TAG_INT32(settings->audience_vol_tag.c_str(), vol);
+        ipc->IPC_Put_TAG_INT32(settings->volume_adjust_tag.c_str(), 1);
+      }
+#endif  // USE_MYIPC
+    settings->set_last_vol(vol);
+    settings->set_last_dist(0);
+  }
+}
+
+// dist is distance in cm
+// three level of distance mapping to sound volume (150/250/350)
+// fuzzy range
+bool issue_man_alert_v2(int dist)
+{
+  // will skip if dist <= 0
+  if (dist <= 0 || dist >= 550) {
+    return false;
+  }
+
+  SsdSetting* settings = SsdSetting::getInstance();
+
+  const int low_vol = settings->low_vol;
+  const int mid_vol = settings->mid_vol;
+  const int high_vol = settings->high_vol;
+  const int max_vol = settings->max_vol;
+  const int threshold = settings->threshold;
+  const int pt1 = settings->pt1;
+  const int pt2 = settings->pt2;
+  const int pt3 = settings->pt3;
+  const int bypass_limit = 5;
+
+  // take it as no change
+  if ( abs(settings->last_dist - dist) < threshold
+       && settings->pass_threshold < bypass_limit) {
+
+    // bypass
+    settings->pass_threshold ++;
+
+    if (settings->pass_threshold == 1) {
+      printf("man_alert_v2: threshold, dist/last: %d vs %d v(%d)\n",
+        dist, settings->last_dist, settings->last_vol, settings->pass_threshold);
+    }
+
+    settings->set_last_vol(settings->last_vol);
+    if (settings->last_vol != 0) {
+      return false;
+    }
+
+  } else {
+    printf("man_alert_v2: check VOL, dist/last: %d vs %d v(%d)\n",
+      dist, settings->last_dist, settings->last_vol);
+    settings->set_last_dist(dist);
+  }
+
+  settings->pass_threshold = 0;
+
+  int vol = 0;
+
+  if (dist < pt1) {
+    vol = low_vol;
+  } else if ( dist >= pt1 && dist < pt2 ) {
+    vol = mid_vol;
+  } else if ( dist >= pt2 && dist < pt3 ) {
+    vol = high_vol;
+  } else if (dist > pt3) {
+    vol = max_vol;
+  }
+
+  if (vol != 0 && vol != settings->last_vol) {
+    settings->set_last_vol(vol);  // record the epoch that changes vol
+#ifdef USE_MYIPC
+    if (settings->wait_myipc && ipc != NULL) {
+      ipc->IPC_Put_TAG_INT32(settings->audience_vol_tag.c_str(), vol);
+      ipc->IPC_Put_TAG_INT32(settings->volume_adjust_tag.c_str(), 1);
+    } else
+#endif  // USE_MYIPC
+    {
+      printf("man_alert_v2: PUT %s/%d dist(%d)\n",
+        settings->audience_vol_tag.c_str(), vol, dist);
+    }
+    return true;
+  } else {
+    // printf("alert_v2: vol no change, last_vol:%d\n",
+    //     settings->last_vol);
+    settings->set_last_vol(settings->last_vol);
+  }
+
+  return false;
+}
+
 // dist in cm
 // need smooth the volume adjust value
 void issue_man_alert(int dist)
@@ -991,7 +1108,7 @@ int main(int argc, char** argv)
             if (isCrop) {
               cv::Mat partial_img = cv_img.clone();
               //printf("=====> rx:%d ry:%d\n", rx, ry);
-              r = show_detection_box(result_img, isCrop, partial_img, detections, rx, ry);
+              show_detection_box(result_img, isCrop, partial_img, detections, rx, ry);
               rx = 0;
               ry = 0;
               isCrop = false;
@@ -1001,7 +1118,7 @@ int main(int argc, char** argv)
             } else {
               // detect from original image
               cv::Mat p;
-              r = show_detection_box(result_img, false, p, detections);
+              show_detection_box(result_img, false, p, detections);
             }
 
             if (settings->do_imshow) {

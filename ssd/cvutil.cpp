@@ -8,13 +8,14 @@
 #define DEFAULT_CROP_WIDTH      240
 #define DEFAULT_CROP_HEIGHT     240
 
+const cv::Scalar white = cv::Scalar(255, 255, 255);
+
 void draw_aim(cv::Mat& img, int x, int y, int w, int h)
 {
     using namespace cv;
 
     const int radius = 30;
     const int tail = 5;
-    Scalar white = Scalar(255, 255, 255);
     int cx = x + w/2;
     int cy = y + h/2;
 
@@ -29,7 +30,6 @@ void draw_aim(cv::Mat& img, int w, int h)
 
     const int radius = 30;
     const int tail = 5;
-    Scalar white = Scalar(255, 255, 255);
     int cx = w/2;
     int cy = h/2;
 
@@ -87,7 +87,10 @@ void crop_image(const cv::Mat& orig, cv::Mat& new_img, int& rx, int& ry,
     //rx = base_x + std::rand() % 320;
     rx = base_x + idx * 80;
     ry = base_y;
-    printf("%s: rx:%d,ry:%d\n", __func__, rx, ry);
+
+    if (settings->show_debug) {
+        printf("%s: rx:%d,ry:%d\n", __func__, rx, ry);
+    }
 
     // if (settings->show_debug) {
     //     std::cout << "rx/ry:" << rx << ", " << ry
@@ -100,5 +103,19 @@ void crop_image(const cv::Mat& orig, cv::Mat& new_img, int& rx, int& ry,
     //if (do_imshow) {
         //imshow("cooo", new_img);
     //}
+}
+
+bool in_the_range_of(const int pt, const int target, const int threshold)
+{
+  int min = target - threshold;
+  int max = target + threshold;
+  if (min < 0) {
+    min = 0;
+    return false;
+  }
+  if (pt > min && pt < max) {
+    return true;
+  }
+  return false;
 }
 
