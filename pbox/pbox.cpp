@@ -31,7 +31,7 @@ std::string get_home()
 // just a stupid function to check file existence
 bool is_file_exist(const char* fname)
 {
-    if ( access(fname, F_OK) != -1 ) {
+    if ( access(fname, F_OK) == 0 ) {
         return true;
     } else {
         return false;
