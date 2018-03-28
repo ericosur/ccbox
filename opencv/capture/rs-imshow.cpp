@@ -4,6 +4,7 @@
 #ifdef USE_REALSENSE
 
 #include "cvutil.h"
+#include "readset.h"
 
 #include <librealsense2/rs.hpp> // Include RealSense Cross Platform API
 #include <cstdio>

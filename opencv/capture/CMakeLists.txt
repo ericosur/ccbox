@@ -24,7 +24,8 @@ find_package( OpenCV REQUIRED )
 # json.hpp
 if(APPLY_JSON)
     message("apply json.hpp, use json.hpp from github repository")
-    include_directories("$ENV{HOME}/src/github/json/single_include/nlohmann")
+#    include_directories("$ENV{HOME}/src/github/json/single_include/nlohmann")
+    include_directories("/usr/local/include")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_JSON")
 endif()
 
@@ -40,6 +41,8 @@ if(APPLY_REALSENSE)
         message("apply intel realsense2")
         #include_directories()
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_REALSENSE")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-sign-compare")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-reorder")
         set(DEPENDENCIES realsense2 ${OpenCV_LIBS})
 
         include_directories("$ENV{HOME}/src/github/librealsense/include")
@@ -66,6 +69,7 @@ add_executable(
     captureDemo.cpp
     cvutil.cpp
     rs-imshow.cpp
+    readset.cpp
 )
 
 target_link_libraries(

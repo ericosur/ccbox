@@ -1,24 +1,26 @@
-//#include <QCoreApplication>
+#include "readset.h"
 
 int demoCapture();
 int demoTest();
 int test_realsense();
 
+
 int main(int argc, char *argv[])
 {
-    //QCoreApplication a(argc, argv);
-    //return a.exec();
+    ReadSetting* settings = ReadSetting::getInstance();
 
-    //demoCapture();
 
 #ifdef USE_REALSENSE
-    test_realsense();
+    if (settings->use_realsense) {
+        test_realsense();
+    }
 #else
     if ( demoTest() == -1 ) {
         return -1;
     }
 #endif
-    //a.quit();
+
+    demoCapture();
 
     return 0;
 }

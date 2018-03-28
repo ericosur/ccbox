@@ -61,8 +61,9 @@ void crop_image(const cv::Mat& orig, cv::Mat& new_img
     static bool isInited = false;
     int rx;
     int ry;
+#ifdef DO_IMSHOW
     bool do_imshow=true;
-
+#endif
     if (!isInited) {
         std::srand(std::time(nullptr)); // use current time as seed for random generator
         isInited = true;
@@ -82,10 +83,11 @@ void crop_image(const cv::Mat& orig, cv::Mat& new_img
     int min_crop_height = 90;
 
     crop_image(orig, new_img, rx, ry, min_crop_width, min_crop_height);
-
-    // if (do_imshow) {
-    //     imshow("cooo", new_img);
-    // }
+#ifdef DO_IMSHOW
+    if (do_imshow) {
+        imshow("cooo", new_img);
+    }
+#endif
 }
 
 #else

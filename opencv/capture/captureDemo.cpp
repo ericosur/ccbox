@@ -13,6 +13,8 @@
 //LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 //IN THE SOFTWARE.
 
+#include "readset.h"
+
 #include <opencv2/opencv.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -21,49 +23,12 @@
 #include <sstream>
 #include <string>
 
-#ifdef USE_JSON
-#include <fstream>
-#include <json.hpp>
-#include <unistd.h>
-#define JSON_FILE    "../setting.json"
-#endif
 
 using namespace cv;
 using namespace std;
 
 int video_id = 0;
 
-#ifdef USE_JSON
-bool is_file_exist(const string& fn)
-{
-    if (access(fn.c_str(), F_OK) != -1) {
-        return true;
-    } else {
-        return false;
-    }
-}
-
-bool load_json(const string& json_file)
-{
-    cout << "load settings from: " << json_file << "\n";
-    if (!is_file_exist(JSON_FILE)) {
-        cout << "json not found..." << endl;
-        return false;
-    }
-    nlohmann::json json;
-    try {
-        ifstream infile(JSON_FILE);
-        infile >> json;
-
-        video_id = json.at("video_id");
-        cout << "video_id: " << video_id << endl;
-    } catch (nlohmann::json::parse_error& e) {
-        cout << "parse json error: " << e.what();
-        return false;
-    }
-    return true;
-}
-#endif
 
 //initial min and max HSV filter values.
 //these will be changed using trackbars
@@ -285,8 +250,8 @@ int demoCapture()
 
 		//delay 30ms so that screen can refresh.
 		//image will not appear without this waitKey() command
-        int c = waitKey(100);
-        if (c == 'c') {
+        int c = waitKey(50);
+        if (c == 'q' || c == 27) {
             destroyAllWindows();
             break;
         }
@@ -302,9 +267,8 @@ int demoTest()
     const string WIN_EDGE = "edges";
 
 #ifdef USE_JSON
-    if ( !load_json(JSON_FILE) ) {
-        video_id = 0;
-    }
+    ReadSetting* settings = ReadSetting::getInstance();
+    video_id = settings->video_id;
 #endif
 
     VideoCapture cap;
