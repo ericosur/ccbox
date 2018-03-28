@@ -1,12 +1,13 @@
 {
-    "version": "20180322",
+    "version": "20180328",
 
     "model_file": "/home/rasmus/caffe_common/models/wing-people/240_mAP50/deploy.prototxt",
     "weights_file": "/home/rasmus/caffe_common/models/wing-people/240_mAP50/SqNet_VOC07122_SSD_240x240_iter_60000.caffemodel",
-    "file_type": "realsense",
+    "file_type": "webcam",
     "confidence_threshold": 0.33,
     "label_id": 15,
     "label_name": "person",
+    "video_id": 0,
 
     "direct_use_realsense": 1,
     "wait_msgq": 0,

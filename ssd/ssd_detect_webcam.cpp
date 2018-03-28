@@ -361,12 +361,6 @@ bool show_fps(cv::Mat& cv_img, double elapsed_time)
       //printf("no show\n");
     }
 
-    // int key = cv::waitKey(1);
-    // if ( key == 27 || key == 'q' ) {
-    //   return false;
-    // } else {
-    //   return true;
-    // }
     return true;
 }
 
@@ -484,18 +478,26 @@ std::string show_detection_box(cv::Mat& cv_img,
       const int DIST_ARRAY_SIZE = 25;
       int dist_array[DIST_ARRAY_SIZE] = {0};
 
-      if (settings->direct_use_realsense) {
-#ifdef USE_REALSENSE
-        dist = pbox::get_dist_from_point(qx, qy);
-#else
-        printf("USE_REALSENSE not set, dist will be always 0\n");
-#endif
+      if (settings->file_type == "webcam") {
+        // do not fetch depth data
+        settings->do_dog_alert = 0;
+        settings->do_man_alert = 0;
+      } else {
+        if (settings->direct_use_realsense && settings->file_type == "realsense") {
+  #ifdef USE_REALSENSE
+          dist = pbox::get_dist_from_point(qx, qy);
+  #else
+          printf("USE_REALSENSE not set, dist will be always 0\n");
+  #endif
+        }
+        else
+        {
+          //dist = get_dpeth_pt(dep_buffer, qx, qy);
+          dist = get_dpeth_pt2(dep_buffer, qx, qy, dist_array, DIST_ARRAY_SIZE);
+        }
+
       }
-      else
-      {
-        //dist = get_dpeth_pt(dep_buffer, qx, qy);
-        dist = get_dpeth_pt2(dep_buffer, qx, qy, dist_array, DIST_ARRAY_SIZE);
-      }
+
       // printf("no realsense, neither myipc\n");
       // (void)qx;
       // (void)qy;
@@ -520,6 +522,7 @@ std::string show_detection_box(cv::Mat& cv_img,
         }
       }
 
+      //pbox::mylog("ssd", "before draw_aim");
       draw_aim(cv_img, box_x1, box_y1, ww, hh);
       //show_distwin(dist);
 
@@ -745,7 +748,9 @@ bool issue_man_alert_v2(int dist)
 
     if (settings->pass_threshold == 1) {
       printf("man_alert_v2: threshold, dist/last: %d vs %d v(%d)\n",
-        dist, settings->last_dist, settings->last_vol, settings->pass_threshold);
+        dist, settings->last_dist, settings->last_vol
+        /*, settings->pass_threshold*/
+      );
     }
 
     settings->set_last_vol(settings->last_vol);
@@ -1155,10 +1160,11 @@ int main(int argc, char** argv)
 #ifdef USE_OPENCV_CAPTURE
     else if (settings->file_type == "webcam") {
       cv::VideoCapture cap;
-      if (!cap.open(atof(argv[7]))) {
-        LOG(FATAL) << "Failed to open webcam: " << argv[7];
+      if (!cap.open(settings->video_id)) {
+        LOG(FATAL) << "Failed to open webcam: " << settings->video_id;
         CV_Assert("Cam open failed");
       }
+      pbox::mylog("webcam", "before setting capturing device");
       cap.set(CV_CAP_PROP_FRAME_WIDTH, 640);
       cap.set(CV_CAP_PROP_FRAME_HEIGHT, 480);
       cap.set(CV_CAP_PROP_AUTOFOCUS, 0);
@@ -1177,6 +1183,15 @@ int main(int argc, char** argv)
         // show fps
         if ( settings->show_fps && !show_fps(cv_img, tm.getTimeMilli()) ) {
           break;
+        }
+        if ( settings->do_imshow ) {
+          imshow(DETECTION_WIN, cv_img);
+          int key = cv::waitKey(1);
+          if ( key == 27 || key == 'q' ) {
+            break;
+          } else {
+            // do nothing...
+          }
         }
       }
     }

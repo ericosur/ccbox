@@ -75,6 +75,7 @@ bool SsdSetting::read_values_from_json(const std::string& json_file)
         confidence_threshold = pbox::get_double_from_jsonfile(json_file, "confidence_threshold", confidence_threshold);
         label_id = pbox::get_int_from_jsonfile(json_file, "label_id", label_id);
         label_name = pbox::get_string_from_jsonfile(json_file, "label_name", label_name);
+        video_id = pbox::get_int_from_jsonfile(json_file, "video_id", video_id);
         direct_use_realsense = pbox::get_int_from_jsonfile(json_file, "direct_use_realsense", direct_use_realsense);
         wait_msgq = pbox::get_int_from_jsonfile(json_file, "wait_msgq", wait_msgq);
         wait_myipc = pbox::get_int_from_jsonfile(json_file, "wait_myipc", wait_myipc);

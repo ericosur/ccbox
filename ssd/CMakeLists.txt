@@ -44,12 +44,13 @@ set(DEPENDENCIES libboost_system.so gflags glog ${OpenCV_LIBS})
 
 set(APPLY_REALSENSE        1)
 set(APPLY_MYIPC            1)
+set(APPLY_WEBCAM           1)
 
 
 
 # realsense2
 if(APPLY_REALSENSE)
-    message("apply intel realsense2")
+    message("=====> apply intel realsense2")
     #include_directories()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_REALSENSE")
     set(DEPENDENCIES ${DEPENDENCIES} realsense2 gflags ${OpenCV_LIBS})
@@ -63,12 +64,12 @@ if(APPLY_REALSENSE)
     if ( IS_DIRECTORY librealsense_dir )
         link_directories(librealsense_dir)
     endif()
+endif()
 
-else()
 
-    message("apply opencv video capturing")
+if(APPLY_WEBCAM)
+    message("=====> apply opencv video capturing")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_OPENCV_CAPTURE")
-
 endif()
 
 

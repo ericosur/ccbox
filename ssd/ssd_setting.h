@@ -38,6 +38,7 @@ public:
     string model_file;
     string weights_file;
 #ifdef USE_REALSENSE
+    // will default use realsense first
     string file_type = "realsense";
 #else
     string file_type = "webcam";
@@ -45,6 +46,8 @@ public:
     float confidence_threshold = 0.33;
     int label_id = 15;
     string label_name = "person";
+    int video_id = 0;
+
     int direct_use_realsense = 0;
     int wait_msgq = 0;
     int wait_myipc = 1;
