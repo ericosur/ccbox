@@ -29,7 +29,7 @@
     "pt1": 100,
     "pt2": 250,
     "pt3": 350,
-    "threshold": 99,
+    "threshold": 35,
     "minus_offset": 15,
     "plus_offset": 25,
 

@@ -59,8 +59,12 @@ MY_IPC *ipc = NULL;
 void issue_dog_alert(int dist);
 void issue_man_alert(int dist);
 bool issue_man_alert_v2(int dist);
-bool issue_man_alert_v3(int dist);
+bool issue_man_alert_v3(int dist, float score);
 void reset_vol_level();
+
+#define MIN_ACCEPTABLE_DIST     (50)
+#define MAX_ACCEPTABLE_DIST     (550)
+#define MAN_ALERT_SCORE         (0.8)
 
 const int max_width = DEFAULT_WIDTH;
 const int max_height = DEFAULT_HEIGHT;
@@ -484,16 +488,22 @@ std::string show_detection_box(cv::Mat& cv_img,
       } else {
         if (settings->direct_use_realsense && settings->file_type == "realsense") {
   #ifdef USE_REALSENSE
-          //dist = pbox::get_dist_from_point(qx, qy);
-          dist = pbox::get_rs_dpeth_pt2(qx, qy);
+          dist = pbox::get_dist_from_point(qx, qy);
+          //dist = pbox::get_rs_dpeth_pt2(qx, qy);
   #else
           printf("USE_REALSENSE not set, dist will be always 0\n");
   #endif
         }
         else
         {
+          if (ww > 10 && hh > 10 && qx > 10 && qy > 10) {
+            dist = get_dpeth_pt2(dep_buffer, qx, qy);
+          } else {
+            printf("invalid range: w(%d)h(%d),qx(%d),qy(%d)\n", ww, hh, qx, qy);
+            dist = 0;
+          }
           //dist = get_dpeth_pt(dep_buffer, qx, qy);
-          dist = get_dpeth_pt2(dep_buffer, qx, qy);
+
         }
 
       }
@@ -517,8 +527,18 @@ std::string show_detection_box(cv::Mat& cv_img,
         if (hasPerson) {
           //printf("hasPerson: ww(%d) hh(%d) s(%.2f)\n", ww, hh, score);
           //issue_man_alert(dist);
-          issue_man_alert_v3(dist);
-          /// man alert is issued
+          if (hasCrop && settings->show_debug) {
+            //printf("will skip cropped...\n");
+          } else {
+            if (score > MAN_ALERT_SCORE) {
+              if ( issue_man_alert_v3(dist, score) ) {
+                // hack
+                cv::imshow("man_alert", cv_img);
+                cv::waitKey(1);
+              }
+            }
+            settings->set_vol_epoch();
+          }
         }
       }
 
@@ -586,13 +606,13 @@ int get_dpeth_pt(uint8_t* buffer, int x, int y)
 {
   int res = 0;
   SsdSetting* settings = SsdSetting::getInstance();
-  if ( (x < 0 || x > max_width) || (y < 0 || y > max_height) ) {
+  if ( (x < 0 || x >= DEFAULT_WIDTH) || (y < 0 || y >= DEFAULT_HEIGHT) ) {
     if (settings->show_debug)
-      printf("%s: out of bound\n", __func__);
+      printf("%s: OOB %d,%d\n", __func__, x, y);
     res = 0;
   } else {
     uint16_t* pt = (uint16_t*)buffer;
-    int cnt = y*max_height + x;
+    int cnt = y*DEFAULT_HEIGHT + x;
     res = (int)*(pt+cnt);
   }
   if (settings->show_debug)
@@ -633,18 +653,21 @@ int get_dpeth_pt2(uint8_t* buffer, int x, int y)
     -5, -3, -1, 1, 3, 5,
     -5, -3, -1, 1, 3, 5,
   };
+
   // x,y as center point, take some points around it
   int cnt = 0;
-  const int array_size = sizeof(offset_x);
+  const int array_size = sizeof(offset_x) / sizeof(offset_x[0]);
   const int max_keep_size = array_size;
   int keep[max_keep_size] = {0};
   SsdSetting* settings = SsdSetting::getInstance();
-  int tmp;
+  int tmp = 0;
   //const int threshold = 100;
   //int cdist = 0;
+  if ( settings->show_debug ) {
+    printf("%s: x:%d, y:%d\n", __func__, x, y);
+  }
 
   memset(keep, 0, sizeof(int)*max_keep_size);
-  tmp = 0;
   for (int i=0; i<array_size; i++) {
 //#ifdef USE_REALSENSE
     // #error do not use here
@@ -654,15 +677,23 @@ int get_dpeth_pt2(uint8_t* buffer, int x, int y)
     //   tmp = pbox::get_dist_from_point(qx, qy);
     // }
 //#else
-    tmp = get_dpeth_pt(buffer, x+offset_x[i], y+offset_y[i]);
+    int pp = x + offset_x[i];
+    int qq = y + offset_y[i];
+    if (pp >= 0 && qq >= 0 && pp < DEFAULT_WIDTH && qq < DEFAULT_HEIGHT) {
+      tmp = get_dpeth_pt(buffer, x+offset_x[i], y+offset_y[i]);
+    } else {
+      tmp = 0;
+    }
 //#endif
-    if (tmp > 0 && tmp < 600) {
+    if (tmp > 0 && tmp < MAX_ACCEPTABLE_DIST) {
       keep[cnt] = tmp;
       if (settings->show_debug)
       printf("tmp(%d)  ", tmp);
       cnt++;
     }
     if (cnt > max_keep_size) {
+      if (settings->show_debug)
+        printf("%s: reach max keep size: %d\n", __func__, cnt);
       break;
     }
   }
@@ -720,21 +751,38 @@ void reset_vol_level()
   }
 }
 
-bool issue_man_alert_v3(int dist)
+bool issue_man_alert_v3(int dist, float score)
 {
-  // will skip if dist <= 0 or dist >= 550
-  if (dist <= 0 || dist >= 550) {
+  // will skip if dist <= 60 or dist >= 550
+  if (dist <= MIN_ACCEPTABLE_DIST || dist >= MAX_ACCEPTABLE_DIST) {
     return false;
   }
   SsdSetting* s = SsdSetting::getInstance();
   VolumeLevelEnum r = VOL_ZERO;
 
   if (dist == s->last_dist)  {  // not change
+    //printf("issue_man_alert_v3: dist not change...\n");
     return false;
   }
+  if (score > s->last_score) {
+    //if (s->show_debug)
+    printf("high score, take it: %d, %.2f vs ls(%.2f)\n", dist, score, s->last_score);
+    s->skipped = 0;
+  }
+  else if (s->last_dist != 0) {
+    if (abs(dist - s->last_dist) > s->threshold) {
+      //if (s->show_debug)
+      printf("skip too large %d vs %d s(%.2f)\n", dist, s->last_dist, s->last_score);
+      s->skipped ++;
+      return false;
+    }
+  }
+  s->last_score = score;
   if (dist > s->last_dist) { // increasing...
+    //printf("issue_man_alert_v3: dist is increasing...\n");
     r = get_vol_while_increase(dist);
   } else {
+    //printf("issue_man_alert_v3: dist is decreasing...\n");
     r = get_vol_while_decrease(dist);
   }
 
@@ -751,11 +799,11 @@ bool issue_man_alert_v3(int dist)
     if (s->wait_myipc && ipc != NULL) {
       ipc->IPC_Put_TAG_INT32(s->audience_vol_tag.c_str(), vol);
       ipc->IPC_Put_TAG_INT32(s->volume_adjust_tag.c_str(), 1);
-    } else
+    }
 #endif  // USE_MYIPC
     {
-      printf("===> man_alert_v3: PUT %s/%d dist(%d)\n",
-        s->audience_vol_tag.c_str(), vol, dist);
+      printf("===> man_alert_v3: PUT %s/%d d(%d) s(%.2f)\n",
+        s->audience_vol_tag.c_str(), vol, dist, s->last_score);
     }
     return true;
   } else {
@@ -1104,7 +1152,8 @@ int main(int argc, char** argv)
           v.clear();
           v.push_back("read from " + std::string(rgbfn));
           if (settings->wait_myipc || settings->testraw) {
-            printf("myipc or testraw\n");
+            if (settings->show_debug)
+              printf("myipc or testraw\n");
             load_bin_to_buffer(rgbfn, rgb_buffer, rgb_buffer_size);
             cv_img = cv::Mat(cv::Size(max_width, max_height), CV_8UC3, (void*)rgb_buffer);
             cv::cvtColor(cv_img, cv_img, cv::COLOR_RGB2BGR);
@@ -1115,7 +1164,7 @@ int main(int argc, char** argv)
             printf("read image from: %s\n", rgbfn);
             cv_img = cv::imread(cmd);
           }
-
+#if 0
           if (settings->show_debug) {
             imshow("press to continue", cv_img);
             int r = get_dpeth_pt(dep_buffer, max_width/2, max_height/2);
@@ -1123,7 +1172,7 @@ int main(int argc, char** argv)
             //printf("r = %d\n", r);
             //cv::waitKey(1000);
           }
-
+#endif
           ofn = cmd + ".json";
           cmd = "";
 

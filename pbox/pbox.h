@@ -63,6 +63,7 @@ std::string output_detections(const std::string& ofn, const std::vector< std::ve
 
 void init_realsense();
 int get_dist_from_point(int x, int y);
+int get_rs_dpeth_pt2(int x, int y);
 bool get_color_mat(cv::Mat& image);
 int get_color_mat_from_realsense(cv::Mat& image);
 int test_realsense();

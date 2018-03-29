@@ -114,8 +114,24 @@ int get_dist_from_point(int x, int y)
     return ret;
 }
 
+int get_avg(int* array, int array_size)
+{
+  int sum = 0;
+  for (int i=0; i<array_size; ++i) {
+    sum += array[i];
+  }
+  int avg = 0;
+  if (array_size > 0) {
+    avg = sum / array_size;
+  }
+
+  //fprintf(stderr, "get_avg = %d\n", avg);
+  return avg;
+}
+
 int get_rs_dpeth_pt2(int x, int y)
 {
+  bool show_debug = false;
   int offset_x[] = {
     -6, -6, -6, -6, -6, -6,
     -4, -4, -4, -4, -4, -4,
@@ -136,7 +152,6 @@ int get_rs_dpeth_pt2(int x, int y)
   const int array_size = sizeof(offset_x);
   const int max_keep_size = array_size;
   int keep[max_keep_size] = {0};
-  SsdSetting* settings = SsdSetting::getInstance();
   int tmp;
   //const int threshold = 100;
   //int cdist = 0;
@@ -147,7 +162,7 @@ int get_rs_dpeth_pt2(int x, int y)
     tmp = get_dist_from_point(x+offset_x[i], y+offset_y[i]);
     if (tmp > 0 && tmp < 600) {
       keep[cnt] = tmp;
-      if (settings->show_debug)
+      if (show_debug)
         printf("tmp(%d)  ", tmp);
       cnt++;
     }

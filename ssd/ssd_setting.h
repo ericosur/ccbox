@@ -83,7 +83,7 @@ public:
     int pt1 = 150;
     int pt2 = 250;
     int pt3 = 350;
-    int threshold = 35;
+    int threshold = 99;
     int minus_offset = 15;
     int plus_offset = 25;
 
@@ -93,6 +93,8 @@ public:
     int last_dist = 0;
     int last_vol = 0;
     int pass_threshold = 0;
+    int skipped = 0;
+    float last_score = 0;
 
 private:
     FILE* fptr = NULL;
