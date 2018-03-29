@@ -114,6 +114,53 @@ int get_dist_from_point(int x, int y)
     return ret;
 }
 
+int get_rs_dpeth_pt2(int x, int y)
+{
+  int offset_x[] = {
+    -6, -6, -6, -6, -6, -6,
+    -4, -4, -4, -4, -4, -4,
+    -2, -2, -2, -2, -2, -2,
+     0,  0,  0,  0,  0,  0,
+     2,  2,  2,  2,  2,  2,
+     4,  4,  4,  4,  4,  4};
+  int offset_y[] = {
+    -5, -3, -1, 1, 3, 5,
+    -5, -3, -1, 1, 3, 5,
+    -5, -3, -1, 1, 3, 5,
+    -5, -3, -1, 1, 3, 5,
+    -5, -3, -1, 1, 3, 5,
+    -5, -3, -1, 1, 3, 5,
+  };
+  // x,y as center point, take some points around it
+  int cnt = 0;
+  const int array_size = sizeof(offset_x);
+  const int max_keep_size = array_size;
+  int keep[max_keep_size] = {0};
+  SsdSetting* settings = SsdSetting::getInstance();
+  int tmp;
+  //const int threshold = 100;
+  //int cdist = 0;
+
+  memset(keep, 0, sizeof(int)*max_keep_size);
+  tmp = 0;
+  for (int i=0; i<array_size; i++) {
+    tmp = get_dist_from_point(x+offset_x[i], y+offset_y[i]);
+    if (tmp > 0 && tmp < 600) {
+      keep[cnt] = tmp;
+      if (settings->show_debug)
+        printf("tmp(%d)  ", tmp);
+      cnt++;
+    }
+    if (cnt > max_keep_size) {
+      break;
+    }
+  }
+
+  int avg = get_avg(keep, cnt);
+
+  return avg;
+}
+
 
 int get_color_mat_from_realsense(cv::Mat& image)
 {

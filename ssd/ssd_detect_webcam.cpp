@@ -72,7 +72,7 @@ uint8_t dep_buffer[dep_buffer_size];
 
 
 int get_dpeth_pt(uint8_t* buffer, int x, int y);
-int get_dpeth_pt2(uint8_t* dep_buffer, int x, int y, int* dist_array, int size);
+int get_dpeth_pt2(uint8_t* dep_buffer, int x, int y);
 
 
 void my_handle_ctrlc(int s)
@@ -476,8 +476,6 @@ std::string show_detection_box(cv::Mat& cv_img,
       const int hh = box_y2 - box_y1;
       const int qx = box_x1 + ww / 2;
       const int qy = box_y1 + hh / 2;
-      const int DIST_ARRAY_SIZE = 25;
-      int dist_array[DIST_ARRAY_SIZE] = {0};
 
       if (settings->file_type == "webcam") {
         // do not fetch depth data
@@ -486,7 +484,8 @@ std::string show_detection_box(cv::Mat& cv_img,
       } else {
         if (settings->direct_use_realsense && settings->file_type == "realsense") {
   #ifdef USE_REALSENSE
-          dist = pbox::get_dist_from_point(qx, qy);
+          //dist = pbox::get_dist_from_point(qx, qy);
+          dist = pbox::get_rs_dpeth_pt2(qx, qy);
   #else
           printf("USE_REALSENSE not set, dist will be always 0\n");
   #endif
@@ -494,7 +493,7 @@ std::string show_detection_box(cv::Mat& cv_img,
         else
         {
           //dist = get_dpeth_pt(dep_buffer, qx, qy);
-          dist = get_dpeth_pt2(dep_buffer, qx, qy, dist_array, DIST_ARRAY_SIZE);
+          dist = get_dpeth_pt2(dep_buffer, qx, qy);
         }
 
       }
@@ -617,24 +616,27 @@ int get_avg(int* array, int array_size)
   return avg;
 }
 
-int get_dpeth_pt2(uint8_t* buffer, int x, int y, int* array, int array_size)
+int get_dpeth_pt2(uint8_t* buffer, int x, int y)
 {
   int offset_x[] = {
-    -4, -4, -4, -4, -4,
-    -2, -2, -2, -2, -2,
-    0,  0,  0,  0, 0,
-    2,  2,  2,  2, 2,
-    4,  4,  4,  4, 4};
+    -6, -6, -6, -6, -6, -6,
+    -4, -4, -4, -4, -4, -4,
+    -2, -2, -2, -2, -2, -2,
+     0,  0,  0,  0,  0,  0,
+     2,  2,  2,  2,  2,  2,
+     4,  4,  4,  4,  4,  4};
   int offset_y[] = {
-    -4, -2, 0, 2, 4,
-    -4, -2, 0, 2, 4,
-    -4, -2, 0, 2, 4,
-    -4, -2, 0, 2, 4,
-    -4, -2, 0, 2, 4
+    -5, -3, -1, 1, 3, 5,
+    -5, -3, -1, 1, 3, 5,
+    -5, -3, -1, 1, 3, 5,
+    -5, -3, -1, 1, 3, 5,
+    -5, -3, -1, 1, 3, 5,
+    -5, -3, -1, 1, 3, 5,
   };
   // x,y as center point, take some points around it
   int cnt = 0;
-  const int max_keep_size = 32;
+  const int array_size = sizeof(offset_x);
+  const int max_keep_size = array_size;
   int keep[max_keep_size] = {0};
   SsdSetting* settings = SsdSetting::getInstance();
   int tmp;
