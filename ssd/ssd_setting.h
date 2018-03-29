@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <string>
+#include "ssdutil.h"
 
 using std::string;
 
@@ -31,6 +32,9 @@ public:
 protected:
     static SsdSetting* _instance;
     SsdSetting();
+
+    void fill_volumes();
+    void fill_ranges();
 
 public:
     string errorlog = "/tmp/ssderror.log";
@@ -72,10 +76,16 @@ public:
     int mid_vol = 50;
     int high_vol = 95;
     int max_vol = 100;
+    int volumes[VOL_ENUMSIZE];
+    int range_inc[kRangeIncEnumSize];
+    int range_dec[kRangeDecEnumSize];
+
     int pt1 = 150;
     int pt2 = 250;
     int pt3 = 350;
     int threshold = 35;
+    int minus_offset = 15;
+    int plus_offset = 25;
 
     // not in json setting
     int last_dist_epoch = 0;

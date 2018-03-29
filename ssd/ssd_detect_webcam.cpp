@@ -59,6 +59,7 @@ MY_IPC *ipc = NULL;
 void issue_dog_alert(int dist);
 void issue_man_alert(int dist);
 bool issue_man_alert_v2(int dist);
+bool issue_man_alert_v3(int dist);
 void reset_vol_level();
 
 const int max_width = DEFAULT_WIDTH;
@@ -517,7 +518,7 @@ std::string show_detection_box(cv::Mat& cv_img,
         if (hasPerson) {
           //printf("hasPerson: ww(%d) hh(%d) s(%.2f)\n", ww, hh, score);
           //issue_man_alert(dist);
-          issue_man_alert_v2(dist);
+          issue_man_alert_v3(dist);
           /// man alert is issued
         }
       }
@@ -715,6 +716,50 @@ void reset_vol_level()
     settings->set_last_vol(vol);
     settings->set_last_dist(0);
   }
+}
+
+bool issue_man_alert_v3(int dist)
+{
+  // will skip if dist <= 0 or dist >= 550
+  if (dist <= 0 || dist >= 550) {
+    return false;
+  }
+  SsdSetting* s = SsdSetting::getInstance();
+  VolumeLevelEnum r = VOL_ZERO;
+
+  if (dist == s->last_dist)  {  // not change
+    return false;
+  }
+  if (dist > s->last_dist) { // increasing...
+    r = get_vol_while_increase(dist);
+  } else {
+    r = get_vol_while_decrease(dist);
+  }
+
+  int vol = s->volumes[r];
+  if ( vol <= 0 ) {
+    return false;
+  }
+
+  // vol changes
+  if ( vol != s->last_vol ) {
+    s->set_last_vol(vol);  // record the epoch that changes vol
+    s->set_last_dist(dist);
+#ifdef USE_MYIPC
+    if (s->wait_myipc && ipc != NULL) {
+      ipc->IPC_Put_TAG_INT32(s->audience_vol_tag.c_str(), vol);
+      ipc->IPC_Put_TAG_INT32(s->volume_adjust_tag.c_str(), 1);
+    } else
+#endif  // USE_MYIPC
+    {
+      printf("===> man_alert_v3: PUT %s/%d dist(%d)\n",
+        s->audience_vol_tag.c_str(), vol, dist);
+    }
+    return true;
+  } else {
+    return false;
+  }
+
 }
 
 // dist is distance in cm

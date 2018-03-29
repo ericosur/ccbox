@@ -100,10 +100,15 @@ bool SsdSetting::read_values_from_json(const std::string& json_file)
         mid_vol = pbox::get_int_from_jsonfile(json_file, "mid_vol", mid_vol);
         high_vol = pbox::get_int_from_jsonfile(json_file, "high_vol", high_vol);
         max_vol = pbox::get_int_from_jsonfile(json_file, "max_vol", max_vol);
+        fill_volumes();
+
         pt1 = pbox::get_int_from_jsonfile(json_file, "pt1", pt1);
         pt2 = pbox::get_int_from_jsonfile(json_file, "pt2", pt2);
         pt3 = pbox::get_int_from_jsonfile(json_file, "pt3", pt3);
         threshold = pbox::get_int_from_jsonfile(json_file, "threshold", threshold);
+        minus_offset = pbox::get_int_from_jsonfile(json_file, "minus_offset", minus_offset);
+        plus_offset = pbox::get_int_from_jsonfile(json_file, "plus_offset", plus_offset);
+        fill_ranges();
 
         return true;
     } else {
@@ -121,3 +126,27 @@ void SsdSetting::set_dist_epoch()
 {
     last_dist_epoch = pbox::get_timeepoch();
 }
+
+void SsdSetting::fill_volumes()
+{
+    volumes[VOL_ZERO] = 0;
+    volumes[VOL_LOW] = low_vol;
+    volumes[VOL_MID] = mid_vol;
+    volumes[VOL_HIGH] = high_vol;
+    volumes[VOL_MAX] = max_vol;
+}
+
+void SsdSetting::fill_ranges()
+{
+    range_inc[kRangeIncZero] = 0;
+    range_inc[kRangeIncNear] = pt1 + plus_offset;
+    range_inc[kRangeIncMiddle] = pt2 + plus_offset;
+    range_inc[kRangeIncFar] = pt3 + plus_offset;
+    range_inc[kRangeIncOut] = pt3 + plus_offset + 1;
+    range_dec[kRangeDecZero] = 0;
+    range_dec[kRangeDecNear] = pt1 - minus_offset;
+    range_dec[kRangeDecMiddle] = pt2 - minus_offset;
+    range_dec[kRangeDecFar] = pt3 - minus_offset;
+    range_dec[kRangeDecOut] = pt3 + minus_offset;
+}
+
