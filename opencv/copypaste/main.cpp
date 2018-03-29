@@ -1,10 +1,11 @@
+#include <pbox/pbox.h>
+
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <iostream>
 #ifdef USE_JSON
 #include <fstream>
-#include <json.hpp>
-#include <unistd.h>
+#include <nlohmann/json.hpp>
 #endif
 
 #define JSON_FILE    "../setting.json"
@@ -18,32 +19,28 @@ string input_img;
 string output_img;
 
 #ifdef USE_JSON
-bool is_file_exist(const string& fn)
-{
-    if (access(fn.c_str(), F_OK) != -1) {
-        return true;
-    } else {
-        return false;
-    }
-}
-
 bool load_json(const string& json_file,
                string& input_fn,
                string& output_fn)
 {
-    if (!is_file_exist(JSON_FILE)) {
+    if (!pbox::is_file_exist(JSON_FILE)) {
         cout << "json not found..." << endl;
         return false;
     }
     nlohmann::json json;
     try {
         ifstream infile(JSON_FILE);
-        infile >> json;
 
+        infile >> json;
+        string home = pbox::get_home();
         string datadir = json.at("datadir");
+        if (json.at("use_home")) {
+            datadir = home + "/" + datadir;
+        }
         input_fn = json.at("input");
         input_fn = datadir + '/' + input_fn;
         output_fn = json.at("output");
+
         cout << "input: " << input_fn << endl;
         cout << "output: " << output_fn << endl;
     } catch (nlohmann::json::parse_error& e) {
@@ -54,7 +51,7 @@ bool load_json(const string& json_file,
 }
 #endif
 
-void init()
+bool init()
 {
     namedWindow("src", WINDOW_AUTOSIZE);
     namedWindow("dst", WINDOW_AUTOSIZE);
@@ -64,11 +61,22 @@ void init()
     if ( !load_json(JSON_FILE, input_img, output_img) ) {
         input_img = INPUT_IMAGE;
         output_img = OUTPUT_IMAGE;
+    } else {
+        // load ok
     }
 #else
     input_img = INPUT_IMAGE;
     output_img = OUTPUT_IMAGE;
 #endif
+
+
+    if (pbox::is_file_exist(input_img)) {
+        return true;
+    } else {
+        cout << "file not found: " << input_img << endl;
+    }
+
+    return false;
 }
 
 Mat rotate(Mat src, double angle)
@@ -82,15 +90,21 @@ Mat rotate(Mat src, double angle)
 
 int main()
 {
-    init();
+    if (!init()) {
+        cout << "something wrong!\n";
+        return 1;
+    }
 
+    bool test = true;
     Mat src = imread(input_img);
-    Mat dst = rotate(src, 45);
 
     imshow("src", src);
-    imshow("dst", dst);
 
-    imwrite(output_img, dst);
+    if (test) {
+        Mat dst = rotate(src, 45);
+        imshow("dst", dst);
+        imwrite(output_img, dst);
+    }
 
     waitKey(0);
     destroyAllWindows();

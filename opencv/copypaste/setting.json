@@ -1,5 +1,6 @@
 {
-    "datadir": "/home/ericosur/Pictures/data",
+    "use_home": true,
+    "datadir": "Pictures/data",
     "input": "lena.jpg",
     "output": "out.png"
 }

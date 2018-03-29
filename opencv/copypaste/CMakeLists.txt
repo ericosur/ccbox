@@ -1,5 +1,5 @@
 # cmake needs this line
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.0)
 
 # Define project name
 set(PN "copypaste")
@@ -10,8 +10,10 @@ project(${PN})
 # via the command line or GUI
 find_package(OpenCV REQUIRED)
 
-# json.hpp
-include_directories("$ENV{HOME}/src/github/json/src/")
+include_directories("/usr/local/include")
+
+# pbox
+link_directories("/usr/local/lib/pbox")
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_FLAGS "-Wall -O3")
@@ -40,5 +42,6 @@ add_executable(
 # Link your application with OpenCV libraries
 target_link_libraries(
     ${PN}
+    libpbox.so
     ${OpenCV_LIBS}
 )
