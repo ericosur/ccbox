@@ -52,6 +52,11 @@ bool ReadSetting::load_json(const std::string& json_file)
         video_id = vid;
 
         use_realsense = json.at("use_realsense");
+
+        bool tmp = json.at("use_edge_test");
+        use_edge_test = tmp;
+        tmp = json.at("use_hsv_test");
+        use_hsv_test = tmp;
     }
     catch (nlohmann::json::parse_error& e) {
         cout << "parse json error: " << e.what();

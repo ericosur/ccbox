@@ -29,6 +29,8 @@ protected:
 public:
     int video_id = 0;
     bool use_realsense = true;
+    bool use_edge_test = true;
+    bool use_hsv_test = true;
 };
 
 

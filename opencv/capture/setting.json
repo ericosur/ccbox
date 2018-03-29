@@ -1,6 +1,9 @@
 {
-    "use_realsense": false,
     "video_id": 0,
-    "description": "will use /dev/video${video_id}"
+    "description": "will use /dev/video${video_id}",
+
+    "use_realsense": false,
+    "use_edge_test": true,
+    "use_hsv_test": false
 }
 

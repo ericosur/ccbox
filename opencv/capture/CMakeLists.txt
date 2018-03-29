@@ -23,8 +23,9 @@ find_package( OpenCV REQUIRED )
 
 # json.hpp
 if(APPLY_JSON)
-    message("apply json.hpp, use json.hpp from github repository")
-#    include_directories("$ENV{HOME}/src/github/json/single_include/nlohmann")
+    # message("apply json.hpp, use json.hpp from github repository")
+    # include_directories("$ENV{HOME}/src/github/json/single_include/nlohmann")
+    message("apply json.hpp, use json.hpp from /usr/local/include")
     include_directories("/usr/local/include")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_JSON")
 endif()
