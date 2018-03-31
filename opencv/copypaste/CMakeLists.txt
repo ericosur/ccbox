@@ -12,8 +12,8 @@ find_package(OpenCV REQUIRED)
 
 include_directories("/usr/local/include")
 
-# pbox
-link_directories("/usr/local/lib/pbox")
+# libmytool.so
+link_directories("/usr/local/lib/mytool")
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_FLAGS "-Wall -O3")
@@ -42,6 +42,7 @@ add_executable(
 # Link your application with OpenCV libraries
 target_link_libraries(
     ${PN}
-    libpbox.so
+    libmytool.so
     ${OpenCV_LIBS}
 )
+

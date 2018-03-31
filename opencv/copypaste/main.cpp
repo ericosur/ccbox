@@ -1,4 +1,4 @@
-#include <pbox/pbox.h>
+#include <mytool/mytool.h>
 
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -24,7 +24,7 @@ bool load_json(const string& json_file,
                string& input_fn,
                string& output_fn)
 {
-    if (!pbox::is_file_exist(JSON_FILE)) {
+    if (!mytoolbox::is_file_exist(JSON_FILE)) {
         cout << "json not found..." << endl;
         return false;
     }
@@ -33,10 +33,12 @@ bool load_json(const string& json_file,
         ifstream infile(JSON_FILE);
 
         infile >> json;
-        string home = pbox::get_home();
+        string home = mytoolbox::get_home();
         string datadir = json.at("datadir");
         if (json.at("use_home")) {
             datadir = home + "/" + datadir;
+        } else {
+            cout << "use_home is false\n";
         }
         input_fn = json.at("input");
         input_fn = datadir + '/' + input_fn;
@@ -60,6 +62,7 @@ bool init()
     moveWindow("dst", 400, 0);
 #ifdef USE_JSON
     if ( !load_json(JSON_FILE, input_img, output_img) ) {
+        cout << "json not found, use defaults\n";
         input_img = INPUT_IMAGE;
         output_img = OUTPUT_IMAGE;
     } else {
@@ -70,8 +73,10 @@ bool init()
     output_img = OUTPUT_IMAGE;
 #endif
 
+    //cout << "input_img: " << input_img << "\n";
+    //cout << "output_img: " << output_img << "\n";
 
-    if (pbox::is_file_exist(input_img)) {
+    if (mytoolbox::is_file_exist(input_img)) {
         return true;
     } else {
         cout << "file not found: " << input_img << endl;
@@ -107,6 +112,7 @@ int main()
         imwrite(output_img, dst);
     }
 
+    cout << "press any key to exit...\n";
     waitKey(0);
     destroyAllWindows();
 
