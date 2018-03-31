@@ -220,6 +220,7 @@ int demoCapture()
 
 	//start an infinite loop where webcam feed is copied to cameraFeed matrix
 	//all of our operations will be performed within this loop
+    printf("press ESC or 'q' to quit %s...\n", __func__);
 	while (true) {
 		//store image to matrix
 		capture.read(cameraFeed);
@@ -292,6 +293,7 @@ int demoTest()
     cap.set(CV_CAP_PROP_FRAME_WIDTH, FRAME_WIDTH);
     cap.set(CV_CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT);
 
+    printf("press any key to quit %s...\n", __func__);
     while (true) {
         //store image to matrix
         cap.read(cameraFeed);

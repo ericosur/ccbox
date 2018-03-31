@@ -7,10 +7,9 @@ int test_realsense();
 
 int main(int argc, char *argv[])
 {
-    ReadSetting* settings = ReadSetting::getInstance();
-
 
 #ifdef USE_REALSENSE
+    ReadSetting* settings = ReadSetting::getInstance();
     if (settings->use_realsense) {
         test_realsense();
     }
