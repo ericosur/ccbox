@@ -533,8 +533,10 @@ std::string show_detection_box(cv::Mat& cv_img,
             if (score > MAN_ALERT_SCORE) {
               if ( issue_man_alert_v3(dist, score) ) {
                 // hack
-                cv::imshow("man_alert", cv_img);
-                cv::waitKey(1);
+                if (settings->do_imshow && settings->show_debug) {
+                    cv::imshow("man_alert", cv_img);
+                    cv::waitKey(1);
+                }
               }
             }
             settings->set_vol_epoch();

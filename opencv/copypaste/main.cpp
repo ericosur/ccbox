@@ -6,6 +6,7 @@
 #ifdef USE_JSON
 #include <fstream>
 #include <nlohmann/json.hpp>
+#include <unistd.h>
 #endif
 
 #define JSON_FILE    "../setting.json"

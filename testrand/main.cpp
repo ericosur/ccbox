@@ -19,14 +19,14 @@ void issue_man_alert_v2(int dist)
   static int last_vol = 0;
   //static int last_epoch = 0;
 
-  const int low_vol = 25;
-  const int mid_vol = 50;
-  const int high_vol = 95;
+  const int low_vol = 20;
+  const int mid_vol = 55;
+  const int high_vol = 90;
   const int max_vol = 100;
-  const int threshold = 35;
-  const int pt1 = 150;
-  const int pt2 = 250;
-  const int pt3 = 350;
+  const int threshold = 30;
+  const int pt1 = 120;
+  const int pt2 = 200;
+  const int pt3 = 320;
   int ret_vol = 0;
 
   // will skip if dist <= 0
