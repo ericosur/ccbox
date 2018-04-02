@@ -60,6 +60,7 @@ void issue_dog_alert(int dist);
 void issue_man_alert(int dist);
 bool issue_man_alert_v2(int dist);
 bool issue_man_alert_v3(int dist, float score);
+bool issue_man_alert_v4(int dist, float score, PersonRect& pr);
 void reset_vol_level();
 
 #define MIN_ACCEPTABLE_DIST     (50)
@@ -407,6 +408,56 @@ float query_dist_from_detection_box(const std::vector< std::vector<float> >& det
 #endif  // USE_REALSENSE
 
 
+int find_min_area(const std::vector<PersonRect> &v)
+{
+  int last_idx = -1;
+  int last_min_area = -1;
+
+  if (v.size() > 0) {
+    last_min_area = v[0].get_area();
+    last_idx = 0;
+  } else if (v.size() == 1) {
+    return 0;
+  }
+
+  for (int ii=1; ii<v.size(); ++ii) {
+    if (v[ii].get_area() < last_min_area) {
+      last_idx = ii;
+      last_min_area = v[ii].get_area();
+    }
+  }
+
+  return last_idx;
+}
+
+int find_max_area(const std::vector<PersonRect> &v)
+{
+  int last_idx = -1;
+  int last_max_area = -1;
+
+  if (v.size() > 0) {
+    last_max_area = v[0].get_area();
+    last_idx = 0;
+  } else if (v.size() == 1) {
+    return 0;
+  }
+
+  for (int ii=1; ii<v.size(); ++ii) {
+    if (v[ii].get_area() > last_max_area) {
+      last_idx = ii;
+      last_max_area = v[ii].get_area();
+    }
+  }
+
+  return last_idx;
+}
+
+
+int find_closest(const std::vector<PersonRect> &v)
+{
+  return -1;
+}
+
 std::string show_detection_box(cv::Mat& cv_img,
                         bool hasCrop, cv::Mat& crop_img,
                         const std::vector< std::vector<float> >& detections,
@@ -418,11 +469,14 @@ std::string show_detection_box(cv::Mat& cv_img,
   bool hasPerson = false;
   int dist = 0;
   SsdSetting* settings = SsdSetting::getInstance();
-
-  if (showDebug)
-    printf("%s\n", __func__);
+  const cv::Scalar& color = cv::Scalar( 255, 255, 255 );
+  //PersonRect last_rect;
+  std::vector<PersonRect> vv;
+  // if (showDebug)
+     //printf("%s +++\n", __func__);
 
   for (size_t i = 0; i < detections.size(); ++i) {
+
     const vector<float>& d = detections[i];
     // Detection format: [image_id, label, score, xmin, ymin, xmax, ymax].
     CHECK_EQ(d.size(), 7);
@@ -430,9 +484,7 @@ std::string show_detection_box(cv::Mat& cv_img,
     const float score = d[2];
 
     int cols, rows;
-    int x1, x2, y1, y2;
     int box_x1, box_x2, box_y1, box_y2;
-
 
     if (hasCrop) {
       cols = crop_img.cols;
@@ -442,10 +494,10 @@ std::string show_detection_box(cv::Mat& cv_img,
       rows = cv_img.rows;
     }
 
-    x1 = static_cast<int>(d[3] * cols);
-    y1 = static_cast<int>(d[4] * rows);
-    x2 = static_cast<int>(d[5] * cols);
-    y2 = static_cast<int>(d[6] * rows);
+    int x1 = static_cast<int>(d[3] * cols);
+    int y1 = static_cast<int>(d[4] * rows);
+    int x2 = static_cast<int>(d[5] * cols);
+    int y2 = static_cast<int>(d[6] * rows);
 
     if (hasCrop) {
       box_x1 = rx + x1;
@@ -459,88 +511,53 @@ std::string show_detection_box(cv::Mat& cv_img,
       box_y2 = y2;
     }
 
-    const cv::Scalar& color = cv::Scalar( 255, 255, 255 );
+    bool hasDog = ( score >= settings->confidence_threshold && is_dog(label) );
+    bool hasPerson = ( score >= MAN_ALERT_SCORE && is_person(label) );
 
-    if ( score >= settings->confidence_threshold && (is_dog(label) || is_person(label)) ) {
+    //printf("fuck @%d\n", __LINE__);
 
-      bool hasDog = is_dog(label);
-      bool hasPerson = is_person(label);
-
-      if (showDebug) {
-        printf("from: c%dr%d_%d %d %d %d\n", cols, rows, box_x1, box_x2, box_y1, box_y2);
-      }
+    if ( hasDog || hasPerson ) {
 
       detected ++;
-
-//
-// Detection format: [image_id, label, score, xmin, ymin, xmax, ymax].
-//
+      // if (showDebug) {
+         //printf("from: c%dr%d_%d %d %d %d\n", cols, rows, box_x1, box_x2, box_y1, box_y2);
+      // }
 
       const int ww = box_x2 - box_x1;
       const int hh = box_y2 - box_y1;
       const int qx = box_x1 + ww / 2;
       const int qy = box_y1 + hh / 2;
 
-      if (settings->file_type == "webcam") {
-        // do not fetch depth data
-        settings->do_dog_alert = 0;
-        settings->do_man_alert = 0;
-      } else {
-        if (settings->direct_use_realsense && settings->file_type == "realsense") {
+      if (settings->direct_use_realsense && settings->file_type == "realsense") {
   #ifdef USE_REALSENSE
-          dist = pbox::get_dist_from_point(qx, qy);
+        //printf("fuck @%d\n", __LINE__);
+        dist = pbox::get_dist_from_point(qx, qy);
           //dist = pbox::get_rs_dpeth_pt2(qx, qy);
+        //printf("rs: dist: %d\n", dist);
   #else
-          printf("USE_REALSENSE not set, dist will be always 0\n");
+        printf("USE_REALSENSE not set, dist will be always 0\n");
   #endif
-        }
-        else
-        {
+      }
+      else {  // using raw data to get depth
           if (ww > 10 && hh > 10 && qx > 10 && qy > 10) {
             dist = get_dpeth_pt2(dep_buffer, qx, qy);
           } else {
             printf("invalid range: w(%d)h(%d),qx(%d),qy(%d)\n", ww, hh, qx, qy);
             dist = 0;
           }
-          //dist = get_dpeth_pt(dep_buffer, qx, qy);
-
-        }
-
       }
-
-      // printf("no realsense, neither myipc\n");
-      // (void)qx;
-      // (void)qy;
-      // dist = 0;
 
       if (settings->do_dog_alert && hasDog) {
-        //if (ww*10/DEFAULT_WIDTH>3 || hh*10/DEFAULT_HEIGHT) {
-          //if (settings->show_debug) {
-            //printf("FALSE ALARM/hasDog: w(%d)h(%d)  ", ww, hh);
-          //}
-          // take as false alarm
-        //} else {
           issue_dog_alert(dist);
-        //}
       }
-      if (settings->do_man_alert) {
-        if (hasPerson) {
-          //printf("hasPerson: ww(%d) hh(%d) s(%.2f)\n", ww, hh, score);
-          //issue_man_alert(dist);
-          if (hasCrop && settings->show_debug) {
-            //printf("will skip cropped...\n");
-          } else {
-            if (score > MAN_ALERT_SCORE) {
-              if ( issue_man_alert_v3(dist, score) ) {
-                // hack
-                if (settings->do_imshow && settings->show_debug) {
-                    cv::imshow("man_alert", cv_img);
-                    cv::waitKey(1);
-                }
-              }
-            }
-            settings->set_vol_epoch();
-          }
+
+    //printf("fuck @%d\n", __LINE__);
+
+      if (hasPerson) {  // will not record down dog rect
+        PersonRect pr(box_x1, box_y1, ww, hh, score, dist);
+        if (dist > 0) {
+          //printf("[%d] i:%d a:%d s(%.2f) d(%d)\r", __LINE__, (int)i, pr.get_area(), score, dist);
+          vv.push_back(pr);
         }
       }
 
@@ -548,25 +565,65 @@ std::string show_detection_box(cv::Mat& cv_img,
       draw_aim(cv_img, box_x1, box_y1, ww, hh);
       //show_distwin(dist);
 
-      //draw box
+      //draw box and text
       cv::Point top_left_pt(box_x1, box_y1);
       cv::Point bottom_right_pt(box_x2, box_y2);
       cv::Point bottom_left_pt(box_x1, box_y2);
-
       cv::rectangle(cv_img, top_left_pt, bottom_right_pt, color, 4);
-
       snprintf(buffer, sizeof(buffer), "%s: %d, %.2f",
                get_label_name(label).c_str(), dist, score);
-
       cv::Size text = cv::getTextSize(buffer, fontface, scale, thickness, &baseline);
-
       cv::rectangle(cv_img, bottom_left_pt + cv::Point(0, 0),
           bottom_left_pt + cv::Point(text.width, -text.height-baseline),
           color, CV_FILLED);
       cv::putText(cv_img, buffer, bottom_left_pt - cv::Point(0, baseline),
           fontface, scale, CV_RGB(0, 0, 0), thickness, 8);
+    } // if ( hasDog || hasPerson )
+    //printf("for-loop --- @%d\t", __LINE__);
+
+  } // for-loop
+
+  // if (vv.size())
+  //   printf("vv.size():%d @%d\n", vv.size(), __LINE__);
+
+  if (settings->do_man_alert) {
+    int idx = -1;
+    if (vv.size() > 1) {
+      //printf("fuck @%d\t", __LINE__);
+      //idx = find_closest(vv);
+      idx = find_min_area(vv);
+      printf("%d: find_min_area --- idx:%d\n", __LINE__, idx);
+      if (idx != -1) {
+        //printf("fuck @%d\n", __LINE__);
+        printf("min at: %d, area: %d, dist: %d\n", idx, vv[idx].get_area(), vv[idx].get_dist());
+      }
+    }
+
+    if (vv.size() > 0) {
+      // update last volume epoch
+      settings->set_vol_epoch();
+
+#if 1
+      if (idx == -1) {
+        //printf("idx == %d, reset idx\n", idx);
+        idx = 0;
+      }
+
+      if ( issue_man_alert_v4(vv[idx].get_dist(), vv[idx].get_score(), vv[idx]) ) {
+        // deubg show
+        if (settings->do_imshow && settings->show_debug) {
+            cv::imshow("man_alert", cv_img);
+            cv::waitKey(1);
+        }
+        //last_rect = vv[idx];
+        //printf("[%d] last_rect: %d, vv: %d\n", __LINE__, last_rect.get_area(), vv[idx].get_area());
+        //float iou = get_iou(aa, bb);
+        //printf("[%d] iou: %.2f\n", __LINE__, iou);
+      }
+#endif
     }
   }
+  vv.clear();
 
   if (strlen(buffer) && settings->show_debug) {
     printf("%s: %s\n", __func__, buffer);
@@ -741,7 +798,7 @@ void reset_vol_level()
   SsdSetting* settings = SsdSetting::getInstance();
   int vol = settings->max_vol;
   if (settings->last_vol != vol) {
-    printf("%s: reset vol level to %d\n", __func__, vol);
+    printf("\n%s: reset vol level to %d\n", __func__, vol);
 #ifdef USE_MYIPC
       if (settings->wait_myipc && ipc != NULL) {
         ipc->IPC_Put_TAG_INT32(settings->audience_vol_tag.c_str(), vol);
@@ -753,6 +810,117 @@ void reset_vol_level()
   }
 }
 
+
+bool issue_man_alert_v4(int dist, float score, PersonRect& pr)
+{
+  // will skip if dist <= 60 or dist >= 550
+  if (dist <= MIN_ACCEPTABLE_DIST || dist >= MAX_ACCEPTABLE_DIST) {
+    printf("v4: oob ");
+    return false;
+  }
+  SsdSetting* s = SsdSetting::getInstance();
+  VolumeLevelEnum r = VOL_ZERO;
+  static PersonRect record;
+  float iou = get_iou(record.get_rect(), pr.get_rect());
+  bool isJumped;
+  int state = 0;
+  static int last_state = 0;
+
+  if (dist != 0 && s->last_dist == 0) {
+    isJumped = true;
+    printf("v4: j ");
+    goto get_volume_label;
+  }
+
+  //printf("v4: %s d(%d), s(%.2f), vol(%d)+++  ", __func__, dist, score, s->last_vol);
+  if (dist == s->last_dist)  {  // not change
+    printf("v4: s ");
+    return false;
+  }
+  if (score > s->last_score) {
+    //if (s->show_debug)
+    //printf("update dist: %d\r", dist);
+    s->skipped = 0;
+    s->last_score = score;
+  }
+  else if (s->last_dist != 0) {
+    if (abs(dist - s->last_dist) > s->threshold) {
+      //if (s->show_debug)
+      //printf("skip too large %d vs %d s(%.2f)\n", dist, s->last_dist, s->last_score);
+      printf("n ");
+      s->skipped ++;
+      return false;
+    }
+  }
+
+  //printf("issue_man_alert_v4: iou: %.2f\n", iou);
+  if (iou > 0.6) { // most area is same...
+    //s->set_last_dist(dist);
+    printf("i ");
+    return false;
+  }
+
+get_volume_label:
+  // if (isJumped) {
+  //   s->last_dist = dist;
+  // }
+
+  //s->last_score = 0.9;
+  if (dist > s->last_dist) { // increasing...
+    //printf("issue_man_alert_v3: dist is increasing...\n");
+    r = get_vol_while_increase(dist);
+    //printf(" inc(%d):%d ", dist, r);
+    //printf("1 ");
+    state = 1;
+  } else {
+    //printf("issue_man_alert_v3: dist is decreasing...\n");
+    r = get_vol_while_decrease(dist);
+    //printf(" dec(%d):%d ", dist, r);
+    //printf("-1 ");
+    state = -1;
+  }
+
+  int vol = s->volumes[r];
+  if ( vol <= 0 ) {
+    return false;
+  }
+
+
+  //if ( (state == 1 && last_state == -1) || (state == -1 && last_state == 1) ) {
+    if ( abs(dist - s->last_dist) < (s->minus_offset + s->plus_offset) ) {
+      //printf("%d %d ", dist, s->last_dist);
+      last_state = state;
+      return false;
+    }
+  //}
+
+  s->set_last_dist(dist);
+
+  // vol changes
+  if ( vol != s->last_vol ) {
+    s->set_last_vol(vol);  // record the epoch that changes vol
+#ifdef USE_MYIPC
+    if (s->wait_myipc && ipc != NULL) {
+      ipc->IPC_Put_TAG_INT32(s->audience_vol_tag.c_str(), vol);
+      ipc->IPC_Put_TAG_INT32(s->volume_adjust_tag.c_str(), 1);
+    }
+#endif  // USE_MYIPC
+    {
+      printf("\n====> issue_man_alert_v4: PUT %s/%d d(%d) s(%.2f) iou(%.2f)\n",
+        s->audience_vol_tag.c_str(), vol, dist, s->last_score, iou);
+    }
+
+    record = pr;
+    //printf("iou: %.2f\n", get_iou(record.get_rect(), pr.get_rect()));
+    return true;
+  } else {
+    return false;
+  }
+
+}
+
+
+
 bool issue_man_alert_v3(int dist, float score)
 {
   // will skip if dist <= 60 or dist >= 550
@@ -762,24 +930,27 @@ bool issue_man_alert_v3(int dist, float score)
   SsdSetting* s = SsdSetting::getInstance();
   VolumeLevelEnum r = VOL_ZERO;
 
+  //printf("%s d(%d), s(%.2f), vol(%d)+++\n", __func__, dist, score, s->last_vol);
   if (dist == s->last_dist)  {  // not change
     //printf("issue_man_alert_v3: dist not change...\n");
     return false;
   }
   if (score > s->last_score) {
     //if (s->show_debug)
-    printf("high score, take it: %d, %.2f vs ls(%.2f)\n", dist, score, s->last_score);
+    //printf("update dist: %d\r", dist);
     s->skipped = 0;
+    s->last_score = score;
   }
   else if (s->last_dist != 0) {
     if (abs(dist - s->last_dist) > s->threshold) {
       //if (s->show_debug)
-      printf("skip too large %d vs %d s(%.2f)\n", dist, s->last_dist, s->last_score);
+      //printf("skip too large %d vs %d s(%.2f)\n", dist, s->last_dist, s->last_score);
+      printf("skip...");
       s->skipped ++;
       return false;
     }
   }
-  s->last_score = score;
+  //s->last_score = 0.9;
   if (dist > s->last_dist) { // increasing...
     //printf("issue_man_alert_v3: dist is increasing...\n");
     r = get_vol_while_increase(dist);
@@ -793,10 +964,11 @@ bool issue_man_alert_v3(int dist, float score)
     return false;
   }
 
+  s->set_last_dist(dist);
+
   // vol changes
   if ( vol != s->last_vol ) {
     s->set_last_vol(vol);  // record the epoch that changes vol
-    s->set_last_dist(dist);
 #ifdef USE_MYIPC
     if (s->wait_myipc && ipc != NULL) {
       ipc->IPC_Put_TAG_INT32(s->audience_vol_tag.c_str(), vol);
@@ -804,7 +976,7 @@ bool issue_man_alert_v3(int dist, float score)
     }
 #endif  // USE_MYIPC
     {
-      printf("===> man_alert_v3: PUT %s/%d d(%d) s(%.2f)\n",
+      printf("\n===> man_alert_v3: PUT %s/%d d(%d) s(%.2f)\n",
         s->audience_vol_tag.c_str(), vol, dist, s->last_score);
     }
     return true;
@@ -1133,26 +1305,27 @@ int main(int argc, char** argv)
         }
 #ifdef USE_REALSENSE
         else if (settings->direct_use_realsense) {
-          v.clear();
-          v.push_back(cmd);
+          //v.clear();
+          //v.push_back(cmd);
 
           if (!hasRealsenseOn) {
             printf("turn on realsense and use it...\n");
-            v.push_back("turn on realsense @" + pbox::get_timestring());
+            //v.push_back("turn on realsense @" + pbox::get_timestring());
           }
           pbox::init_realsense();
-
+          //printf("pbox::init_realsense() ---\n");
           hasRealsenseOn = true;
-          v.push_back("hasRealsenseOn");
+          //v.push_back("hasRealsenseOn");
 
           pbox::get_color_mat_from_realsense(cv_img);
-          pbox::output_status(OUTPUT_SSD_JSON, v);
+          //printf("pbox::get_color_mat_from_realsense() ---\n");
+          //pbox::output_status(OUTPUT_SSD_JSON, v);
         }
 #endif// USE_REALSENSE
         else if (pbox::is_file_exist(rgbfn)) {
           //printf("rgbfn: %s\n", rgbfn);
-          v.clear();
-          v.push_back("read from " + std::string(rgbfn));
+          //v.clear();
+          //v.push_back("read from " + std::string(rgbfn));
           if (settings->wait_myipc || settings->testraw) {
             if (settings->show_debug)
               printf("myipc or testraw\n");
@@ -1196,9 +1369,11 @@ int main(int argc, char** argv)
           //   printf("CROPPED!!! size: %d x %d\n", cv_img.cols, cv_img.rows);
           // }
 
+          //printf("before detector +++\n");
           tm.start();
           std::vector<vector<float> > detections = detector.Detect(cv_img);
           tm.stop();
+          //printf("detector ---\n");
 
           // temmp test
           //imshow("temp", cv_img);

@@ -96,6 +96,12 @@ bool SsdSetting::read_values_from_json(const std::string& json_file)
         do_dog_alert = pbox::get_int_from_jsonfile(json_file, "do_dog_alert", do_dog_alert);
         do_man_alert = pbox::get_int_from_jsonfile(json_file, "do_man_alert", do_man_alert);
 
+        if (file_type == "webcam") {
+            printf("using webcam: auto turn off do_dog_alert and do_man_alert\n");
+            do_dog_alert = 0;
+            do_man_alert = 0;
+        }
+
         low_vol = pbox::get_int_from_jsonfile(json_file, "low_vol", low_vol);
         mid_vol = pbox::get_int_from_jsonfile(json_file, "mid_vol", mid_vol);
         high_vol = pbox::get_int_from_jsonfile(json_file, "high_vol", high_vol);

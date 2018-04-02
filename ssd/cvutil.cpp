@@ -119,3 +119,13 @@ bool in_the_range_of(const int pt, const int target, const int threshold)
   return false;
 }
 
+float get_iou(const cv::Rect& a, const cv::Rect& b)
+{
+    cv::Rect unionRect = a | b;
+    cv::Rect intersectionRect = a & b;
+    if (unionRect.area() == 0) {
+        return 0.0;
+    }
+    float iou = (float)intersectionRect.area() / (float)unionRect.area();
+    return iou;
+}
