@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 
-set(PN "firstgsl")
+set(PN "statgsl")
 project(${PN})
 
 set(CMAKE_CXX_FLAGS "-Wall -O3")
@@ -27,6 +27,7 @@ endif()
 add_executable(
     ${PN}
     main.cpp
+    test.cpp
 )
 
 target_link_libraries(
