@@ -22,6 +22,25 @@ std::string save_mat_to_file(const cv::Mat& img)
     return fn;
 }
 
+float get_iou(const cv::Rect& a, const cv::Rect& b)
+{
+    cv::Rect unionRect = a | b;
+    cv::Rect intersectionRect = a & b;
+    if (unionRect.area() == 0) {
+        return 0.0;
+    }
+    float iou = (float)intersectionRect.area() / (float)unionRect.area();
+    return iou;
+}
+
+void test_iou()
+{
+    cv::Rect a(80,120,50,50);
+    cv::Rect b(100,100,50,50);
+    float f = get_iou(a, b);
+    printf("f: %.2f\n", f);
+}
+
 void draw_aim(cv::Mat& img, int w, int h)
 {
     using namespace cv;

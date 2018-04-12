@@ -22,6 +22,9 @@ void crop_image(const cv::Mat& orig, cv::Mat& new_img);
 
 std::string save_mat_to_file(const cv::Mat& img);
 
+float get_iou(const cv::Rect& a, const cv::Rect& b);
+void test_iou();
+
 }   // namespace cvutil
 
 #endif  // __UTIL_CV_UTIL_H__
