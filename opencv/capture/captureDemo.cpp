@@ -14,6 +14,7 @@
 //IN THE SOFTWARE.
 
 #include "readset.h"
+#include "cvutil.h"
 
 #include <opencv2/opencv.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -293,21 +294,27 @@ int demoTest()
     cap.set(CV_CAP_PROP_FRAME_WIDTH, FRAME_WIDTH);
     cap.set(CV_CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT);
 
-    printf("press any key to quit %s...\n", __func__);
+    printf("press ESC/q to quit %s...\npress SPACE/s to save RGB mat\n", __func__);
     while (true) {
         //store image to matrix
         cap.read(cameraFeed);
-        imshow(WIN_FEED, cameraFeed);
 
         cvtColor(cameraFeed, edges, CV_BGR2GRAY);
         GaussianBlur(edges, edges, Size(7,7), 1.5, 1.5);
         Canny(edges, edges, 0, 30, 3);
-        imshow(WIN_EDGE, edges);
 
-        if ( waitKey(100) > 0 ) {
-            destroyAllWindows();
+        imshow(WIN_EDGE, edges);
+        imshow(WIN_FEED, cameraFeed);
+
+        int key = waitKey(500);
+        if ( key == 'q' || key == 27 ) {
             break;
+        } else if (key == 's' || key == 32) {
+            // save image
+            std::string fn = cvutil::save_mat_to_file(cameraFeed);
+            cout << "saved " << fn << endl;
         }
     }
+    destroyAllWindows();
     return 0;
 }

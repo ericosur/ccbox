@@ -99,12 +99,12 @@ int test_realsense() try
         Mat new_img;
 
         if (use_dep_win) {
-            pbox::draw_aim(depth_image, w, h);
-            pbox::draw_dist(depth_image, dist);
+            cvutil::draw_aim(depth_image, w, h);
+            cvutil::draw_dist(depth_image, dist);
         }
 
-        pbox::draw_aim(color_image, w, h);
-        pbox::draw_aim(color_image, w, h);
+        cvutil::draw_aim(color_image, w, h);
+        cvutil::draw_aim(color_image, w, h);
 
         // Update the window with new data
         if (use_dep_win) {
@@ -115,7 +115,7 @@ int test_realsense() try
 
         const int max_repeat = 3;
         for (int ii=0; ii<max_repeat; ++ii) {
-            pbox::crop_image(color_image, new_img);
+            cvutil::crop_image(color_image, new_img);
             imshow(crop_window, new_img);
         }
     }

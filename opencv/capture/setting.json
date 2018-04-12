@@ -4,6 +4,8 @@
 
     "use_realsense": false,
     "use_edge_test": true,
-    "use_hsv_test": false
+    "use_hsv_test": false,
+
+    "output_dir": "outdir"
 }
 

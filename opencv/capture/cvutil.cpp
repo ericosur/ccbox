@@ -1,4 +1,5 @@
 #include "cvutil.h"
+#include "readset.h"
 
 #include <cstdlib>
 #include <iostream>
@@ -9,9 +10,17 @@
 
 using namespace std;
 
-namespace pbox {
+namespace cvutil {
 
 int baseline = 0;
+
+std::string save_mat_to_file(const cv::Mat& img)
+{
+    ReadSetting* s = ReadSetting::getInstance();
+    std::string fn = s->get_save_image_fn();
+    cv::imwrite(fn, img);
+    return fn;
+}
 
 void draw_aim(cv::Mat& img, int w, int h)
 {
@@ -111,4 +120,4 @@ void crop_image(const cv::Mat& orig, cv::Mat& new_img)
 }
 #endif
 
-}   // namespace pbox
+}   // namespace cvutil

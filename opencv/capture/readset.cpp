@@ -57,6 +57,9 @@ bool ReadSetting::load_json(const std::string& json_file)
         use_edge_test = tmp;
         tmp = json.at("use_hsv_test");
         use_hsv_test = tmp;
+
+        std::string _dir = json.at("output_dir");
+        output_dir = _dir;
     }
     catch (nlohmann::json::parse_error& e) {
         cout << "parse json error: " << e.what();
