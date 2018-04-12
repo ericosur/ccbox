@@ -3,4 +3,6 @@ f/
 *.jpg
 *.png
 *.bmp
+!**/data/*.png
+!**/data/*.jpg
 

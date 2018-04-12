@@ -14,8 +14,8 @@ int test()
 {
     vector<Mat> imgs;
 
-    imgs.push_back( imread("outdir/capt0000.png") );
-    imgs.push_back( imread("outdir/capt0001.png") );
+    imgs.push_back( imread("../data/capt0000.png") );
+    imgs.push_back( imread("../data/capt0001.png") );
 
     // vector of keyPoints
     vector<vector<KeyPoint>> keypoints;
