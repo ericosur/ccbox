@@ -14,6 +14,7 @@ std::string get_home();
 
 bool is_file_exist(const char* fname);
 bool is_file_exist(const std::string& fname);
+void dump(const char* buf, int size);
 
 void test();
 
