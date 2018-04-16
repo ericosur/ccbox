@@ -10,6 +10,8 @@
 
 const cv::Scalar white = cv::Scalar(255, 255, 255);
 
+int PersonRect::count = 0;
+
 void draw_aim(cv::Mat& img, int x, int y, int w, int h)
 {
     using namespace cv;
@@ -60,8 +62,26 @@ void crop_image(const cv::Mat& orig, cv::Mat& new_img, int x, int y, int w, int 
 
     cv::Rect roi(x, y, DEFAULT_CROP_WIDTH, DEFAULT_CROP_HEIGHT);
     new_img = orig(roi);
+}
 
+void crop_image_rect(const cv::Mat& orig, cv::Mat& new_img, cv::Rect rr)
+{
+    printf("orig: col:%d, row:%d\n", orig.cols, orig.rows);
+    cv::Rect nn = rr;
+    if (nn.x < 0) {
+        nn.x = 0;
+    }
+    if (nn.y < 0) {
+        nn.y = 0;
+    }
+    if (nn.x + nn.width > DEFAULT_WIDTH) {
+        nn.width = DEFAULT_WIDTH - nn.x;
+    }
+    if (nn.y + nn.height > DEFAULT_HEIGHT) {
+        nn.height = DEFAULT_HEIGHT - nn.y;
+    }
 
+    new_img = orig(nn);
 }
 
 void crop_image(const cv::Mat& orig, cv::Mat& new_img, int& rx, int& ry,

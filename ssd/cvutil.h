@@ -16,6 +16,7 @@ void draw_aim(cv::Mat& img, int w, int h);
 void draw_dist(cv::Mat& img, float dist);
 void crop_image(const cv::Mat& orig, cv::Mat& new_img,
                 int x, int y, int w, int h);
+void crop_image_rect(const cv::Mat& orig, cv::Mat& new_img, cv::Rect rr);
 void crop_image(const cv::Mat& orig, cv::Mat& new_img,
                 int& rx, int& ry,
                 //int& min_crop_width, int& min_crop_height,
@@ -63,10 +64,24 @@ public:
     return dist;
   }
 
+  static int get_count() {
+    return count;
+  }
+
+  static int inc_count() {
+    if (count + 1 > 9801) {
+      count = 0;
+    } else {
+      count ++;
+    }
+    return count;
+  }
+
 private:
   cv::Rect _rect;
   float score = 0.0;
   int dist = 0;
+  static int count;
 };
 
 

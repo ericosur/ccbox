@@ -455,7 +455,24 @@ int find_max_area(const std::vector<PersonRect> &v)
 
 int find_closest(const std::vector<PersonRect> &v)
 {
-  return -1;
+  int last_idx = -1;
+  int last_min = -1;
+
+  if (v.size() > 0) {
+    last_min = v[0].get_dist();
+    last_idx = 0;
+  } else if (v.size() == 1) {
+    return 0;
+  }
+
+  for (int ii=1; ii<v.size(); ++ii) {
+    if (v[ii].get_dist() < last_min) {
+      last_idx = ii;
+      last_min = v[ii].get_dist();
+    }
+  }
+
+  return last_idx;
 }
 
 std::string show_detection_box(cv::Mat& cv_img,
@@ -474,6 +491,8 @@ std::string show_detection_box(cv::Mat& cv_img,
   std::vector<PersonRect> vv;
   // if (showDebug)
      //printf("%s +++\n", __func__);
+
+  cv::Mat orig_img = cv_img.clone();
 
   for (size_t i = 0; i < detections.size(); ++i) {
 
@@ -555,6 +574,8 @@ std::string show_detection_box(cv::Mat& cv_img,
 
       if (hasPerson) {  // will not record down dog rect
         PersonRect pr(box_x1, box_y1, ww, hh, score, dist);
+        printf("@%d: (%d,%d,%d,%d) s(%.2f)", __LINE__, box_x1, box_y1, ww, hh, score);
+        printf("@%d: (%d,%d,%d,%d)", __LINE__, pr.get_rect().x, pr.get_rect().y, pr.get_rect().width, pr.get_rect().height);
         if (dist > 0) {
           //printf("[%d] i:%d a:%d s(%.2f) d(%d)\r", __LINE__, (int)i, pr.get_area(), score, dist);
           vv.push_back(pr);
@@ -588,14 +609,22 @@ std::string show_detection_box(cv::Mat& cv_img,
 
   if (settings->do_man_alert) {
     int idx = -1;
-    if (vv.size() > 1) {
-      //printf("fuck @%d\t", __LINE__);
-      //idx = find_closest(vv);
-      idx = find_min_area(vv);
-      printf("%d: find_min_area --- idx:%d\n", __LINE__, idx);
+    if (vv.size() >= 1) {
+      printf("vv.size >= 1 @%d\t", __LINE__);
+      idx = find_closest(vv);
+      //idx = find_min_area(vv);
+      printf("%d: find_closest --- idx:%d\n", __LINE__, idx);
       if (idx != -1) {
         //printf("fuck @%d\n", __LINE__);
-        printf("min at: %d, area: %d, dist: %d\n", idx, vv[idx].get_area(), vv[idx].get_dist());
+        cv::Mat new_img;
+        cv::Rect rr = vv[idx].get_rect();
+        printf("closest at idx: %d, dist: %d\t(%d,%d,%d,%d)\n",
+          idx, vv[idx].get_dist(), rr.x, rr.y, rr.width, rr.height);
+        crop_image_rect(orig_img, new_img, vv[idx].get_rect());
+        snprintf(buffer, sizeof(buffer), "/tmp/f%04d.jpg",PersonRect::get_count());
+        PersonRect::inc_count();
+        printf("output to %s\n", buffer);
+        imwrite(buffer, new_img);
       }
     }
 
@@ -619,9 +648,9 @@ std::string show_detection_box(cv::Mat& cv_img,
         //printf("[%d] last_rect: %d, vv: %d\n", __LINE__, last_rect.get_area(), vv[idx].get_area());
         //float iou = get_iou(aa, bb);
         //printf("[%d] iou: %.2f\n", __LINE__, iou);
-      }
+      } // if issue out
 #endif
-    }
+    } // if (vv.size() > 0) {
   }
   vv.clear();
 
@@ -813,8 +842,10 @@ void reset_vol_level()
 
 bool issue_man_alert_v4(int dist, float score, PersonRect& pr)
 {
+  bool v4_debug = false;
   // will skip if dist <= 60 or dist >= 550
   if (dist <= MIN_ACCEPTABLE_DIST || dist >= MAX_ACCEPTABLE_DIST) {
+    if (v4_debug)
     printf("v4: oob ");
     return false;
   }
@@ -828,12 +859,14 @@ bool issue_man_alert_v4(int dist, float score, PersonRect& pr)
 
   if (dist != 0 && s->last_dist == 0) {
     isJumped = true;
+    if (v4_debug)
     printf("v4: j ");
     goto get_volume_label;
   }
 
   //printf("v4: %s d(%d), s(%.2f), vol(%d)+++  ", __func__, dist, score, s->last_vol);
   if (dist == s->last_dist)  {  // not change
+    if (v4_debug)
     printf("v4: s ");
     return false;
   }
@@ -847,6 +880,7 @@ bool issue_man_alert_v4(int dist, float score, PersonRect& pr)
     if (abs(dist - s->last_dist) > s->threshold) {
       //if (s->show_debug)
       //printf("skip too large %d vs %d s(%.2f)\n", dist, s->last_dist, s->last_score);
+      if (v4_debug)
       printf("n ");
       s->skipped ++;
       return false;
@@ -856,6 +890,7 @@ bool issue_man_alert_v4(int dist, float score, PersonRect& pr)
   //printf("issue_man_alert_v4: iou: %.2f\n", iou);
   if (iou > 0.6) { // most area is same...
     //s->set_last_dist(dist);
+    if (v4_debug)
     printf("i ");
     return false;
   }
