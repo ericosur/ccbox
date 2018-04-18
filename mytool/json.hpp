@@ -1,7 +1,7 @@
 /*
     __ _____ _____ _____
  __|  |   __|     |   | |  JSON for Modern C++
-|  |  |__   |  |  | | | |  version 3.1.1
+|  |  |__   |  |  | | | |  version 3.1.2
 |_____|_____|_____|_|___|  https://github.com/nlohmann/json
 
 Licensed under the MIT License <http://opensource.org/licenses/MIT>.
@@ -31,7 +31,7 @@ SOFTWARE.
 
 #define NLOHMANN_JSON_VERSION_MAJOR 3
 #define NLOHMANN_JSON_VERSION_MINOR 1
-#define NLOHMANN_JSON_VERSION_PATCH 1
+#define NLOHMANN_JSON_VERSION_PATCH 2
 
 #include <algorithm> // all_of, find, for_each
 #include <cassert> // assert
@@ -1871,6 +1871,7 @@ class lexer
     using number_integer_t = typename BasicJsonType::number_integer_t;
     using number_unsigned_t = typename BasicJsonType::number_unsigned_t;
     using number_float_t = typename BasicJsonType::number_float_t;
+    using string_t = typename BasicJsonType::string_t;
 
   public:
     /// token types for the parser
@@ -2969,7 +2970,7 @@ scan_number_done:
     }
 
     /// return current string value (implicitly resets the token; useful only once)
-    std::string&& move_string()
+    string_t&& move_string()
     {
         return std::move(token_buffer);
     }
@@ -3099,7 +3100,7 @@ scan_number_done:
     std::vector<char> token_string {};
 
     /// buffer for variable-length tokens (numbers, strings)
-    std::string token_buffer {};
+    string_t token_buffer {};
 
     /// a description of occurred lexer errors
     const char* error_message = "";
@@ -3155,6 +3156,7 @@ class parser
     using number_integer_t = typename BasicJsonType::number_integer_t;
     using number_unsigned_t = typename BasicJsonType::number_unsigned_t;
     using number_float_t = typename BasicJsonType::number_float_t;
+    using string_t = typename BasicJsonType::string_t;
     using lexer_t = lexer<BasicJsonType>;
     using token_type = typename lexer_t::token_type;
 
@@ -3298,7 +3300,7 @@ class parser
                 }
 
                 // parse values
-                std::string key;
+                string_t key;
                 BasicJsonType value;
                 while (true)
                 {
@@ -6355,9 +6357,9 @@ class binary_writer
                 break;
             }
 
-            case value_t::number_float: // Double-Precision Float
+            case value_t::number_float:
             {
-                oa->write_character(static_cast<CharType>(0xFB));
+                oa->write_character(get_cbor_float_prefix(j.m_value.number_float));
                 write_number(j.m_value.number_float);
                 break;
             }
@@ -6615,9 +6617,9 @@ class binary_writer
                 break;
             }
 
-            case value_t::number_float: // float 64
+            case value_t::number_float:
             {
-                oa->write_character(static_cast<CharType>(0xCB));
+                oa->write_character(get_msgpack_float_prefix(j.m_value.number_float));
                 write_number(j.m_value.number_float);
                 break;
             }
@@ -6794,7 +6796,7 @@ class binary_writer
                 if (use_type and not j.m_value.array->empty())
                 {
                     assert(use_count);
-                    const char first_prefix = ubjson_prefix(j.front());
+                    const CharType first_prefix = ubjson_prefix(j.front());
                     const bool same_prefix = std::all_of(j.begin() + 1, j.end(),
                                                          [this, first_prefix](const BasicJsonType & v)
                     {
@@ -6805,7 +6807,7 @@ class binary_writer
                     {
                         prefix_required = false;
                         oa->write_character(static_cast<CharType>('$'));
-                        oa->write_character(static_cast<CharType>(first_prefix));
+                        oa->write_character(first_prefix);
                     }
                 }
 
@@ -6839,7 +6841,7 @@ class binary_writer
                 if (use_type and not j.m_value.object->empty())
                 {
                     assert(use_count);
-                    const char first_prefix = ubjson_prefix(j.front());
+                    const CharType first_prefix = ubjson_prefix(j.front());
                     const bool same_prefix = std::all_of(j.begin(), j.end(),
                                                          [this, first_prefix](const BasicJsonType & v)
                     {
@@ -6850,7 +6852,7 @@ class binary_writer
                     {
                         prefix_required = false;
                         oa->write_character(static_cast<CharType>('$'));
-                        oa->write_character(static_cast<CharType>(first_prefix));
+                        oa->write_character(first_prefix);
                     }
                 }
 
@@ -6918,7 +6920,7 @@ class binary_writer
     {
         if (add_prefix)
         {
-            oa->write_character(static_cast<CharType>('D'));  // float64
+            oa->write_character(get_ubjson_float_prefix(n));
         }
         write_number(n);
     }
@@ -7039,7 +7041,7 @@ class binary_writer
           write_number_with_ubjson_prefix. Therefore, we return 'L' for any
           value that does not fit the previous limits.
     */
-    char ubjson_prefix(const BasicJsonType& j) const noexcept
+    CharType ubjson_prefix(const BasicJsonType& j) const noexcept
     {
         switch (j.type())
         {
@@ -7098,7 +7100,7 @@ class binary_writer
             }
 
             case value_t::number_float:
-                return 'D';
+                return get_ubjson_float_prefix(j.m_value.number_float);
 
             case value_t::string:
                 return 'S';
@@ -7112,6 +7114,36 @@ class binary_writer
             default:  // discarded values
                 return 'N';
         }
+    }
+
+    static constexpr CharType get_cbor_float_prefix(float)
+    {
+        return static_cast<CharType>(0xFA);  // Single-Precision Float
+    }
+
+    static constexpr CharType get_cbor_float_prefix(double)
+    {
+        return static_cast<CharType>(0xFB);  // Double-Precision Float
+    }
+
+    static constexpr CharType get_msgpack_float_prefix(float)
+    {
+        return static_cast<CharType>(0xCA);  // float 32
+    }
+
+    static constexpr CharType get_msgpack_float_prefix(double)
+    {
+        return static_cast<CharType>(0xCB);  // float 64
+    }
+
+    static constexpr CharType get_ubjson_float_prefix(float)
+    {
+        return 'd';  // float 32
+    }
+
+    static constexpr CharType get_ubjson_float_prefix(double)
+    {
+        return 'D';  // float 64
     }
 
   private:
@@ -10546,7 +10578,7 @@ class basic_json
                     object = nullptr;  // silence warning, see #821
                     if (JSON_UNLIKELY(t == value_t::null))
                     {
-                        JSON_THROW(other_error::create(500, "961c151d2e87f2686a955a9be24d316f1362bf21 3.1.1")); // LCOV_EXCL_LINE
+                        JSON_THROW(other_error::create(500, "961c151d2e87f2686a955a9be24d316f1362bf21 3.1.2")); // LCOV_EXCL_LINE
                     }
                     break;
                 }
@@ -13014,7 +13046,7 @@ class basic_json
     @return copy of the element at key @a key or @a default_value if @a key
     is not found
 
-    @throw type_error.306 if the JSON value is not an objec; in that case,
+    @throw type_error.306 if the JSON value is not an object; in that case,
     using `value()` with a key makes no sense.
 
     @complexity Logarithmic in the size of the container.
