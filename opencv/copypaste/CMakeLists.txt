@@ -5,11 +5,22 @@ cmake_minimum_required(VERSION 3.0)
 set(PN "copypaste")
 project(${PN})
 
+set(APPLY_INTEL_OPENCV     1)
+
+if(APPLY_INTEL_OPENCV)
+    set(OpenCV_DIR    "/opt/intel/opencv/share/OpenCV")
+else()
+    set(OpenCV_DIR    "/usr/local/share/OpenCV")
+endif()
+
+message("OpenCV_DIR: ${OpenCV_DIR}")
+
 # Find OpenCV, you may need to set OpenCV_DIR variable
 # to the absolute path to the directory containing OpenCVConfig.cmake file
 # via the command line or GUI
 find_package(OpenCV REQUIRED)
 
+include_directories(${OpenCV_INCLUDE_DIRS})
 include_directories("/usr/local/include")
 
 # libmytool.so
@@ -28,11 +39,6 @@ message(STATUS "    version: ${OpenCV_VERSION}")
 message(STATUS "    libraries: ${OpenCV_LIBS}")
 message(STATUS "    include path: ${OpenCV_INCLUDE_DIRS}")
 
-if(CMAKE_VERSION VERSION_LESS "2.8.11")
-  # Add OpenCV headers location to your include paths
-  include_directories(${OpenCV_INCLUDE_DIRS})
-endif()
-
 # Declare the executable target built from your sources
 add_executable(
     ${PN}
@@ -45,4 +51,3 @@ target_link_libraries(
     libmytool.so
     ${OpenCV_LIBS}
 )
-
