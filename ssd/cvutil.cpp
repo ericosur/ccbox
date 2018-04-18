@@ -66,7 +66,7 @@ void crop_image(const cv::Mat& orig, cv::Mat& new_img, int x, int y, int w, int 
 
 void crop_image_rect(const cv::Mat& orig, cv::Mat& new_img, cv::Rect rr)
 {
-    printf("orig: col:%d, row:%d\n", orig.cols, orig.rows);
+    //printf("orig: col:%d, row:%d\n", orig.cols, orig.rows);
     cv::Rect nn = rr;
     if (nn.x < 0) {
         nn.x = 0;
@@ -148,4 +148,71 @@ float get_iou(const cv::Rect& a, const cv::Rect& b)
     }
     float iou = (float)intersectionRect.area() / (float)unionRect.area();
     return iou;
+}
+
+int find_min_area(const std::vector<PersonRect> &v)
+{
+  int last_idx = -1;
+  int last_min_area = -1;
+
+  if (v.size() > 0) {
+    last_min_area = v[0].get_area();
+    last_idx = 0;
+  } else if (v.size() == 1) {
+    return 0;
+  }
+
+  for (int ii=1; ii<v.size(); ++ii) {
+    if (v[ii].get_area() < last_min_area) {
+      last_idx = ii;
+      last_min_area = v[ii].get_area();
+    }
+  }
+
+  return last_idx;
+}
+
+int find_max_area(const std::vector<PersonRect> &v)
+{
+  int last_idx = -1;
+  int last_max_area = -1;
+
+  if (v.size() > 0) {
+    last_max_area = v[0].get_area();
+    last_idx = 0;
+  } else if (v.size() == 1) {
+    return 0;
+  }
+
+  for (int ii=1; ii<v.size(); ++ii) {
+    if (v[ii].get_area() > last_max_area) {
+      last_idx = ii;
+      last_max_area = v[ii].get_area();
+    }
+  }
+
+  return last_idx;
+}
+
+
+int find_closest(const std::vector<PersonRect> &v)
+{
+  int last_idx = -1;
+  int last_min = -1;
+
+  if (v.size() > 0) {
+    last_min = v[0].get_dist();
+    last_idx = 0;
+  } else if (v.size() == 1) {
+    return 0;
+  }
+
+  for (int ii=1; ii<v.size(); ++ii) {
+    if (v[ii].get_dist() < last_min) {
+      last_idx = ii;
+      last_min = v[ii].get_dist();
+    }
+  }
+
+  return last_idx;
 }

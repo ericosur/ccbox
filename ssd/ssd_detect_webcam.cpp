@@ -57,9 +57,11 @@ MY_IPC *ipc = NULL;
 #endif
 
 void issue_dog_alert(int dist);
+#ifdef USE_OLDALERT
 void issue_man_alert(int dist);
 bool issue_man_alert_v2(int dist);
 bool issue_man_alert_v3(int dist, float score);
+#endif
 bool issue_man_alert_v4(int dist, float score, PersonRect& pr);
 void reset_vol_level();
 
@@ -408,72 +410,6 @@ float query_dist_from_detection_box(const std::vector< std::vector<float> >& det
 #endif  // USE_REALSENSE
 
 
-int find_min_area(const std::vector<PersonRect> &v)
-{
-  int last_idx = -1;
-  int last_min_area = -1;
-
-  if (v.size() > 0) {
-    last_min_area = v[0].get_area();
-    last_idx = 0;
-  } else if (v.size() == 1) {
-    return 0;
-  }
-
-  for (int ii=1; ii<v.size(); ++ii) {
-    if (v[ii].get_area() < last_min_area) {
-      last_idx = ii;
-      last_min_area = v[ii].get_area();
-    }
-  }
-
-  return last_idx;
-}
-
-int find_max_area(const std::vector<PersonRect> &v)
-{
-  int last_idx = -1;
-  int last_max_area = -1;
-
-  if (v.size() > 0) {
-    last_max_area = v[0].get_area();
-    last_idx = 0;
-  } else if (v.size() == 1) {
-    return 0;
-  }
-
-  for (int ii=1; ii<v.size(); ++ii) {
-    if (v[ii].get_area() > last_max_area) {
-      last_idx = ii;
-      last_max_area = v[ii].get_area();
-    }
-  }
-
-  return last_idx;
-}
-
-
-int find_closest(const std::vector<PersonRect> &v)
-{
-  int last_idx = -1;
-  int last_min = -1;
-
-  if (v.size() > 0) {
-    last_min = v[0].get_dist();
-    last_idx = 0;
-  } else if (v.size() == 1) {
-    return 0;
-  }
-
-  for (int ii=1; ii<v.size(); ++ii) {
-    if (v[ii].get_dist() < last_min) {
-      last_idx = ii;
-      last_min = v[ii].get_dist();
-    }
-  }
-
-  return last_idx;
-}
 
 std::string show_detection_box(cv::Mat& cv_img,
                         bool hasCrop, cv::Mat& crop_img,
@@ -574,8 +510,8 @@ std::string show_detection_box(cv::Mat& cv_img,
 
       if (hasPerson) {  // will not record down dog rect
         PersonRect pr(box_x1, box_y1, ww, hh, score, dist);
-        printf("@%d: (%d,%d,%d,%d) s(%.2f)", __LINE__, box_x1, box_y1, ww, hh, score);
-        printf("@%d: (%d,%d,%d,%d)", __LINE__, pr.get_rect().x, pr.get_rect().y, pr.get_rect().width, pr.get_rect().height);
+        //printf("@%d: (%d,%d,%d,%d) s(%.2f)\t", __LINE__, box_x1, box_y1, ww, hh, score);
+        //printf("@%d: (%d,%d,%d,%d)", __LINE__, pr.get_rect().x, pr.get_rect().y, pr.get_rect().width, pr.get_rect().height);
         if (dist > 0) {
           //printf("[%d] i:%d a:%d s(%.2f) d(%d)\r", __LINE__, (int)i, pr.get_area(), score, dist);
           vv.push_back(pr);
@@ -610,20 +546,20 @@ std::string show_detection_box(cv::Mat& cv_img,
   if (settings->do_man_alert) {
     int idx = -1;
     if (vv.size() >= 1) {
-      printf("vv.size >= 1 @%d\t", __LINE__);
+      //printf("vv.size >= 1 @%d\t", __LINE__);
       idx = find_closest(vv);
       //idx = find_min_area(vv);
-      printf("%d: find_closest --- idx:%d\n", __LINE__, idx);
+      //printf("%d: find_closest --- idx:%d\n", __LINE__, idx);
       if (idx != -1) {
         //printf("fuck @%d\n", __LINE__);
         cv::Mat new_img;
         cv::Rect rr = vv[idx].get_rect();
-        printf("closest at idx: %d, dist: %d\t(%d,%d,%d,%d)\n",
-          idx, vv[idx].get_dist(), rr.x, rr.y, rr.width, rr.height);
+        // printf("closest at idx: %d, dist: %d\t(%d,%d,%d,%d)\n",
+        //   idx, vv[idx].get_dist(), rr.x, rr.y, rr.width, rr.height);
         crop_image_rect(orig_img, new_img, vv[idx].get_rect());
-        snprintf(buffer, sizeof(buffer), "/tmp/f%04d.jpg",PersonRect::get_count());
+        snprintf(buffer, sizeof(buffer), "/tmp/reid/f%04d.jpg",PersonRect::get_count());
         PersonRect::inc_count();
-        printf("output to %s\n", buffer);
+        //printf("output to %s\n", buffer);
         imwrite(buffer, new_img);
       }
     }
@@ -955,7 +891,7 @@ get_volume_label:
 }
 
 
-
+#ifdef USE_OLDALERT
 bool issue_man_alert_v3(int dist, float score)
 {
   // will skip if dist <= 60 or dist >= 550
@@ -1020,7 +956,9 @@ bool issue_man_alert_v3(int dist, float score)
   }
 
 }
+#endif
 
+#ifdef USE_OLDALERT
 // dist is distance in cm
 // three level of distance mapping to sound volume (150/250/350)
 // fuzzy range
@@ -1103,7 +1041,9 @@ bool issue_man_alert_v2(int dist)
 
   return false;
 }
+#endif
 
+#ifdef USE_OLDALERT
 // dist in cm
 // need smooth the volume adjust value
 void issue_man_alert(int dist)
@@ -1169,7 +1109,7 @@ void issue_man_alert(int dist)
 
   old_vol = vol;
 }
-
+#endif
 
 int main(int argc, char** argv)
 {
@@ -1189,6 +1129,8 @@ int main(int argc, char** argv)
   gflags::ParseCommandLineFlags(&argc, &argv, true);
 */
   SsdSetting* settings = SsdSetting::getInstance();
+
+  system("mkdir -p /tmp/reid/");
 
   if (argc == 2) {
     pbox::mylog("ssd", "use %s as setting file\n", argv[1]);
@@ -1222,8 +1164,8 @@ int main(int argc, char** argv)
   pbox::mylog("ssd", "start init Detector...\n");
   // Initialize the network.
   Detector detector(settings->model_file, settings->weights_file, mean_file, mean_value);
-  pbox::mylog("ssd", "end init Detector...\n");
-  settings->recordlog("end init Detector...\n");
+  //pbox::mylog("ssd", "end init Detector...\n");
+  //settings->recordlog("end init Detector...\n");
 
 #ifdef USE_MYIPC
       if (settings->wait_myipc) {

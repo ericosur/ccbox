@@ -2,10 +2,12 @@
 #define __UTIL_CV_UTIL_H__
 
 #include <cstdint>
+#include <vector>
 #include <opencv2/opencv.hpp>   // Include OpenCV API
 
-#define DEFAULT_WIDTH    640
-#define DEFAULT_HEIGHT   480
+#define DEFAULT_WIDTH             640
+#define DEFAULT_HEIGHT            480
+#define MAX_PERSON_IMAGE_COUNT    100
 
 const int fontface = cv::FONT_HERSHEY_SIMPLEX;
 const double scale = 1;
@@ -28,6 +30,10 @@ bool in_the_range_of(const int pt, const int target, const int threshold);
 // get iou from two cv::rect
 float get_iou(const cv::Rect& a, const cv::Rect& b);
 
+class PersonRect;
+int find_min_area(const std::vector<PersonRect> &v);
+int find_max_area(const std::vector<PersonRect> &v);
+int find_closest(const std::vector<PersonRect> &v);
 
 class PersonRect
 {
@@ -69,7 +75,7 @@ public:
   }
 
   static int inc_count() {
-    if (count + 1 > 9801) {
+    if (count + 1 > MAX_PERSON_IMAGE_COUNT) {
       count = 0;
     } else {
       count ++;
