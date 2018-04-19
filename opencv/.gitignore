@@ -5,4 +5,5 @@ f/
 *.bmp
 !**/data/*.png
 !**/data/*.jpg
+*.pyc
 

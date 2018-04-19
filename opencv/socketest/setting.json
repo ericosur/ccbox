@@ -1,0 +1,6 @@
+{
+    "host": "localhost",
+    "port": 9801,
+    "max_connection": 5,
+    "max_recv_size": 4096
+}
