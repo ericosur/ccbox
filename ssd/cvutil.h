@@ -13,6 +13,11 @@ const int fontface = cv::FONT_HERSHEY_SIMPLEX;
 const double scale = 1;
 const int thickness = 2;
 
+int send_crop_image_to_server(const cv::Mat& orig_img, const cv::Rect& rr);
+void setup_connect();
+void check_recv();
+void transfer_image_to_server(const std::string& file);
+
 void draw_aim(cv::Mat& img, int x, int y, int w, int h);
 void draw_aim(cv::Mat& img, int w, int h);
 void draw_dist(cv::Mat& img, float dist);

@@ -116,6 +116,10 @@ bool SsdSetting::read_values_from_json(const std::string& json_file)
         plus_offset = pbox::get_int_from_jsonfile(json_file, "plus_offset", plus_offset);
         fill_ranges();
 
+        host = pbox::get_string_from_jsonfile(json_file, "host", host);
+        port = pbox::get_int_from_jsonfile(json_file, "port", port);
+        max_recv_size = pbox::get_int_from_jsonfile(json_file, "max_recv_size", max_recv_size);
+
         return true;
     } else {
         recordlog("%s\n", "specified json not found...");

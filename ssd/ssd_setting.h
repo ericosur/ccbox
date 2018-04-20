@@ -96,6 +96,13 @@ public:
     int skipped = 0;
     float last_score = 0;
 
+    std::string host = "localhost";
+    int port = 9801;
+    int max_recv_size = 4096;
+
+    int sockfd = -1;
+    bool bCouldSend = true;
+
 private:
     FILE* fptr = NULL;
 };

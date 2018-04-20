@@ -5,12 +5,166 @@
 #include <iostream>
 #include <ctime>
 
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <stdio.h>
+
 #define DEFAULT_CROP_WIDTH      240
 #define DEFAULT_CROP_HEIGHT     240
+
+using namespace std;
+using namespace cv;
 
 const cv::Scalar white = cv::Scalar(255, 255, 255);
 
 int PersonRect::count = 0;
+
+uint8_t* read_image(const string fn, size_t* size)
+{
+    Mat tstMat = imread(fn);
+
+    vector<uint8_t> inImage;
+    imencode(".jpg", tstMat, inImage);
+    size_t datalen = inImage.size();
+    cout << "datalen: " << datalen << "\n";
+
+    uint8_t* buffer = (uint8_t*)malloc(inImage.size());
+    *size = inImage.size();
+    std::copy(inImage.begin(), inImage.end(), buffer);
+    //free(buffer);
+
+    cout << "read into buffer: " << fn << endl;
+    return buffer;
+}
+
+// refer to:
+// http://beej-zhtw.netdpi.net/09-man-manual/9-13-inet_ntoa-inet_aton-inet_addr
+
+void ljust(char* str, size_t filllen)
+{
+    size_t len = strlen(str);
+    memset(&str[len], 0x20, filllen - len);
+}
+
+////////// client/server function
+int send_crop_image_to_server(const cv::Mat& orig_img, const cv::Rect& rr)
+{
+    const int BUFFER_SIZE = 384;
+    char buffer[BUFFER_SIZE];
+    cv::Mat crop_img;
+
+    // crop image with specified rectangle
+    crop_image_rect(orig_img, crop_img, rr);
+
+    // resize image to limited 64x128
+    cv::Mat resized_img(128, 64, CV_8UC3);
+
+    cv::resize(crop_img, resized_img, resized_img.size(), 0, 0);
+    snprintf(buffer, BUFFER_SIZE, "/tmp/reid/r%04d.jpg", PersonRect::get_count());
+    PersonRect::inc_count();
+    //printf("output to %s\n", buffer);
+    imwrite(buffer, resized_img);
+
+    transfer_image_to_server(buffer);
+
+    return 0;
+}
+////////// client/server function
+
+void setup_connect()
+{
+    SsdSetting* sett = SsdSetting::getInstance();
+
+    int sockfd;
+    struct sockaddr_in dest;
+    int ret;
+
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    sett->sockfd = sockfd;
+    if (sockfd < 0) {
+        perror("socket error: ");
+        return;
+    }
+
+    bzero(&dest, sizeof(dest));
+    dest.sin_family = AF_INET;
+    dest.sin_port = htons(sett->port);
+    ret = inet_aton(sett->host.c_str(), &dest.sin_addr);
+    if (ret < 1) {
+        perror("inet_aton fail: ");
+    }
+    connect(sockfd, (struct sockaddr*)&dest, sizeof(dest));
+    printf("setup_connect: connected...\n");
+}
+
+void check_recv()
+{
+    SsdSetting* sett = SsdSetting::getInstance();
+    int sockfd = sett->sockfd;
+    const int RECVBUF_SIZE = 128;
+    char recv_buf[RECVBUF_SIZE];
+
+    bzero(recv_buf, RECVBUF_SIZE);
+    int ret = recv(sockfd, recv_buf, RECVBUF_SIZE, MSG_DONTWAIT);
+    //printf("ret of recv: %d, %s\n", ret, recv_buf);
+    if (ret == -1) {
+        // printf("wait a moment\n");
+        // usleep(500*1000);
+        // socket recv is set as NO WAIT
+    }
+    if (strcmp(recv_buf, "ok") == 0) {
+        sett->bCouldSend = true;
+    }
+}
+
+void transfer_image_to_server(const std::string& file)
+{
+    SsdSetting* sett = SsdSetting::getInstance();
+    int sockfd = sett->sockfd;
+    int ret;
+
+    if (sockfd < 0) {
+        perror("socket error: ");
+        return;
+    }
+
+    const int SIZEBUF_SIZE = 16;
+    char size_buf[SIZEBUF_SIZE];
+    size_t size;
+    uint8_t* buffer = read_image(file, &size);
+
+    if (buffer == NULL) {
+        printf("buffer is NULL\n");
+        return;
+    }
+
+    snprintf(size_buf, SIZEBUF_SIZE, "%d", (int)size);
+    //cout << "size: " << size << "\n";
+    ljust(size_buf, SIZEBUF_SIZE);
+    //mytoolbox::dump(size_buf, SIZEBUF_SIZE);
+
+    ret = send(sockfd, size_buf, SIZEBUF_SIZE, 0);
+    //cout << "ret: " << ret << endl;
+    if (ret != SIZEBUF_SIZE) {
+        cout << "ret != SIZEBUF_SIZE\n";
+    }
+
+    ret = send(sockfd, buffer, size, 0);
+    if (ret < 0) {
+        perror("send error...");
+    }
+    if (ret != (int)size) {
+        printf("ret(%d) != size(%d)\n", (int)ret, (int)size);
+    }
+    free(buffer);
+    sett->bCouldSend = false;
+
+    //close(sockfd);
+}
+
 
 void draw_aim(cv::Mat& img, int x, int y, int w, int h)
 {

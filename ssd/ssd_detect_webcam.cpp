@@ -410,7 +410,6 @@ float query_dist_from_detection_box(const std::vector< std::vector<float> >& det
 #endif  // USE_REALSENSE
 
 
-
 std::string show_detection_box(cv::Mat& cv_img,
                         bool hasCrop, cv::Mat& crop_img,
                         const std::vector< std::vector<float> >& detections,
@@ -470,6 +469,7 @@ std::string show_detection_box(cv::Mat& cv_img,
     bool hasPerson = ( score >= MAN_ALERT_SCORE && is_person(label) );
 
     //printf("fuck @%d\n", __LINE__);
+    check_recv();
 
     if ( hasDog || hasPerson ) {
 
@@ -551,18 +551,20 @@ std::string show_detection_box(cv::Mat& cv_img,
       //idx = find_min_area(vv);
       //printf("%d: find_closest --- idx:%d\n", __LINE__, idx);
       if (idx != -1) {
-        //printf("fuck @%d\n", __LINE__);
-        cv::Mat new_img;
-        cv::Rect rr = vv[idx].get_rect();
-        // printf("closest at idx: %d, dist: %d\t(%d,%d,%d,%d)\n",
-        //   idx, vv[idx].get_dist(), rr.x, rr.y, rr.width, rr.height);
-        crop_image_rect(orig_img, new_img, vv[idx].get_rect());
-        snprintf(buffer, sizeof(buffer), "/tmp/reid/f%04d.jpg",PersonRect::get_count());
-        PersonRect::inc_count();
-        //printf("output to %s\n", buffer);
-        imwrite(buffer, new_img);
+        //printf("send cropped @%d\n", __LINE__);
+
+        /**
+        *** send cropped and resize image to reid server ***
+        **/
+        if (settings->bCouldSend) {
+          send_crop_image_to_server(orig_img, vv[idx].get_rect());
+        } else {
+          printf("bypass cropped images to reid server...\n");
+        }
+
       }
     }
+
 
     if (vv.size() > 0) {
       // update last volume epoch
@@ -1214,6 +1216,8 @@ int main(int argc, char** argv)
       //cv::Mat cv_img = cv::Mat::zeros(640,480,CV_8UC3);
       //remove_shm();
 
+      setup_connect();
+
       const int max_fnlen = 256;
       char rgbfn[max_fnlen];
       char depfn[max_fnlen];
@@ -1351,6 +1355,8 @@ int main(int argc, char** argv)
           std::vector<vector<float> > detections = detector.Detect(cv_img);
           tm.stop();
           //printf("detector ---\n");
+
+          check_recv();
 
           // temmp test
           //imshow("temp", cv_img);
