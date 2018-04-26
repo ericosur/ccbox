@@ -5,6 +5,9 @@
 #include <string>
 #include "ssdutil.h"
 
+class Detector;
+class MY_IPC;
+
 using std::string;
 
 class SsdSetting
@@ -71,6 +74,7 @@ public:
     int dog_min_dist = 100;
     int do_dog_alert = 1;
     int do_man_alert = 1;
+    int do_reid = 1;
 
     int low_vol = 25;
     int mid_vol = 50;
@@ -102,6 +106,10 @@ public:
 
     int sockfd = -1;
     bool bCouldSend = true;
+
+    Detector* det = NULL;
+
+    MY_IPC *ipc = NULL;
 
 private:
     FILE* fptr = NULL;

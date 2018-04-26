@@ -38,6 +38,7 @@ message("${caffe_root}/build/install/lib")
 include_directories(${caffe_root}/external/mkl/mklml_lnx_2018.0.1.20171227/include)
 link_directories(${caffe_root}/external//mkldnn/install/lib)
 link_directories(${caffe_root}/external/mkl/mklml_lnx_2018.0.1.20171227/lib)
+#link_directories(${caffe_root}/external/mlsl/l_mlsl_2018.0.003/intel64/lib)
 message(${caffe_root}/external/mkldnn/install/lib)
 
 find_package( OpenCV REQUIRED )
@@ -97,6 +98,7 @@ message("DEPENDENCIES: ${DEPENDENCIES}")
 add_executable(
     ${PN}
     ssd_detect_webcam.cpp
+    detector.cpp
     cvutil.cpp
     ssd_setting.cpp
     ssdutil.cpp
@@ -109,5 +111,21 @@ target_link_libraries(
     libcaffe.so
     libpbox.so
 
+    ${DEPENDENCIES}
+)
+
+add_executable(
+    test_myipc
+    myipc_test.cpp
+    MY_IPC.cpp
+)
+
+add_executable(
+    hello
+    main.cpp
+)
+
+target_link_libraries(
+    hello
     ${DEPENDENCIES}
 )

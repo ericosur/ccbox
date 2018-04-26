@@ -1,5 +1,5 @@
 {
-    "version": "20180328",
+    "version": "20180423-localnb-test",
 
     "model_file": "/home/rasmus/caffe_common/models/wing-people/300_mAP58/deploy.prototxt",
     "weights_file": "/home/rasmus/caffe_common/models/wing-people/300_mAP58/SqNet_VOC0712_SSD_300x300_iter_90000.caffemodel",
@@ -13,7 +13,7 @@
     "wait_msgq": 0,
     "wait_myipc": 0,
 
-    "do_imshow": 1,
+    "do_imshow": 0,
     "show_fps": 0,
     "testraw": 0,
 
@@ -39,5 +39,10 @@
     "volume_adjust_tag": "volume_adjust",
     "rawbin_dir": "/tmp",
     "test_crop": 0,
-    "show_debug": 0
+    "show_debug": 0,
+
+    "do_reid": 1,
+    "host": "192.168.1.118",
+    "port": 9801,
+    "max_recv_size": 4096
 }

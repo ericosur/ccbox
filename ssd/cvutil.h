@@ -9,13 +9,24 @@
 #define DEFAULT_HEIGHT            480
 #define MAX_PERSON_IMAGE_COUNT    100
 
+typedef enum tagReidName {
+    kNone = -1,
+    kBin = 1000,
+    kAllen,
+    kRasmus,
+    kJoe,
+    kPerson,
+    kMaxNumber
+} ReidName ;
+
 const int fontface = cv::FONT_HERSHEY_SIMPLEX;
 const double scale = 1;
 const int thickness = 2;
 
 int send_crop_image_to_server(const cv::Mat& orig_img, const cv::Rect& rr);
 void setup_connect();
-void check_recv();
+ReidName check_recv();
+void send_string_to_server(const std::string& msg);
 void transfer_image_to_server(const std::string& file);
 
 void draw_aim(cv::Mat& img, int x, int y, int w, int h);

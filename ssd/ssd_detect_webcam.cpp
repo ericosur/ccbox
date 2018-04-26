@@ -12,20 +12,6 @@
 //    folder/video1.mp4
 //    folder/video2.mp4
 //
-#include <caffe/caffe.hpp>
-
-#ifdef USE_OPENCV
-#include <opencv2/opencv.hpp>
-#endif  // USE_OPENCV
-
-#include <algorithm>
-#include <iomanip>
-#include <iosfwd>
-#include <memory>
-#include <string>
-#include <utility>
-#include <vector>
-#include <stdlib.h>
 
 #include <pbox/pbox.h>
 #include "cvutil.h"
@@ -33,8 +19,23 @@
 #include "MY_IPC.hpp"
 #include "ssdutil.h"
 #include "shmutil.h"
+#include "detector.h"
 
-using namespace caffe;  // NOLINT(build/namespaces)
+#include <opencv2/opencv.hpp>
+
+#include <algorithm>
+#include <iomanip>
+#include <iosfwd>
+#include <memory>
+#include <string>
+#include <utility>
+#include <stdlib.h>
+#include <signal.h>
+
+
+//#define RASMUS_HACK
+
+//using namespace caffe;  // NOLINT(build/namespaces)
 
 //#define USE_DISTWIN
 #ifdef USE_DISTWIN
@@ -44,17 +45,12 @@ using namespace caffe;  // NOLINT(build/namespaces)
 #define DETECTION_WIN "detections"
 
 
-#include <signal.h>
 
-#define OUTPUT_SSD_JSON    "/tmp/ssd.json"
+//#define OUTPUT_SSD_JSON    "/tmp/ssd.json"
 
 //#define USE_MYIPC
 
 bool showDebug = false;
-
-#ifdef USE_MYIPC
-MY_IPC *ipc = NULL;
-#endif
 
 void issue_dog_alert(int dist);
 #ifdef USE_OLDALERT
@@ -82,215 +78,29 @@ int get_dpeth_pt(uint8_t* buffer, int x, int y);
 int get_dpeth_pt2(uint8_t* dep_buffer, int x, int y);
 
 
-void my_handle_ctrlc(int s)
+void my_handle_ctrlc(int sig)
 {
-  printf("caught signal %d\n", s);
-  remove_msgq();
-  exit(1);
-}
+  printf("caught signal %d\n", sig);
 
-
-
-class Detector {
- public:
-  Detector(const string& model_file,
-           const string& weights_file,
-           const string& mean_file,
-           const string& mean_value);
-
-  std::vector<vector<float> > Detect(const cv::Mat& img);
-
- private:
-  void SetMean(const string& mean_file, const string& mean_value);
-
-  void WrapInputLayer(std::vector<cv::Mat>* input_channels);
-
-  void Preprocess(const cv::Mat& img,
-                  std::vector<cv::Mat>* input_channels);
-
- private:
-  shared_ptr<Net<float> > net_;
-  cv::Size input_geometry_;
-  int num_channels_;
-  cv::Mat mean_;
-};
-
-Detector::Detector(const string& model_file,
-                   const string& weights_file,
-                   const string& mean_file,
-                   const string& mean_value)
-{
-#ifdef CPU_ONLY
-  Caffe::set_mode(Caffe::CPU);
-#else
-  Caffe::set_mode(Caffe::GPU);
-#endif
-  /* Load the network. */
-  net_.reset(new Net<float>(model_file, TEST));
-  net_->CopyTrainedLayersFrom(weights_file);
-
-  CHECK_EQ(net_->num_inputs(), 1) << "Network should have exactly one input.";
-  CHECK_EQ(net_->num_outputs(), 1) << "Network should have exactly one output.";
-
-  Blob<float>* input_layer = net_->input_blobs()[0];
-  num_channels_ = input_layer->channels();
-  CHECK(num_channels_ == 3 || num_channels_ == 1)
-    << "Input layer should have 1 or 3 channels.";
-  input_geometry_ = cv::Size(input_layer->width(), input_layer->height());
-
-  /* Load the binaryproto mean file. */
-  SetMean(mean_file, mean_value);
-}
-
-std::vector<vector<float> > Detector::Detect(const cv::Mat& img)
-{
-  Blob<float>* input_layer = net_->input_blobs()[0];
-  input_layer->Reshape(1, num_channels_,
-                       input_geometry_.height, input_geometry_.width);
-  /* Forward dimension change to all layers. */
-  net_->Reshape();
-
-  std::vector<cv::Mat> input_channels;
-  WrapInputLayer(&input_channels);
-
-  Preprocess(img, &input_channels);
-
-  net_->Forward();
-
-  /* Copy the output layer to a std::vector */
-  Blob<float>* result_blob = net_->output_blobs()[0];
-  const float* result = result_blob->cpu_data();
-  const int num_det = result_blob->height();
-  vector<vector<float> > detections;
-  for (int k = 0; k < num_det; ++k) {
-    if (result[0] == -1) {
-      // Skip invalid detection.
-      result += 7;
-      continue;
-    }
-    vector<float> detection(result, result + 7);
-    detections.push_back(detection);
-    result += 7;
+  SsdSetting* s = SsdSetting::getInstance();
+  if (s->wait_msgq) {
+    remove_msgq();
   }
-  return detections;
-}
 
-/* Load the mean file in binaryproto format. */
-void Detector::SetMean(const string& mean_file, const string& mean_value) {
-  cv::Scalar channel_mean;
-  if (!mean_file.empty()) {
-    CHECK(mean_value.empty()) <<
-      "Cannot specify mean_file and mean_value at the same time";
-    BlobProto blob_proto;
-    ReadProtoFromBinaryFileOrDie(mean_file.c_str(), &blob_proto);
-
-    /* Convert from BlobProto to Blob<float> */
-    Blob<float> mean_blob;
-    mean_blob.FromProto(blob_proto);
-    CHECK_EQ(mean_blob.channels(), num_channels_)
-      << "Number of channels of mean file doesn't match input layer.";
-
-    /* The format of the mean file is planar 32-bit float BGR or grayscale. */
-    std::vector<cv::Mat> channels;
-    float* data = mean_blob.mutable_cpu_data();
-    for (int i = 0; i < num_channels_; ++i) {
-      /* Extract an individual channel. */
-      cv::Mat channel(mean_blob.height(), mean_blob.width(), CV_32FC1, data);
-      channels.push_back(channel);
-      data += mean_blob.height() * mean_blob.width();
-    }
-
-    /* Merge the separate channels into a single image. */
-    cv::Mat mean;
-    cv::merge(channels, mean);
-
-    /* Compute the global mean pixel value and create a mean image
-     * filled with this value. */
-    channel_mean = cv::mean(mean);
-    mean_ = cv::Mat(input_geometry_, mean.type(), channel_mean);
+  if (s->sockfd >= 0) {
+    send_string_to_server("quit");
   }
-  if (!mean_value.empty()) {
-    CHECK(mean_file.empty()) <<
-      "Cannot specify mean_file and mean_value at the same time";
-    stringstream ss(mean_value);
-    vector<float> values;
-    string item;
-    while (getline(ss, item, ',')) {
-      float value = std::atof(item.c_str());
-      values.push_back(value);
-    }
-    CHECK(values.size() == 1 || values.size() == (size_t)num_channels_) <<
-      "Specify either 1 mean_value or as many as channels: " << num_channels_;
 
-    std::vector<cv::Mat> channels;
-    for (int i = 0; i < num_channels_; ++i) {
-      /* Extract an individual channel. */
-      cv::Mat channel(input_geometry_.height, input_geometry_.width, CV_32FC1,
-          cv::Scalar(values[i]));
-      channels.push_back(channel);
-    }
-    cv::merge(channels, mean_);
-  }
+  // if (s->det != NULL) {
+  //   delete s->det;
+  // }
+
+  exit(0);
+  return;
 }
 
-/* Wrap the input layer of the network in separate cv::Mat objects
- * (one per channel). This way we save one memcpy operation and we
- * don't need to rely on cudaMemcpy2D. The last preprocessing
- * operation will write the separate channels directly to the input
- * layer. */
-void Detector::WrapInputLayer(std::vector<cv::Mat>* input_channels) {
-  Blob<float>* input_layer = net_->input_blobs()[0];
 
-  int width = input_layer->width();
-  int height = input_layer->height();
-  float* input_data = input_layer->mutable_cpu_data();
-  for (int i = 0; i < input_layer->channels(); ++i) {
-    cv::Mat channel(height, width, CV_32FC1, input_data);
-    input_channels->push_back(channel);
-    input_data += width * height;
-  }
-}
-
-void Detector::Preprocess(const cv::Mat& img,
-                            std::vector<cv::Mat>* input_channels) {
-  /* Convert the input image to the input image format of the network. */
-  cv::Mat sample;
-  if (img.channels() == 3 && num_channels_ == 1)
-    cv::cvtColor(img, sample, cv::COLOR_BGR2GRAY);
-  else if (img.channels() == 4 && num_channels_ == 1)
-    cv::cvtColor(img, sample, cv::COLOR_BGRA2GRAY);
-  else if (img.channels() == 4 && num_channels_ == 3)
-    cv::cvtColor(img, sample, cv::COLOR_BGRA2BGR);
-  else if (img.channels() == 1 && num_channels_ == 3)
-    cv::cvtColor(img, sample, cv::COLOR_GRAY2BGR);
-  else
-    sample = img;
-
-  cv::Mat sample_resized;
-  if (sample.size() != input_geometry_)
-    cv::resize(sample, sample_resized, input_geometry_);
-  else
-    sample_resized = sample;
-
-  cv::Mat sample_float;
-  if (num_channels_ == 3)
-    sample_resized.convertTo(sample_float, CV_32FC3);
-  else
-    sample_resized.convertTo(sample_float, CV_32FC1);
-
-  cv::Mat sample_normalized;
-  cv::subtract(sample_float, mean_, sample_normalized);
-
-  /* This operation will write the separate BGR planes directly to the
-   * input layer of the network because it is wrapped by the cv::Mat
-   * objects in input_channels. */
-  cv::split(sample_normalized, *input_channels);
-
-  CHECK(reinterpret_cast<float*>(input_channels->at(0).data)
-        == net_->input_blobs()[0]->cpu_data())
-    << "Input channels are not wrapping the input layer of the network.";
-}
-
+#if 1
 DEFINE_string(mean_file, "",
     "The mean file used to subtract from the input image.");
 DEFINE_string(mean_value, "104,117,123",
@@ -305,6 +115,7 @@ DEFINE_double(confidence_threshold, 0.3,
     "Only store detections with score higher than the threshold.");
 DEFINE_int32(device_id, 2,
     "The input webcam camera default device is 0");
+#endif
 
 // rasmus hack, global variables
 const int BUFFER_SIZE = 100;
@@ -468,7 +279,10 @@ std::string show_detection_box(cv::Mat& cv_img,
     bool hasDog = ( score >= settings->confidence_threshold && is_dog(label) );
     bool hasPerson = ( score >= MAN_ALERT_SCORE && is_person(label) );
 
-    //printf("fuck @%d\n", __LINE__);
+    // if (hasPerson) {
+    //   printf("ssd: hasPerson\n");
+    // }
+
     check_recv();
 
     if ( hasDog || hasPerson ) {
@@ -512,10 +326,19 @@ std::string show_detection_box(cv::Mat& cv_img,
         PersonRect pr(box_x1, box_y1, ww, hh, score, dist);
         //printf("@%d: (%d,%d,%d,%d) s(%.2f)\t", __LINE__, box_x1, box_y1, ww, hh, score);
         //printf("@%d: (%d,%d,%d,%d)", __LINE__, pr.get_rect().x, pr.get_rect().y, pr.get_rect().width, pr.get_rect().height);
+
+        // could fetch depth data from realsense camera or IPC depth raw data
         if (dist > 0) {
           //printf("[%d] i:%d a:%d s(%.2f) d(%d)\r", __LINE__, (int)i, pr.get_area(), score, dist);
           vv.push_back(pr);
+        } else {
+          // still keep record of rect for person if webcam
+          if (settings->file_type == "webcam") {
+            vv.push_back(pr);
+          }
         }
+
+
       }
 
       //pbox::mylog("ssd", "before draw_aim");
@@ -541,9 +364,10 @@ std::string show_detection_box(cv::Mat& cv_img,
   } // for-loop
 
   // if (vv.size())
-  //   printf("vv.size():%d @%d\n", vv.size(), __LINE__);
+     //printf("vv.size():%d @%d -- %d\n", (int)vv.size(), __LINE__, settings->do_man_alert);
 
   if (settings->do_man_alert) {
+    //printf("do man alert...\n");
     int idx = -1;
     if (vv.size() >= 1) {
       //printf("vv.size >= 1 @%d\t", __LINE__);
@@ -556,13 +380,16 @@ std::string show_detection_box(cv::Mat& cv_img,
         /**
         *** send cropped and resize image to reid server ***
         **/
-        if (settings->bCouldSend) {
+        if (settings->do_reid && settings->bCouldSend) {
           send_crop_image_to_server(orig_img, vv[idx].get_rect());
         } else {
-          printf("bypass cropped images to reid server...\n");
+          //printf("bypass cropped images to reid server...\n");
         }
-
       }
+      /* else {
+        printf("idx == -1\n");
+      }
+      */
     }
 
 
@@ -740,8 +567,8 @@ void issue_dog_alert(int dist)
 #ifdef USE_MYIPC
   //SsdSetting* settings = SsdSetting::getInstance();
   if (settings->wait_myipc) {
-    if (ipc != NULL) {
-      ipc->IPC_Put_TAG_INT32(settings->dog_warning_tag.c_str(), 1);
+    if (settings->ipc != NULL) {
+      settings->ipc->IPC_Put_TAG_INT32(settings->dog_warning_tag.c_str(), 1);
     }
   }
   std::cout << "=====>" << settings->dog_warning_tag << " !!!!!\n";
@@ -767,9 +594,9 @@ void reset_vol_level()
   if (settings->last_vol != vol) {
     printf("\n%s: reset vol level to %d\n", __func__, vol);
 #ifdef USE_MYIPC
-      if (settings->wait_myipc && ipc != NULL) {
-        ipc->IPC_Put_TAG_INT32(settings->audience_vol_tag.c_str(), vol);
-        ipc->IPC_Put_TAG_INT32(settings->volume_adjust_tag.c_str(), 1);
+      if (settings->wait_myipc && settings->ipc != NULL) {
+        settings->ipc->IPC_Put_TAG_INT32(settings->audience_vol_tag.c_str(), vol);
+        settings->ipc->IPC_Put_TAG_INT32(settings->volume_adjust_tag.c_str(), 1);
       }
 #endif  // USE_MYIPC
     settings->set_last_vol(vol);
@@ -808,7 +635,9 @@ bool issue_man_alert_v4(int dist, float score, PersonRect& pr)
     printf("v4: s ");
     return false;
   }
-  if (score > s->last_score) {
+
+  // NOTICE HERE, WILL LOOSE THE THRESHOLD TO 0.8
+  if (score > s->last_score || score > 0.8) {
     //if (s->show_debug)
     //printf("update dist: %d\r", dist);
     s->skipped = 0;
@@ -873,9 +702,9 @@ get_volume_label:
   if ( vol != s->last_vol ) {
     s->set_last_vol(vol);  // record the epoch that changes vol
 #ifdef USE_MYIPC
-    if (s->wait_myipc && ipc != NULL) {
-      ipc->IPC_Put_TAG_INT32(s->audience_vol_tag.c_str(), vol);
-      ipc->IPC_Put_TAG_INT32(s->volume_adjust_tag.c_str(), 1);
+    if (s->wait_myipc && s->ipc != NULL) {
+      s->ipc->IPC_Put_TAG_INT32(s->audience_vol_tag.c_str(), vol);
+      s->ipc->IPC_Put_TAG_INT32(s->volume_adjust_tag.c_str(), 1);
     }
 #endif  // USE_MYIPC
     {
@@ -1100,9 +929,9 @@ void issue_man_alert(int dist)
 #ifdef USE_MYIPC
   SsdSetting* settings = SsdSetting::getInstance();
   if (settings->wait_myipc) {
-    if (ipc != NULL && vol != 0 && vol != old_vol) {
-      ipc->IPC_Put_TAG_INT32(settings->audience_vol_tag.c_str(), vol);
-      ipc->IPC_Put_TAG_INT32(settings->volume_adjust_tag.c_str(), 1);
+    if (settings->ipc != NULL && vol != 0 && vol != old_vol) {
+      settings->ipc->IPC_Put_TAG_INT32(settings->audience_vol_tag.c_str(), vol);
+      settings->ipc->IPC_Put_TAG_INT32(settings->volume_adjust_tag.c_str(), 1);
     }
   } else {
     printf("dgb: put %s/%d", settings->audience_vol_tag.c_str(), vol);
@@ -1115,6 +944,9 @@ void issue_man_alert(int dist)
 
 int main(int argc, char** argv)
 {
+#ifdef RASMUS_HACK
+  printf("hello world\n");
+#else  // RASMUS_HACK
 
   //::google::InitGoogleLogging(argv[0]);
   // Print output to stderr (while still logging)
@@ -1132,7 +964,15 @@ int main(int argc, char** argv)
 */
   SsdSetting* settings = SsdSetting::getInstance();
 
+  signal(SIGINT, my_handle_ctrlc);
+
   system("mkdir -p /tmp/reid/");
+  system("rm -f /tmp/reid/*");
+
+  if (argc == 1) {
+    printf("ssd_detect built at: %s %s", __DATE__, __TIME__);
+    return 0;
+  }
 
   if (argc == 2) {
     pbox::mylog("ssd", "use %s as setting file\n", argv[1]);
@@ -1156,8 +996,6 @@ int main(int argc, char** argv)
     }
   }
 
-  signal(SIGINT, my_handle_ctrlc);
-
   const string& mean_file = FLAGS_mean_file;
   const string& mean_value = FLAGS_mean_value;
 
@@ -1165,32 +1003,22 @@ int main(int argc, char** argv)
 
   pbox::mylog("ssd", "start init Detector...\n");
   // Initialize the network.
-  Detector detector(settings->model_file, settings->weights_file, mean_file, mean_value);
+  Detector* det = new Detector(settings->model_file, settings->weights_file, mean_file, mean_value);
+  settings->det = det;
+
+  setup_connect();
+
   //pbox::mylog("ssd", "end init Detector...\n");
   //settings->recordlog("end init Detector...\n");
 
 #ifdef USE_MYIPC
-      if (settings->wait_myipc) {
-        ipc = MY_IPC::MY_IPC_GetInstance();
-        if (ipc == NULL) {
-          fprintf(stderr, "failed to init MY_IPC\n");
-          return 1;
-        }
+    if (settings->wait_myipc) {
+      settings->ipc = MY_IPC::MY_IPC_GetInstance();
+      if (settings->ipc == NULL) {
+        fprintf(stderr, "!!! Failed to init MY_IPC\n");
+        return 1;
       }
-#endif
-
-#if 0
-  const string& out_file = FLAGS_out_file;
-  // Set the output mode.
-  std::streambuf* buf = std::cout.rdbuf();
-  std::ofstream outfile;
-  if (!out_file.empty()) {
-    outfile.open(out_file.c_str());
-    if (outfile.good()) {
-      buf = outfile.rdbuf();
     }
-  }
-  std::ostream out(buf);
 #endif
 
     if (settings->file_type == "image") {
@@ -1202,7 +1030,7 @@ int main(int argc, char** argv)
         CHECK(!cv_img.empty()) << "Unable to decode image " << argv[7];
         cv::TickMeter tm;
         tm.start();
-        std::vector<vector<float> > detections = detector.Detect(cv_img);
+        std::vector<vector<float> > detections = det->Detect(cv_img);
         tm.stop();
         // draw detected box
         show_detection_box(cv_img, false, p, detections, false);
@@ -1216,7 +1044,6 @@ int main(int argc, char** argv)
       //cv::Mat cv_img = cv::Mat::zeros(640,480,CV_8UC3);
       //remove_shm();
 
-      setup_connect();
 
       const int max_fnlen = 256;
       char rgbfn[max_fnlen];
@@ -1244,7 +1071,7 @@ int main(int argc, char** argv)
           //cmd = "realsense";
         } else {
 
-          if (settings->wait_msgq) { // use msgq for IPC
+          if (settings->wait_msgq) { // use msgq instead of MY_IPC
             cmd = wait_msgq();
             // TODO: make dir configurable
             if (settings->testraw) {
@@ -1265,8 +1092,8 @@ int main(int argc, char** argv)
             cmd = "myipc";
             int img_idx = 0;
             // will block here
-            if (ipc != NULL) {
-              img_idx = ipc->IPC_Get_TAG_INT32(settings->wait_myipc_tag.c_str(), 0);
+            if (settings->ipc != NULL) {
+              img_idx = settings->ipc->IPC_Get_TAG_INT32(settings->wait_myipc_tag.c_str(), 0);
               snprintf(rgbfn, sizeof(rgbfn), "%s/rgb%d.bin", settings->rawbin_dir.c_str(), img_idx);
               snprintf(depfn, sizeof(depfn), "%s/depth%d.bin", settings->rawbin_dir.c_str(), img_idx);
             }
@@ -1352,7 +1179,7 @@ int main(int argc, char** argv)
 
           //printf("before detector +++\n");
           tm.start();
-          std::vector<vector<float> > detections = detector.Detect(cv_img);
+          std::vector<vector<float> > detections = det->Detect(cv_img);
           tm.stop();
           //printf("detector ---\n");
 
@@ -1409,8 +1236,8 @@ int main(int argc, char** argv)
         }
       } // while-loop
 
-      v.push_back("break at " + pbox::get_timestring());
-      pbox::output_status(OUTPUT_SSD_JSON, v);
+      //v.push_back("break at " + pbox::get_timestring());
+      //pbox::output_status(OUTPUT_SSD_JSON, v);
 
     } // REALSENSE if (settings.file_type == "realsense")
 #ifdef USE_OPENCV_CAPTURE
@@ -1431,7 +1258,7 @@ int main(int argc, char** argv)
         CHECK(cv_img.data) << "Could not load image!";
         cv::TickMeter tm;
         tm.start();
-        std::vector<vector<float> > detections = detector.Detect(cv_img);
+        std::vector<vector<float> > detections = det->Detect(cv_img);
         tm.stop();
         // draw detected box
         cv::Mat p;
@@ -1456,7 +1283,11 @@ int main(int argc, char** argv)
       std::cerr << "Unknown file_type: " << settings->file_type << "\n";
     }
 
-  remove_msgq();
+  if (settings->wait_msgq) {
+    remove_msgq();
+  }
+
+#endif  // RASMUS_HACK
 
   return 0;
 }

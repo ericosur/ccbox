@@ -1,5 +1,6 @@
 #include "cvutil.h"
 #include "ssd_setting.h"
+#include "MY_IPC.hpp"
 
 #include <cstdlib>
 #include <iostream>
@@ -25,18 +26,25 @@ int PersonRect::count = 0;
 uint8_t* read_image(const string fn, size_t* size)
 {
     Mat tstMat = imread(fn);
+    bool _debug = false;
 
     vector<uint8_t> inImage;
     imencode(".jpg", tstMat, inImage);
     size_t datalen = inImage.size();
-    cout << "datalen: " << datalen << "\n";
+    if (_debug)
+        cout << "datalen: " << datalen << "\n";
 
     uint8_t* buffer = (uint8_t*)malloc(inImage.size());
+    if (buffer == NULL) {
+        printf("buffer is null, cannot allocate...\n");
+        return NULL;
+    }
     *size = inImage.size();
     std::copy(inImage.begin(), inImage.end(), buffer);
     //free(buffer);
 
-    cout << "read into buffer: " << fn << endl;
+    if (_debug)
+        cout << "read into buffer: " << fn << endl;
     return buffer;
 }
 
@@ -77,11 +85,17 @@ int send_crop_image_to_server(const cv::Mat& orig_img, const cv::Rect& rr)
 void setup_connect()
 {
     SsdSetting* sett = SsdSetting::getInstance();
+    if (!sett->do_reid) {
+        return;
+    }
+
+    printf("%s\n", __func__);
 
     int sockfd;
     struct sockaddr_in dest;
     int ret;
 
+    printf("try setup_connect\n");
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     sett->sockfd = sockfd;
     if (sockfd < 0) {
@@ -100,31 +114,122 @@ void setup_connect()
     printf("setup_connect: connected...\n");
 }
 
-void check_recv()
+ReidName check_recv()
 {
     SsdSetting* sett = SsdSetting::getInstance();
+    if (!sett->do_reid) {
+        printf("function do_reid off\n");
+        return kNone;
+    }
+
+#ifdef USE_MYIPC
+      if (sett->wait_myipc) {
+        if (sett->ipc == NULL) {
+            sett->ipc = MY_IPC::MY_IPC_GetInstance();
+        }
+        if (sett->ipc == NULL) {
+          fprintf(stderr, "!!! Failed to init MY_IPC\n");
+        }
+      }
+#endif
+
     int sockfd = sett->sockfd;
     const int RECVBUF_SIZE = 128;
     char recv_buf[RECVBUF_SIZE];
+    char result[RECVBUF_SIZE];
 
+    if (sockfd < 0) {
+        printf("socket error\n");
+        return kNone;
+    }
+
+    bzero(result, RECVBUF_SIZE);
     bzero(recv_buf, RECVBUF_SIZE);
     int ret = recv(sockfd, recv_buf, RECVBUF_SIZE, MSG_DONTWAIT);
-    //printf("ret of recv: %d, %s\n", ret, recv_buf);
     if (ret == -1) {
-        // printf("wait a moment\n");
-        // usleep(500*1000);
-        // socket recv is set as NO WAIT
+        return kNone;
     }
-    if (strcmp(recv_buf, "ok") == 0) {
+    //printf("ret of recv: %d, %s\n", ret, recv_buf);
+    char* pch = strstr(recv_buf,":");
+    if (pch != NULL) {
+        ReidName rn = kNone;
+        strncpy(result, pch+1, 32);
+        //printf("%s: result: %s\n", __func__, result);
         sett->bCouldSend = true;
+        // TODO: use MY_IPC to send out the name
+        if (strcmp(result, "bin") == 0) {
+            rn = kBin;
+            sett->ipc->IPC_Put_TAG_INT32("bin", 1);
+        } else if (strcmp(result, "allen") == 0) {
+            rn = kAllen;
+            sett->ipc->IPC_Put_TAG_INT32("allen", 1);
+        } else if (strcmp(result, "rasmus") == 0) {
+            rn = kRasmus;
+        } else if (strcmp(result, "joe") == 0) {
+            rn = kJoe;
+        } else if (strcmp(result, "matched") == 0) {
+            rn = kPerson;
+        }
+        return rn;
+    }
+
+    // if (strcmp(recv_buf, "ok") == 0) {
+    //     sett->bCouldSend = true;
+    // }
+    return kNone;
+}
+
+void send_string_to_server(const std::string& msg)
+{
+    SsdSetting* sett = SsdSetting::getInstance();
+
+    if (!sett->do_reid) {
+        return;
+    }
+
+    int sockfd = sett->sockfd;
+    int ret;
+    //bool _debug = false;
+
+    if (sockfd < 0) {
+        perror("socket error: ");
+        return;
+    }
+
+    int size = (int)msg.length();
+
+    const int SIZEBUF_SIZE = 16;
+    char size_buf[SIZEBUF_SIZE];
+
+    snprintf(size_buf, SIZEBUF_SIZE, "%d", (int)size);
+    //cout << "size: " << size << "\n";
+    ljust(size_buf, SIZEBUF_SIZE);
+    //mytoolbox::dump(size_buf, SIZEBUF_SIZE);
+
+    ret = send(sockfd, size_buf, SIZEBUF_SIZE, 0);
+    //cout << "ret: " << ret << endl;
+    if (ret != SIZEBUF_SIZE) {
+        cout << "ret != SIZEBUF_SIZE\n";
+    }
+
+    ret = send(sockfd, msg.c_str(), size, 0);
+    if (ret < 0) {
+        perror("send error...");
+    }
+    if (ret != (int)size) {
+        printf("ret(%d) != size(%d)\n", (int)ret, (int)size);
     }
 }
 
 void transfer_image_to_server(const std::string& file)
 {
     SsdSetting* sett = SsdSetting::getInstance();
+    if (!sett->do_reid) {
+        return;
+    }
     int sockfd = sett->sockfd;
     int ret;
+    bool _debug = false;
 
     if (sockfd < 0) {
         perror("socket error: ");
@@ -139,6 +244,10 @@ void transfer_image_to_server(const std::string& file)
     if (buffer == NULL) {
         printf("buffer is NULL\n");
         return;
+    }
+
+    if (_debug) {
+        printf("sockfd: %d: prepare to send: %d bytes\n", sockfd, (int)size);
     }
 
     snprintf(size_buf, SIZEBUF_SIZE, "%d", (int)size);

@@ -90,16 +90,18 @@ bool SsdSetting::read_values_from_json(const std::string& json_file)
         test_crop = pbox::get_int_from_jsonfile(json_file, "test_crop");
         show_debug = pbox::get_int_from_jsonfile(json_file, "show_debug");
         max_crop_try = pbox::get_int_from_jsonfile(json_file, "max_crop_try", max_crop_try);
+#ifdef USE_OLDALERT
         vol_per_ratio = pbox::get_int_from_jsonfile(json_file, "vol_per_ratio", vol_per_ratio);
-
+#endif
         dog_min_dist = pbox::get_int_from_jsonfile(json_file, "dog_min_dist", dog_min_dist);
         do_dog_alert = pbox::get_int_from_jsonfile(json_file, "do_dog_alert", do_dog_alert);
         do_man_alert = pbox::get_int_from_jsonfile(json_file, "do_man_alert", do_man_alert);
+        do_reid = pbox::get_int_from_jsonfile(json_file, "do_reid", do_reid);
 
         if (file_type == "webcam") {
-            printf("using webcam: auto turn off do_dog_alert and do_man_alert\n");
+            printf("SETTING: using webcam: auto turn off do_dog_alert\n");
             do_dog_alert = 0;
-            do_man_alert = 0;
+            //do_man_alert = 0;
         }
 
         low_vol = pbox::get_int_from_jsonfile(json_file, "low_vol", low_vol);
