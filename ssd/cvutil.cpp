@@ -118,7 +118,7 @@ ReidName check_recv()
 {
     SsdSetting* sett = SsdSetting::getInstance();
     if (!sett->do_reid) {
-        printf("function do_reid off\n");
+        //printf("function do_reid off\n");
         return kNone;
     }
 
