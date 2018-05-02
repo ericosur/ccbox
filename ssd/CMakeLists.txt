@@ -18,7 +18,7 @@ include_directories("/usr/local/include/pbox")
 include_directories("/usr/local/include")
 link_directories("/usr/local/lib/pbox")
 
-set(testdir $ENV{CAFFE_ROOT})
+set(testdir ${CAFFE_ROOT})
 if(IS_DIRECTORY ${testdir})
     set(caffe_root ${testdir})
     message("use caffe_root: ${caffe_root}")
@@ -44,7 +44,7 @@ message(${caffe_root}/external/mkldnn/install/lib)
 find_package( OpenCV REQUIRED )
 set(DEPENDENCIES libboost_system.so gflags glog ${OpenCV_LIBS})
 
-set(APPLY_REALSENSE        1)
+set(APPLY_REALSENSE        0)
 set(APPLY_MYIPC            1)
 set(APPLY_WEBCAM           1)
 
