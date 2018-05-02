@@ -160,11 +160,14 @@ ReidName check_recv()
         if (strcmp(result, "bin") == 0) {
             rn = kBin;
             sett->ipc->IPC_Put_TAG_INT32("bin", 1);
+            printf("detect bin\n");
         } else if (strcmp(result, "allen") == 0) {
             rn = kAllen;
             sett->ipc->IPC_Put_TAG_INT32("allen", 1);
+            printf("detect allen\n");
         } else if (strcmp(result, "rasmus") == 0) {
             rn = kRasmus;
+            printf("detect rasmus\n");
         } else if (strcmp(result, "joe") == 0) {
             rn = kJoe;
         } else if (strcmp(result, "matched") == 0) {
