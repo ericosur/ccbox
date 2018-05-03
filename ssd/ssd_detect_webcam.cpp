@@ -87,9 +87,11 @@ void my_handle_ctrlc(int sig)
     remove_msgq();
   }
 
+#ifdef USE_SOCKET
   if (s->sockfd >= 0) {
     send_string_to_server("quit");
   }
+#endif
 
   // if (s->det != NULL) {
   //   delete s->det;
@@ -283,7 +285,12 @@ std::string show_detection_box(cv::Mat& cv_img,
     //   printf("ssd: hasPerson\n");
     // }
 
+#ifdef USE_SOCKET
     check_recv();
+#else
+    check_result();
+#endif
+
 
     if ( hasDog || hasPerson ) {
 
@@ -380,11 +387,17 @@ std::string show_detection_box(cv::Mat& cv_img,
         /**
         *** send cropped and resize image to reid server ***
         **/
+#ifdef USE_SOCKET
         if (settings->do_reid && settings->bCouldSend) {
           send_crop_image_to_server(orig_img, vv[idx].get_rect());
         } else {
           //printf("bypass cropped images to reid server...\n");
         }
+#else
+        if (settings->do_reid) {
+          save_crop_image(orig_img, vv[idx].get_rect());
+        }
+#endif
       }
       /* else {
         printf("idx == -1\n");
@@ -1006,7 +1019,9 @@ int main(int argc, char** argv)
   Detector* det = new Detector(settings->model_file, settings->weights_file, mean_file, mean_value);
   settings->det = det;
 
+#ifdef USE_SOCKET
   setup_connect();
+#endif
 
   //pbox::mylog("ssd", "end init Detector...\n");
   //settings->recordlog("end init Detector...\n");
@@ -1183,8 +1198,9 @@ int main(int argc, char** argv)
           tm.stop();
           //printf("detector ---\n");
 
+#ifdef USE_SOCKET
           check_recv();
-
+#endif
           // temmp test
           //imshow("temp", cv_img);
 

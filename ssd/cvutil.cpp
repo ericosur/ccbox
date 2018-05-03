@@ -1,6 +1,7 @@
 #include "cvutil.h"
 #include "ssd_setting.h"
 #include "MY_IPC.hpp"
+#include <pbox/pbox.h>
 
 #include <cstdlib>
 #include <iostream>
@@ -47,6 +48,8 @@ uint8_t* read_image(const string fn, size_t* size)
         cout << "read into buffer: " << fn << endl;
     return buffer;
 }
+
+#ifdef USE_SOCKET
 
 // refer to:
 // http://beej-zhtw.netdpi.net/09-man-manual/9-13-inet_ntoa-inet_aton-inet_addr
@@ -275,6 +278,63 @@ void transfer_image_to_server(const std::string& file)
     sett->bCouldSend = false;
 
     //close(sockfd);
+}
+#endif  // #ifdef USE_SOCKET
+
+
+int save_crop_image(const cv::Mat& orig_img, const cv::Rect& rr)
+{
+    #define REID_OFN "/dev/shm/reid.jpg"
+    cv::Mat crop_img;
+
+    // crop image with specified rectangle
+    crop_image_rect(orig_img, crop_img, rr);
+
+    // resize image to limited 64x128
+    cv::Mat resized_img(128, 64, CV_8UC3);
+
+    cv::resize(crop_img, resized_img, resized_img.size(), 0, 0);
+    //printf("output to %s\n", buffer);
+    imwrite(REID_OFN, resized_img);
+    return 0;
+}
+
+
+ReidName check_result()
+{
+    SsdSetting* sett = SsdSetting::getInstance();
+    if (!sett->do_reid) {
+        //printf("function do_reid off\n");
+        return kNone;
+    }
+
+#ifdef USE_MYIPC
+      if (sett->wait_myipc) {
+        if (sett->ipc == NULL) {
+            sett->ipc = MY_IPC::MY_IPC_GetInstance();
+        }
+        if (sett->ipc == NULL) {
+          fprintf(stderr, "!!! Failed to init MY_IPC\n");
+        }
+      }
+#endif
+
+    ReidName rn = kNone;
+
+    std::string name = pbox::get_string_from_jsonfile("/dev/shm/result.json", "name", "none");
+    if (name == "bin") {
+        rn = kBin;
+        sett->ipc->IPC_Put_TAG_INT32("bin", 1);
+        printf("detect bin\n");
+    } else if (name == "allen") {
+        rn = kAllen;
+        sett->ipc->IPC_Put_TAG_INT32("allen", 1);
+        printf("detect allen\n");
+    } else if (name == "rasmus") {
+        rn = kRasmus;
+        printf("detect rasmus\n");
+    }
+    return rn;
 }
 
 
