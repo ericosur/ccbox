@@ -284,28 +284,27 @@ void transfer_image_to_server(const std::string& file)
 
 int save_crop_image(const cv::Mat& orig_img, const cv::Rect& rr)
 {
-    #define REID_OFN "/dev/shm/reid.jpg"
+    const int FN_SIZE = 128;
+    char fn[FN_SIZE];
+    static int cnt = 0;
+
     cv::Mat crop_img;
+    SsdSetting* sett = SsdSetting::getInstance();
 
     // crop image with specified rectangle
     crop_image_rect(orig_img, crop_img, rr);
-
     // resize image to limited 64x128
     cv::Mat resized_img(128, 64, CV_8UC3);
-
     cv::resize(crop_img, resized_img, resized_img.size(), 0, 0);
-    //printf("output to %s\n", buffer);
-    imwrite(REID_OFN, resized_img);
-    return 0;
-}
 
-
-ReidName check_result()
-{
-    SsdSetting* sett = SsdSetting::getInstance();
-    if (!sett->do_reid) {
-        //printf("function do_reid off\n");
-        return kNone;
+    // prepare filename for reid
+    bzero(fn, sizeof(fn));
+    snprintf(fn, FN_SIZE, "/tmp/reid%04d.jpg", cnt);
+    //printf("cropped image output to %s\n", fn);
+    imwrite(fn, resized_img);
+    cnt ++;
+    if (cnt > 33) {
+        cnt = 0;
     }
 
 #ifdef USE_MYIPC
@@ -315,26 +314,13 @@ ReidName check_result()
         }
         if (sett->ipc == NULL) {
           fprintf(stderr, "!!! Failed to init MY_IPC\n");
+          return -1;
         }
+        sett->ipc->IPC_Put_TAG_String("reid_jpg_path", fn);
       }
 #endif
 
-    ReidName rn = kNone;
-
-    std::string name = pbox::get_string_from_jsonfile("/dev/shm/result.json", "name", "none");
-    if (name == "bin") {
-        rn = kBin;
-        sett->ipc->IPC_Put_TAG_INT32("bin", 1);
-        printf("detect bin\n");
-    } else if (name == "allen") {
-        rn = kAllen;
-        sett->ipc->IPC_Put_TAG_INT32("allen", 1);
-        printf("detect allen\n");
-    } else if (name == "rasmus") {
-        rn = kRasmus;
-        printf("detect rasmus\n");
-    }
-    return rn;
+    return 0;
 }
 
 

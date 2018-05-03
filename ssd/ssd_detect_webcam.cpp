@@ -287,8 +287,6 @@ std::string show_detection_box(cv::Mat& cv_img,
 
 #ifdef USE_SOCKET
     check_recv();
-#else
-    check_result();
 #endif
 
 
