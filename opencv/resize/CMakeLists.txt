@@ -5,6 +5,7 @@ cmake_minimum_required(VERSION 3.0)
 set(PN "resize")
 project(${PN})
 
+# turn it to 1 to use intel optimized opencv
 set(APPLY_INTEL_OPENCV     0)
 
 if(APPLY_INTEL_OPENCV)
@@ -21,7 +22,7 @@ message("OpenCV_DIR: ${OpenCV_DIR}")
 find_package(OpenCV REQUIRED)
 
 include_directories(${OpenCV_INCLUDE_DIRS})
-include_directories("/usr/local/include")
+#include_directories("/usr/local/include")
 
 # libmytool.so
 link_directories("/usr/local/lib/mytool")
