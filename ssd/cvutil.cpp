@@ -210,7 +210,7 @@ void send_string_to_server(const std::string& msg)
     snprintf(size_buf, SIZEBUF_SIZE, "%d", (int)size);
     //cout << "size: " << size << "\n";
     ljust(size_buf, SIZEBUF_SIZE);
-    //mytoolbox::dump(size_buf, SIZEBUF_SIZE);
+    //mytool::dump(size_buf, SIZEBUF_SIZE);
 
     ret = send(sockfd, size_buf, SIZEBUF_SIZE, 0);
     //cout << "ret: " << ret << endl;
@@ -259,7 +259,7 @@ void transfer_image_to_server(const std::string& file)
     snprintf(size_buf, SIZEBUF_SIZE, "%d", (int)size);
     //cout << "size: " << size << "\n";
     ljust(size_buf, SIZEBUF_SIZE);
-    //mytoolbox::dump(size_buf, SIZEBUF_SIZE);
+    //mytool::dump(size_buf, SIZEBUF_SIZE);
 
     ret = send(sockfd, size_buf, SIZEBUF_SIZE, 0);
     //cout << "ret: " << ret << endl;

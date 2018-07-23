@@ -13,7 +13,7 @@ void read_file_list(const std::string& jsonfile, std::vector<std::string>& filel
     using namespace std;
     vector<string> keys;
     keys.push_back("test");
-    filelist = mytoolbox::get_vector_from_jsonfile(jsonfile, keys);
+    filelist = mytool::get_vector_from_jsonfile(jsonfile, keys);
 }
 
 int main()
@@ -23,7 +23,7 @@ int main()
     read_file_list(SETTING_JSON, filelist);
 
     for (string fn: filelist) {
-        if (mytoolbox::is_file_exist(fn)) {
+        if (mytool::is_file_exist(fn)) {
             cout << "resize fn: " << fn << endl;
             resize_file(fn);
         } else {

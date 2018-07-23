@@ -6,7 +6,7 @@
 
 #include <string>
 
-namespace mytoolbox {
+namespace mytool {
 
 
 class Person
@@ -39,6 +39,6 @@ private:
     int age;
 };
 
-}   // namespace mytoolbox
+}   // namespace mytool
 
 #endif  // __INTERNAL_MY_TOOL_H__

@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-namespace mytoolbox {
+namespace mytool {
 
 using namespace std;
 using namespace nlohmann;
@@ -594,4 +594,4 @@ void test()
 }
 
 
-}   // namespace mytoolbox
+}   // namespace mytool

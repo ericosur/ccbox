@@ -6,7 +6,7 @@
 #include <time.h>
 #include <string>
 
-namespace mytoolbox {
+namespace mytool {
 
 /* Checking errors returned by system calls was omitted for the sake of readability. */
 int get_timeepoch()
@@ -43,4 +43,4 @@ date -d @$testdate
 
 */
 
-}   // namespace mytoolbox
+}   // namespace mytool

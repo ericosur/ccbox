@@ -15,8 +15,8 @@ void test()
     using namespace std;
     using namespace cv;
 
-    string test_image = mytoolbox::get_string_from_jsonfile(SETTING_JSON, "test_image", DEFAULT_TESTIMAGE);
-    if ( !mytoolbox::is_file_exist(test_image) ) {
+    string test_image = mytool::get_string_from_jsonfile(SETTING_JSON, "test_image", DEFAULT_TESTIMAGE);
+    if ( !mytool::is_file_exist(test_image) ) {
         cout << "test iamge not found: " << test_image << "\n";
         return;
     }

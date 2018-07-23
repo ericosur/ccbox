@@ -32,7 +32,7 @@ int main()
     byte* buffer = (byte*)malloc(inImage.size());
     std::copy(inImage.begin(), inImage.end(), buffer);
 #ifdef USE_MYTOOL
-    mytoolbox::dump((const char*)buffer, datalen);
+    mytool::dump((const char*)buffer, datalen);
 #endif
     vector<unsigned char> buffVec;
     buffVec.insert(buffVec.end(), &buffer[0], &buffer[datalen]);

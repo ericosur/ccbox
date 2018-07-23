@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 
-namespace mytoolbox {
+namespace mytool {
 
 std::string get_version_string()
 {
@@ -24,9 +24,9 @@ void mylog(const char* name, const char* format, ...)
     va_end(aptr);
     (void)ret;
 
-    printf("[%d][%s]: %s\n", mytoolbox::get_timeepoch(), name, buffer);
+    printf("[%d][%s]: %s\n", get_timeepoch(), name, buffer);
 
 }
 
 
-}   // namespace mytoolbox
+}   // namespace mytool

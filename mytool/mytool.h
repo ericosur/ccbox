@@ -8,7 +8,7 @@
 #include <opencv2/opencv.hpp>   // Include OpenCV API
 #endif
 
-namespace mytoolbox {
+namespace mytool {
 
 std::string get_home();
 
@@ -57,6 +57,6 @@ void mylog(const char* name, const char* format, ...);
 void output_status(const std::string& ofn, const std::vector<std::string>& v);
 
 
-}   // namespace mytoolbox
+}   // namespace mytool
 
 #endif  // __PUBLIC_MY_TOOLBOX_H__

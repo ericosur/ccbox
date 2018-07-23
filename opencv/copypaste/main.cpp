@@ -24,7 +24,7 @@ bool load_json(const string& json_file,
                string& input_fn,
                string& output_fn)
 {
-    if (!mytoolbox::is_file_exist(JSON_FILE)) {
+    if (!mytool::is_file_exist(JSON_FILE)) {
         cout << "json not found..." << endl;
         return false;
     }
@@ -33,7 +33,7 @@ bool load_json(const string& json_file,
         ifstream infile(JSON_FILE);
 
         infile >> json;
-        string home = mytoolbox::get_home();
+        string home = mytool::get_home();
         string datadir = json.at("datadir");
         if (json.at("use_home")) {
             datadir = home + "/" + datadir;
@@ -76,7 +76,7 @@ bool init()
     //cout << "input_img: " << input_img << "\n";
     //cout << "output_img: " << output_img << "\n";
 
-    if (mytoolbox::is_file_exist(input_img)) {
+    if (mytool::is_file_exist(input_img)) {
         return true;
     } else {
         cout << "file not found: " << input_img << endl;

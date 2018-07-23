@@ -88,7 +88,7 @@ void test_transfer(const std::vector<std::string> files)
             snprintf(size_buf, SIZEBUF_SIZE, "%d", (int)size);
             //cout << "size: " << size << "\n";
             ljust(size_buf, SIZEBUF_SIZE);
-            //mytoolbox::dump(size_buf, SIZEBUF_SIZE);
+            //mytool::dump(size_buf, SIZEBUF_SIZE);
 
             ret = send(sockfd, size_buf, SIZEBUF_SIZE, 0);
             //cout << "ret: " << ret << endl;
