@@ -1,5 +1,7 @@
-#include "readset.h"
+#include "readsetting.h"
 #include "cvutil.h"
+
+#include <iostream>
 
 int demoCapture();
 int demoTest();
@@ -8,6 +10,7 @@ int test_realsense();
 
 int main(int argc, char *argv[])
 {
+    std::cout << "call test_iou()\n";
     cvutil::test_iou();
 
 #if 0

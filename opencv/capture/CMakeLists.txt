@@ -70,7 +70,7 @@ add_executable(
     captureDemo.cpp
     cvutil.cpp
     rs-imshow.cpp
-    readset.cpp
+    readsetting.cpp
 )
 
 add_executable(

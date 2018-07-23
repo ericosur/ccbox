@@ -1,5 +1,5 @@
-#ifndef __UTIL_READ_SET_H__
-#define __UTIL_READ_SET_H__
+#ifndef __UTIL_READ_SETTING_H__
+#define __UTIL_READ_SETTING_H__
 
 #include <string>
 #include <iostream>
@@ -59,4 +59,4 @@ private:
 };
 
 
-#endif  // __UTIL_READ_SET_H__
+#endif  // __UTIL_READ_SETTING_H__
