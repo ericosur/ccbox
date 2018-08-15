@@ -6,6 +6,7 @@ project(${PN})
 set(CMAKE_CXX_FLAGS "-Wall -O3")
 set(CMAKE_CXX_STANDARD 11)
 
+# do not know why FindGSL() not work
 #FindGSL()
 find_package( GSL REQUIRED )
 
