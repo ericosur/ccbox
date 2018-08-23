@@ -1,0 +1,66 @@
+{
+    "test": "5",
+    "min": 1,
+    "max": 6,
+    "base_dir": "/home/rasmus/Pictures/rs_data",
+    "1": {
+        "color": "1_Depth.png",
+        "depth": "1_Depth.raw",
+        "p1": {
+            "x": 500,
+            "y": 200
+        },
+        "p2": {
+            "x": 550,
+            "y": 650
+        }
+    },
+    "2": {
+        "color": "lisa_Color.png",
+        "depth": "lisa_Depth.raw",
+        "p1": {
+            "x": 565,
+            "y": 278
+        },
+        "p2": {
+            "x": 565,
+            "y": 719
+        }
+    },
+    "3": {
+        "color": "Rasmus222_Color.png",
+        "depth": "Rasmus222_Depth.raw",
+        "p1": {
+            "x": 560,
+            "y": 192
+        },
+        "p2": {
+            "x": 560,
+            "y": 719
+        }
+    },
+    "4": {
+        "color": "Rasmus_Color.png",
+        "depth": "Rasmus_Depth.raw",
+        "p1": {
+            "x": 560,
+            "y": 235
+        },
+        "p2": {
+            "x": 560,
+            "y": 719
+        }
+    },
+    "5": {
+        "color": "ming1_Color.png",
+        "depth": "ming1_Depth.raw",
+        "p1": {
+            "x": 620,
+            "y": 200
+        },
+        "p2": {
+            "x": 620,
+            "y": 700
+        }
+    }
+}
