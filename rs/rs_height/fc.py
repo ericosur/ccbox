@@ -121,8 +121,15 @@ class FindContour(object):
         _dist = math.sqrt(pow(p1[0]-p2[0],2.0) + pow(p1[1]-p2[1],2.0))
         return _dist;
 
-    def query_length(self, p1, p2):
-        img = cv2.imread(self.colorfn)
+    def query_length(self, p1, p2, img=None):
+
+        if type(img) != type(None):
+            has_input_img = True
+            #print('fc.py has input image')
+        else:
+            print('read from self.colorfn')
+            has_input_img = False
+            img = cv2.imread(self.colorfn)
 
         dis1 = self.get_raw_u16(self.get_pos(p1[0], p1[1]))
         dis2 = self.get_raw_u16(self.get_pos(p2[0], p2[1]))
@@ -147,9 +154,22 @@ class FindContour(object):
 
         cv2.line(img, p1, p2, color=(255,255,255), thickness=2)
 
-        cv2.imshow('img', img)
-        cv2.waitKey(0)
+        if not has_input_img:
+            print('imshow from fc.py')
+            cv2.imshow('img', img)
+            cv2.waitKey(0)
 
+        return img
+
+    def query_length_without_show(self, p1, p2):
+        dis1 = self.get_raw_u16(self.get_pos(p1[0], p1[1]))
+        dis2 = self.get_raw_u16(self.get_pos(p2[0], p2[1]))
+
+        pixel_dist = self.get_pixel_distance(p1, p2)
+        avg = (dis1 + dis2) / 2.0
+        #print('avg pixel distance: {:.2f}'.format(avg))
+        _estlen = self.get_actual_length(pixel_dist, (dis1+dis2)/2)
+        print('{:.2f}mm, '.format(_estlen))
 
 
 def test_with_setting(jsondata, item):
@@ -168,7 +188,7 @@ def test_with_setting(jsondata, item):
     p1 = (sett['p1']['x'], sett['p1']['y'])
     p2 = (sett['p2']['x'], sett['p2']['y'])
     print('p1:{}, p2:{}'.format(p1, p2))
-    myctr.query_length(p1, p2)
+    myctr.query_length_without_show(p1, p2)
 
 def test_proc():
     json = read_setting('setting.json')
@@ -185,7 +205,7 @@ def main():
     myctr.load_file('1_Depth.png', '1_Depth.raw')
     p1 = (500, 200)
     p2 = (550, 650)
-    myctr.query_length(p1, p2)
+    myctr.query_length_without_show(p1, p2)
 
 if __name__ == '__main__':
     #main()
