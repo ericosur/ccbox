@@ -161,7 +161,10 @@ class FindContour(object):
 
         return img
 
-    def query_length_without_show(self, p1, p2):
+    def query_length_without_img(self, p1, p2, show=True):
+        ''' return estimated length for p1, p2
+            if show is Ture will print to terminal
+        '''
         dis1 = self.get_raw_u16(self.get_pos(p1[0], p1[1]))
         dis2 = self.get_raw_u16(self.get_pos(p2[0], p2[1]))
 
@@ -169,7 +172,9 @@ class FindContour(object):
         avg = (dis1 + dis2) / 2.0
         #print('avg pixel distance: {:.2f}'.format(avg))
         _estlen = self.get_actual_length(pixel_dist, (dis1+dis2)/2)
-        print('{:.2f}mm, '.format(_estlen))
+        if show:
+            print('{:.2f}mm, '.format(_estlen))
+        return _estlen
 
 
 def test_with_setting(jsondata, item):
@@ -188,7 +193,7 @@ def test_with_setting(jsondata, item):
     p1 = (sett['p1']['x'], sett['p1']['y'])
     p2 = (sett['p2']['x'], sett['p2']['y'])
     print('p1:{}, p2:{}'.format(p1, p2))
-    myctr.query_length_without_show(p1, p2)
+    myctr.query_length_without_img(p1, p2)
 
 def test_proc():
     json = read_setting('setting.json')
@@ -205,7 +210,7 @@ def main():
     myctr.load_file('1_Depth.png', '1_Depth.raw')
     p1 = (500, 200)
     p2 = (550, 650)
-    myctr.query_length_without_show(p1, p2)
+    myctr.query_length_without_img(p1, p2)
 
 if __name__ == '__main__':
     #main()

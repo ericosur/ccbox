@@ -10,6 +10,7 @@ from glob import glob
 from myutil import read_jsonfile, isfile
 from fc import FindContour
 from kp import KP
+import pandas as pd
 
 
 class TestProc(object):
@@ -99,13 +100,32 @@ class TestProc(object):
         #cv2.imshow('img', img)
         #cv2.waitKey(0)
 
+        results = []
         if self.flag_show_image:
             #print('imshow from listpts.py')
             img2 = myctr.query_length(p1, p2, img)
             cv2.imshow('img', img2)
             cv2.waitKey(0)
         else:
-            myctr.query_length_without_show(p1, p2)
+            r = myctr.query_length_without_img(p1, p2, show=False)
+            results.append(r)
+        return results
+
+    def get_all_links(self):
+        ''' print header '''
+        idexes = []
+        for ll in self.links:
+            #print('{} - {}'.format(ll[0], ll[1]))
+            '''
+            rs = '{}({}) - {}({})'.format(
+                TestProc.rrt(KP(ll[0])), ll[0],
+                TestProc.rrt(KP(ll[1])), ll[1])
+            '''
+            rs = '{} - {}'.format(
+                TestProc.rrt(KP(ll[0])),
+                TestProc.rrt(KP(ll[1])))
+            idexes.append(rs)
+        return idexes
 
 
     def process_all_sections(self):
@@ -123,18 +143,9 @@ class TestProc(object):
 
         flag_show_image = False
 
-        # print header
-        '''
-        for ll in self.links:
-            #print('{} - {}'.format(ll[0], ll[1]))
-            print('{}({}) - {}({})'.format(
-                TestProc.rrt(KP(ll[0])),
-                ll[0],
-                TestProc.rrt(KP(ll[1])),
-                ll[1]),)
-        '''
-
+        result = []
         # print data
+        #print('show links')
         for ll in self.links:
             #print('{} - {}'.format(ll[0], ll[1]))
             x1 = int(kps[TestProc.get_x(ll[0])])
@@ -143,8 +154,9 @@ class TestProc(object):
             y2 = int(kps[TestProc.get_y(ll[1])])
             p1 = (x1, y1)
             p2 = (x2, y2)
-            myctr.query_length_without_show(p1, p2)
-
+            res = myctr.query_length_without_img(p1, p2, show=False)
+            result.append(res)
+        return result
 
     @staticmethod
     def get_x(idx):
@@ -160,14 +172,29 @@ class TestProc(object):
         return pref
 
 if __name__ == '__main__':
+    OUTCSV = 'out.csv'
     if len(sys.argv) == 1:
-        files = glob('*Color_keypoints.json')
+        patterns = '*Color_keypoints.json'
+        print('use patterns: {}'.format(patterns))
+        files = glob(patterns)
+        #files = ['ming1_Color_keypoints.json']
+        df = pd.DataFrame()
         for ff in files:
-            print('process file: {}'.format(ff))
+            #print('process file: {}'.format(ff))
             prefix = TestProc.get_prefix(ff)
+            if len(prefix) < 1:
+                print('WARNING:', prefix)
             tp = TestProc(prefix, show_image=False)
-            tp.process_one_section()
-            print()
+            idxes = tp.get_all_links()
+            #print('idxes:', idxes)
+            r = tp.process_all_sections()
+            s1 = pd.Series(r, index=idxes)
+            df[prefix] = s1
+        #print(df)
+        print('output csv: {}'.format(OUTCSV))
+        df.to_csv(OUTCSV)
     elif len(sys.argv) == 2:
+        name = sys.argv[1]
         tp = TestProc(sys.argv[1])
-        tp.process_one_section()
+        lens = tp.process_all_sections()
+        print('{}: {}'.format(name, lens))
