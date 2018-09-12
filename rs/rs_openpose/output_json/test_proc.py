@@ -5,7 +5,6 @@ list COCO keypoints from json file
 '''
 
 import sys
-from enum import Enum
 from glob import glob
 
 from myutil import read_jsonfile, isfile
@@ -55,8 +54,14 @@ class TestProc(object):
             return False
         return True
 
+    @staticmethod
+    def rrt(tok):
+        if type(tok) == str:
+            return tok.replace('KP.', '')
+        else:
+            return str(tok).replace('KP.', '')
 
-    def process_json(self):
+    def process_one_section(self):
         if not self.proceed:
             print('cannot proceed...')
             return
@@ -66,6 +71,7 @@ class TestProc(object):
         p1 = ()
         p2 = ()
 
+        # TODO: if more than one person
         kps = self.json['people'][0]['pose_keypoints_2d']
 
         if self.flag_show_image:
@@ -101,6 +107,53 @@ class TestProc(object):
         else:
             myctr.query_length_without_show(p1, p2)
 
+
+    def process_all_sections(self):
+        if not self.proceed:
+            print('cannot proceed...')
+            return
+
+        myctr = FindContour()
+        myctr.load_file(self.imgfile, self.rawfile)
+        p1 = ()
+        p2 = ()
+
+        # TODO: if more than one person
+        kps = self.json['people'][0]['pose_keypoints_2d']
+
+        flag_show_image = False
+
+        # print header
+        '''
+        for ll in self.links:
+            #print('{} - {}'.format(ll[0], ll[1]))
+            print('{}({}) - {}({})'.format(
+                TestProc.rrt(KP(ll[0])),
+                ll[0],
+                TestProc.rrt(KP(ll[1])),
+                ll[1]),)
+        '''
+
+        # print data
+        for ll in self.links:
+            #print('{} - {}'.format(ll[0], ll[1]))
+            x1 = int(kps[TestProc.get_x(ll[0])])
+            y1 = int(kps[TestProc.get_y(ll[0])])
+            x2 = int(kps[TestProc.get_x(ll[1])])
+            y2 = int(kps[TestProc.get_y(ll[1])])
+            p1 = (x1, y1)
+            p2 = (x2, y2)
+            myctr.query_length_without_show(p1, p2)
+
+
+    @staticmethod
+    def get_x(idx):
+        return idx * 3
+
+    @staticmethod
+    def get_y(idx):
+        return idx * 3 + 1
+
     @staticmethod
     def get_prefix(filepath):
         pref = filepath.replace('_Color_keypoints.json', '')
@@ -113,8 +166,8 @@ if __name__ == '__main__':
             print('process file: {}'.format(ff))
             prefix = TestProc.get_prefix(ff)
             tp = TestProc(prefix, show_image=False)
-            tp.process_json()
+            tp.process_one_section()
             print()
     elif len(sys.argv) == 2:
         tp = TestProc(sys.argv[1])
-        tp.process_json()
+        tp.process_one_section()
