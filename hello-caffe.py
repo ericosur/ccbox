@@ -1,3 +1,12 @@
+# -*- coding: utf-8 -*-
+
+'''
+python2 hello-caffe.py
+---or---
+python3 hello-caffe.py
+'''
+
+from __future__ import print_function
 import os, sys
 
 def hello_world():
@@ -10,6 +19,11 @@ def insert_syspath(p):
         sys.path.insert(0, p)
         return True
     return False
+
+def get_python_version():
+    ''' return version string of python '''
+    py_ver = ".".join(map(str, sys.version_info[:2]))
+    return py_ver
 
 def is_path_exist(p):
     return os.path.exists(p)
@@ -37,9 +51,22 @@ def init():
 
 def main():
     if init():
-        hello_world()
+        print('import pycaffe successfully')
     else:
         print('failed to import pycaffe...')
+        return
+
+    print('Would you like to call caffe function? will core dump a lot')
+    ans = 'no'
+    ver = float(get_python_version())
+    #print('ver: ', get_python_version())
+    if ver > 3.0:
+        ans = input('enter "yes" to continue: ')
+    else:
+        ans = raw_input('enter "yes" to continue: ')
+    if ans == 'yes':
+        hello_world()
+
 
 if __name__ == '__main__':
     main()
