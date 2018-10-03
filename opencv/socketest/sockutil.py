@@ -1,6 +1,4 @@
 import json
-import cv2
-import numpy
 
 def read_jsonfile(fn):
     print('load json from {}'.format(fn))
@@ -8,6 +6,9 @@ def read_jsonfile(fn):
     return data
 
 def translate_img_to_str(fn):
+    import cv2
+    import numpy
+
     img = cv2.imread(fn)
     encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 90]
     result, img_str = cv2.imencode('.jpg', img, encode_param)
@@ -18,6 +19,9 @@ def translate_img_to_str(fn):
     return stringData
 
 def combine_two_images(ofn, inf1, inf2):
+    import cv2
+    import numpy
+
     img1 = cv2.imread(inf1)
     img2 = cv2.imread(inf2)
 
@@ -39,7 +43,11 @@ def combine_two_images(ofn, inf1, inf2):
 def main():
     # strData = translate_img_to_str('lena.jpg')
     # print strData
-    combine_two_images('out.jpg', 'l128.jpg', 'l200.jpg')
+    IMG1 = 'l128.jpg'
+    IMG2 = 'l200.jpg'
+    RESULT = 'out.jpg'
+    print('combine {} and {} to {}'.format(IMG1, IMG2, RESULT))
+    combine_two_images(RESULT, IMG1, IMG2)
 
 if __name__ == '__main__':
     main()

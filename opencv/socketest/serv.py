@@ -1,14 +1,16 @@
 #!/usr/bin/python
 
-# refer from: https://gist.github.com/kevinkindom/108ffd675cb9253f8f71
+'''
+refer from: https://gist.github.com/kevinkindom/108ffd675cb9253f8f71
+'''
 
 # socket server
 
 import socket
-import myutil
 import numpy
 import cv2
 import time
+from sockutil import read_jsonfile
 
 def recvall(sock, count):
     print('recvall, count:{}'.format(count))
@@ -24,7 +26,7 @@ def recvall(sock, count):
 
 
 def main():
-    data = myutil.read_jsonfile('setting.json')
+    data = read_jsonfile('setting.json')
 
     HOST = data['host']
     PORT = data['port']

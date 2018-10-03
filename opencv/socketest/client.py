@@ -1,7 +1,14 @@
+
+'''
+refer from: https://gist.github.com/kevinkindom/108ffd675cb9253f8f71
+'''
+
+# socket client
+
 import socket
-import myutil
 import sys
 import time
+from sockutil import read_jsonfile, translate_img_to_str
 
 def save_data(data):
     f = open('p.dat', 'w')
@@ -9,7 +16,7 @@ def save_data(data):
     f.close()
 
 def main(argv):
-    data = myutil.read_jsonfile('setting.json')
+    data = read_jsonfile('setting.json')
 
     HOST = data['host']
     PORT = data['port']
@@ -20,7 +27,7 @@ def main(argv):
 
     for fn in argv:
         print("sending fn: {}".format(fn))
-        strData = myutil.translate_img_to_str(fn)
+        strData = translate_img_to_str(fn)
         dataLen = str(len(strData)).ljust(16);
         print('dataLen: {}'.format(dataLen))
         s.send(dataLen)
