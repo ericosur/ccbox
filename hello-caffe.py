@@ -15,7 +15,10 @@ def is_path_exist(p):
     return os.path.exists(p)
 
 def init():
-    env_caffe_root = os.environ['CAFFE_ROOT']
+    env_caffe_root = os.environ.get('CAFFE_ROOT')
+    if not env_caffe_root:
+        print('no CAFFE_ROOT')
+        return False
     pycaffe_path = '{}/python'.format(env_caffe_root)
     if insert_syspath(pycaffe_path):
         print('insert syspath successfully'.format(pycaffe_path))
