@@ -1,3 +1,8 @@
+/**
+ **  simple opencv + realsense
+ **/
+
+#include <iostream>
 // include the librealsense C++ header file
 #include <librealsense2/rs.hpp>
 
@@ -24,7 +29,7 @@ int main()
 
     // Camera warmup - dropping several first frames to let auto-exposure stabilize
     rs2::frameset frames;
-    for(int i = 0; i < 30; i++)
+    for (int i = 0; i < 30; i++)
     {
         //Wait for all configured streams to produce a frame
         frames = pipe.wait_for_frames();
@@ -45,8 +50,8 @@ int main()
     namedWindow("Display Image", WINDOW_AUTOSIZE );
     imshow("Display Image", ir);
 
+    cout << "press any key to quit...\n";
     waitKey(0);
 
     return 0;
 }
-

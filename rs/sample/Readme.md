@@ -26,6 +26,5 @@ rs2::pipeline
 
 distance: 1.351 meter will be 0x1351 in hex
 
-## opencv 3.4.2 python examples
+## opencv python examples
 /home/rasmus/src/github/librealsense/wrappers/python/examples
-
