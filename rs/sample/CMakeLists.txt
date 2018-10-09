@@ -63,6 +63,7 @@ message("DEPENDENCIES: ${DEPENDENCIES}")
 add_executable(
     ir
     ir.cpp
+    dist.cpp
 )
 
 target_link_libraries(
