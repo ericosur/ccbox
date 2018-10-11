@@ -5,6 +5,7 @@ project(${PN})
 
 set(APPLY_INTEL_OPENCV   0)
 set(CMAKE_CXX_FLAGS "-Wall -O3")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
 
 set(CMAKE_CXX_STANDARD 11)
 set(APPLY_JSON         1)
@@ -55,11 +56,6 @@ if(APPLY_REALSENSE)
     endif()
 
 endif()
-
-
-
-#find_package( OpenCV REQUIRED )
-#set(DEPENDENCIES realsense2 ${OpenCV_LIBS})
 
 
 message("====> DEPENDENCIES: ${DEPENDENCIES}")
