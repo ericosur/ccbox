@@ -36,6 +36,8 @@ public:
         return ret;
     }
 
+    void show(const std::string& str, bool true_false);
+
 protected:
     static ReadSetting* _instance;
     ReadSetting();
@@ -53,6 +55,14 @@ public:
     bool use_edge_test = true;
     bool use_hsv_test = true;
     std::string output_dir = "out";
+
+    bool show_dist = true;
+    bool show_fps = true;
+    bool apply_align = true;
+    bool apply_dec = true;
+    bool apply_disparity = true;
+    bool apply_temporal = true;
+    bool apply_spatial = true;
 
 private:
     int save_image_index = 0;

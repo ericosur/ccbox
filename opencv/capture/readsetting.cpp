@@ -32,6 +32,10 @@ ReadSetting::ReadSetting()
     }
 }
 
+void ReadSetting::show(const std::string& str, bool true_false)
+{
+    cout << str << ": " << (true_false ? "true" : "false") << endl;
+}
 
 bool ReadSetting::load_json(const std::string& json_file)
 {
@@ -60,6 +64,23 @@ bool ReadSetting::load_json(const std::string& json_file)
 
         std::string _dir = json.at("output_dir");
         output_dir = _dir;
+
+        nlohmann::json jsub = json.at("realsense");
+        show_dist = jsub.at("show_dist");
+        show("show_dist", show_dist);
+        show_fps = jsub.at("show_fps");
+        show("show_fps", show_fps);
+
+        apply_align = jsub.at("apply_align");
+        show("apply_align", apply_align);
+        apply_dec = jsub.at("apply_dec");
+        show("apply_dec", apply_dec);
+        apply_disparity = jsub.at("apply_disparity");
+        show("apply_disparity", apply_disparity);
+        apply_spatial = jsub.at("apply_spatial");
+        show("apply_spatial", apply_spatial);
+        apply_temporal = jsub.at("apply_temporal");
+        show("apply_temporal", apply_temporal);
     }
     catch (nlohmann::json::parse_error& e) {
         cout << "parse json error: " << e.what();

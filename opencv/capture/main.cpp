@@ -10,10 +10,12 @@ int test_realsense();
 
 int main(int argc, char *argv[])
 {
+#if 0
     std::cout << "call test_iou()\n";
     cvutil::test_iou();
+#endif
 
-#if 0
+#if 1
 
     ReadSetting* settings = ReadSetting::getInstance();
 
@@ -23,7 +25,9 @@ int main(int argc, char *argv[])
     }
 #endif
 
+#endif
 
+#if 0
     if (settings->use_edge_test) {
         if ( demoTest() == -1 ) {
             printf("edge test failed...\n");

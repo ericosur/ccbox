@@ -4,7 +4,7 @@
 #ifdef USE_REALSENSE
 
 #include "cvutil.h"
-#include "readset.h"
+#include "readsetting.h"
 
 #include <librealsense2/rs.hpp> // Include RealSense Cross Platform API
 #include <cstdio>
@@ -82,7 +82,7 @@ int test_realsense() try
     while (waitKey(1) < 0 /*&& cvGetWindowHandle(rgb_window)*/)
     {
         rs2::frameset data = pipe.wait_for_frames(); // Wait for next set of frames from the camera
-        rs2::frame depth = color_map(data.get_depth_frame());
+        rs2::frame depth = data.get_depth_frame();
         rs2::frame color = data.get_color_frame();
 
         // Query frame size (width and height)
