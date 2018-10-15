@@ -11,11 +11,12 @@
     "realsense": {
         "show_dist": false,
         "show_fps": true,
-        "color_scheme": 6,
+        "color_scheme": 2,
         "apply_align": true,
-        "apply_dec": false,
+        "apply_dec": true,
         "apply_disparity": true,
-        "apply_spatial": true,
-        "apply_temporal": true
+        "apply_spatial": false,
+        "apply_temporal": false,
+        "apply_holefill": true
     }
 }

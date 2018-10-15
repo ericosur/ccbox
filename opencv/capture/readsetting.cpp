@@ -83,6 +83,8 @@ bool ReadSetting::load_json(const std::string& json_file)
         show("apply_spatial", apply_spatial);
         apply_temporal = jsub.at("apply_temporal");
         show("apply_temporal", apply_temporal);
+        apply_holefill = jsub.at("apply_holefill");
+        show("apply_holefill", apply_holefill);
     }
     catch (nlohmann::json::parse_error& e) {
         cout << "parse json error: " << e.what();

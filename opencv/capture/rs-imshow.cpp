@@ -52,7 +52,7 @@ void init_windows()
     }
 
     namedWindow(rgb_window, WINDOW_AUTOSIZE);
-    moveWindow(rgb_window, DEFAULT_WIDTH+50, 0);
+    moveWindow(rgb_window, DEFAULT_WIDTH+55, 0);
 
     // namedWindow(crop_window, WINDOW_AUTOSIZE);
     // moveWindow(crop_window, 0, DEFAULT_HEIGHT+50);
@@ -115,6 +115,7 @@ int test_realsense() try
     rs2::spatial_filter spat;
     spat.set_option(RS2_OPTION_HOLES_FILL, 3); // 5 = fill all the zero pixels
     rs2::temporal_filter temp;
+    rs2::hole_filling_filter hole;
 
     if (settings->show_dist) {
         std::cout << "press to continue..." << std::endl;
@@ -131,25 +132,29 @@ int test_realsense() try
             frameset = frameset.apply_filter(align_to);
         }
 
-        if (settings->apply_dec)
-            frameset = frameset.apply_filter(dec);
+        if (settings->apply_disparity) {
 
-        if (settings->apply_disparity)
             frameset = frameset.apply_filter(depth2disparity);
 
-        if (settings->apply_spatial) {
-            // Apply spatial filtering
-            frameset = frameset.apply_filter(spat);
-        }
+            if (settings->apply_dec)
+                frameset = frameset.apply_filter(dec);
 
-        if (settings->apply_temporal) {
-            // Apply temporal filtering
-            frameset = frameset.apply_filter(temp);
-        }
+            if (settings->apply_spatial) {
+                // Apply spatial filtering
+                frameset = frameset.apply_filter(spat);
+            }
 
-        if (settings->apply_disparity)
+            if (settings->apply_temporal) {
+                // Apply temporal filtering
+                frameset = frameset.apply_filter(temp);
+            }
+
+            if (settings->apply_holefill) {
+                frameset = frameset.apply_filter(hole);
+            }
+
             frameset = frameset.apply_filter(disparity2depth);
-
+        }
 
         frameset = frameset.apply_filter(color_map);
 

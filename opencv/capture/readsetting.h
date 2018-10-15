@@ -64,6 +64,7 @@ public:
     bool apply_disparity = true;
     bool apply_temporal = true;
     bool apply_spatial = true;
+    bool apply_holefill = true;
 
 private:
     int save_image_index = 0;
