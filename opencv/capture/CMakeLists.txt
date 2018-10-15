@@ -73,17 +73,18 @@ add_executable(
     readsetting.cpp
 )
 
-add_executable(
-    fe2d
-    fe2d.cpp
-)
-
 target_link_libraries(
     ${PN}
     ${DEPENDENCIES}
 )
 
-target_link_libraries(
-    fe2d
-    ${DEPENDENCIES}
-)
+
+# add_executable(
+#     fe2d
+#     fe2d.cpp
+# )
+
+# target_link_libraries(
+#     fe2d
+#     ${DEPENDENCIES}
+# )

@@ -11,8 +11,9 @@
     "realsense": {
         "show_dist": false,
         "show_fps": true,
+        "color_scheme": 6,
         "apply_align": true,
-        "apply_dec": true,
+        "apply_dec": false,
         "apply_disparity": true,
         "apply_spatial": true,
         "apply_temporal": true

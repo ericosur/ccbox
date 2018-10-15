@@ -70,6 +70,8 @@ bool ReadSetting::load_json(const std::string& json_file)
         show("show_dist", show_dist);
         show_fps = jsub.at("show_fps");
         show("show_fps", show_fps);
+        color_scheme = jsub.at("color_scheme");
+        show("color_scheme", color_scheme);
 
         apply_align = jsub.at("apply_align");
         show("apply_align", apply_align);
