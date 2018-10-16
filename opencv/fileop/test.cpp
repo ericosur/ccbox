@@ -9,10 +9,11 @@ void test()
     using namespace std;
     using namespace cv;
 
+    cout << "read values from json file...\n";
     FileStorage fs(SETTING_JSON, FileStorage::READ);
     string name = fs["name"];
     string date = fs["date"];
-    cout << name << endl
-        << date << endl;
+    cout << "name: " << name << endl
+        << "date: " << date << endl;
     fs.release();
 }
