@@ -39,7 +39,7 @@ void ReadSetting::show(const std::string& str, bool true_false)
 
 void ReadSetting::show(const std::string &str, int val)
 {
-    cout << str << "= " << val << endl;
+    cout << str << " = " << val << endl;
 }
 
 bool ReadSetting::load_json(const std::string& json_file)

@@ -47,7 +47,7 @@ if(APPLY_REALSENSE)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_REALSENSE")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-sign-compare")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-reorder")
-        set(DEPENDENCIES "realsense2 ${DEPENDENCIES}")
+        set(DEPENDENCIES "realsense2;${DEPENDENCIES}")
 
         include_directories("$ENV{HOME}/src/github/librealsense/include")
         include_directories("$ENV{HOME}/src/librealsense/include")

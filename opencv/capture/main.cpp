@@ -14,12 +14,14 @@ int main(int argc, char *argv[])
     cvutil::test_iou();
 
 #ifdef USE_REALSENSE
+    ReadSetting *settings = ReadSetting::getInstance();
     if (settings->use_realsense) {
         test_realsense();
+    } else {
+        demoTest();
     }
 #else
-
-    ReadSetting* settings = ReadSetting::getInstance();
+    ReadSetting *settings = ReadSetting::getInstance();
     if (settings->use_edge_test) {
         if ( demoTest() == -1 ) {
             printf("edge test failed...\n");
