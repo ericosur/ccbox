@@ -11,6 +11,8 @@
 #define JSON_FILE    "../setting.json"
 #endif
 
+#include "cvutil.h"
+
 #define MAX_SAVE_IMAGE_INDEX    9999
 
 using namespace std;
@@ -37,6 +39,7 @@ public:
     }
 
     void show(const std::string& str, bool true_false);
+    void show(const std::string &str, int val);
 
 protected:
     static ReadSetting* _instance;
@@ -51,11 +54,14 @@ protected:
 
 public:
     int video_id = 0;
+    int default_width = DEFAULT_WIDTH;
+    int default_height = DEFAULT_HEIGHT;
     bool use_realsense = true;
     bool use_edge_test = true;
     bool use_hsv_test = true;
     std::string output_dir = "out";
 
+#ifdef USE_REALSENSE
     bool show_dist = true;
     bool show_fps = true;
     int color_scheme = 2;
@@ -65,6 +71,7 @@ public:
     bool apply_temporal = true;
     bool apply_spatial = true;
     bool apply_holefill = true;
+#endif
 
 private:
     int save_image_index = 0;

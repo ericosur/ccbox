@@ -31,6 +31,8 @@ if(APPLY_JSON)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_JSON")
 endif()
 
+set(DEPENDENCIES ${OpenCV_LIBS})
+
 # realsense2
 if(APPLY_REALSENSE)
 
@@ -45,14 +47,13 @@ if(APPLY_REALSENSE)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_REALSENSE")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-sign-compare")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-reorder")
-        set(DEPENDENCIES realsense2 ${OpenCV_LIBS})
+        set(DEPENDENCIES "realsense2 ${DEPENDENCIES}")
 
         include_directories("$ENV{HOME}/src/github/librealsense/include")
         include_directories("$ENV{HOME}/src/librealsense/include")
     else()
         message("WARNING realsense2 not found, turn off this feature...")
         set(APPLY_REALSENSE    0)
-        set(DEPENDENCIES ${OpenCV_LIBS})
     endif()
 
 endif()

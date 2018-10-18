@@ -48,8 +48,8 @@ int v_min = 0;
 int v_max = 255;
 
 //default capture width and height
-const int FRAME_WIDTH = DEFAULT_WIDTH;
-const int FRAME_HEIGHT = DEFAULT_HEIGHT;
+int FRAME_WIDTH = ReadSetting::getInstance()->default_width;
+int FRAME_HEIGHT = ReadSetting::getInstance()->default_height;
 //max number of objects to be detected in frame
 const int MAX_NUM_OBJECTS = 10;
 //minimum and maximum object area

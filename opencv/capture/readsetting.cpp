@@ -37,6 +37,11 @@ void ReadSetting::show(const std::string& str, bool true_false)
     cout << str << ": " << (true_false ? "true" : "false") << endl;
 }
 
+void ReadSetting::show(const std::string &str, int val)
+{
+    cout << str << "= " << val << endl;
+}
+
 bool ReadSetting::load_json(const std::string& json_file)
 {
     using namespace std;
@@ -55,6 +60,11 @@ bool ReadSetting::load_json(const std::string& json_file)
         cout << "video_id: " << vid << endl;
         video_id = vid;
 
+        default_width = json.at("default_width");
+        show("default_width", default_width);
+        default_height = json.at("default_height");
+        show("default_height", default_height);
+
         use_realsense = json.at("use_realsense");
 
         bool tmp = json.at("use_edge_test");
@@ -65,6 +75,7 @@ bool ReadSetting::load_json(const std::string& json_file)
         std::string _dir = json.at("output_dir");
         output_dir = _dir;
 
+#ifdef USE_REALSENSE
         nlohmann::json jsub = json.at("realsense");
         show_dist = jsub.at("show_dist");
         show("show_dist", show_dist);
@@ -85,6 +96,7 @@ bool ReadSetting::load_json(const std::string& json_file)
         show("apply_temporal", apply_temporal);
         apply_holefill = jsub.at("apply_holefill");
         show("apply_holefill", apply_holefill);
+#endif
     }
     catch (nlohmann::json::parse_error& e) {
         cout << "parse json error: " << e.what();
