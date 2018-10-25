@@ -1,6 +1,8 @@
 // License: Apache 2.0. See LICENSE file in root directory.
 // Copyright(c) 2017 Intel Corporation. All Rights Reserved.
 
+#define SLEEP_DURATION      (500*1000)
+
 #ifdef USE_REALSENSE
 
 #include "cvutil.h"
@@ -9,6 +11,7 @@
 #include <stdint.h>
 #include <cstdio>
 #include <iostream>
+#include <unistd.h>
 #include <librealsense2/rs.hpp> // Include RealSense Cross Platform API
 
 bool show_info()
@@ -100,8 +103,13 @@ int test_realsense() try
 
     // Declare RealSense pipeline, encapsulating the actual device and sensors
     rs2::pipeline pipe;
-    // Start streaming with default recommended configuration
-    rs2::pipeline_profile profile = pipe.start(cfg);
+
+    if (!settings->apply_sleep) {
+        // Start streaming with default recommended configuration
+        rs2::pipeline_profile profile = pipe.start(cfg);
+    } else {
+        std::cout << "pipe is sleeping..." << std::endl;
+    }
 
     rs2::align align_to(RS2_STREAM_COLOR);
 
@@ -126,80 +134,80 @@ int test_realsense() try
     while (true)
     {
         int64 e1 = cv::getTickCount();
-        rs2::frameset frameset = pipe.wait_for_frames(); // Wait for next set of frames from the camera
 
-        if (settings->apply_align) {
-            frameset = frameset.apply_filter(align_to);
-        }
+        if (!settings->apply_sleep) {
+            rs2::frameset frameset = pipe.wait_for_frames(); // Wait for next set of frames from the camera
 
-        if (settings->apply_disparity) {
-
-            frameset = frameset.apply_filter(depth2disparity);
-
-            if (settings->apply_dec)
-                frameset = frameset.apply_filter(dec);
-
-            if (settings->apply_spatial) {
-                // Apply spatial filtering
-                frameset = frameset.apply_filter(spat);
+            if (settings->apply_align) {
+                frameset = frameset.apply_filter(align_to);
+            }
+            if (settings->apply_disparity) {
+                frameset = frameset.apply_filter(depth2disparity);
+                if (settings->apply_dec) {
+                    frameset = frameset.apply_filter(dec);
+                }
+                if (settings->apply_spatial) {
+                    // Apply spatial filtering
+                    frameset = frameset.apply_filter(spat);
+                }
+                if (settings->apply_temporal) {
+                    // Apply temporal filtering
+                    frameset = frameset.apply_filter(temp);
+                }
+                if (settings->apply_holefill) {
+                    frameset = frameset.apply_filter(hole);
+                }
+                frameset = frameset.apply_filter(disparity2depth);
             }
 
-            if (settings->apply_temporal) {
-                // Apply temporal filtering
-                frameset = frameset.apply_filter(temp);
+            frameset = frameset.apply_filter(color_map);
+
+            rs2::depth_frame depth = frameset.get_depth_frame();
+            rs2::video_frame color = frameset.get_color_frame();
+            auto colorized_depth = frameset.first(RS2_STREAM_DEPTH, RS2_FORMAT_RGB8);
+
+            // Query frame size (width and height)
+            //const int w = color.as<rs2::video_frame>().get_width();
+            //const int h = color.as<rs2::video_frame>().get_height();
+            int w = DEFAULT_WIDTH;
+            int h = DEFAULT_HEIGHT;
+
+            if (settings->show_dist) {
+                // get distance of center point
+                float dist = depth.get_distance(w/2, h/2);
+                printf("from aligned depth: dist@(%d,%d) => %f\n", w/2, h/2, dist);
             }
 
-            if (settings->apply_holefill) {
-                frameset = frameset.apply_filter(hole);
+            //rs2::frame depth_color_frame = depth.apply_filter(color_map);
+
+            // Create OpenCV matrix of size (w,h) from the colorized depth data
+            Mat depth_image(Size(w, h), CV_8UC3, (void*)colorized_depth.get_data());
+            Mat color_image(Size(w, h), CV_8UC3, (void*)color.get_data());
+            //Mat new_img;
+
+            int64 e2 = cv::getTickCount();
+            double elapse_time = (e2 - e1) / cv::getTickFrequency();
+            //double time = cv::getTickFrequency() / (e2 - e1);
+            if (settings->show_fps) {
+                show_cvfps(color_image, elapse_time);
+                //printf("fps: %.3f\n", elapse_time);
             }
-
-            frameset = frameset.apply_filter(disparity2depth);
+            imshow(rgb_window, color_image);
+            imshow(depth_window, depth_image);
+        } else {
+            usleep(SLEEP_DURATION);
         }
-
-        frameset = frameset.apply_filter(color_map);
-
-        rs2::depth_frame depth = frameset.get_depth_frame();
-        rs2::video_frame color = frameset.get_color_frame();
-        auto colorized_depth = frameset.first(RS2_STREAM_DEPTH, RS2_FORMAT_RGB8);
-
-        // Query frame size (width and height)
-        //const int w = color.as<rs2::video_frame>().get_width();
-        //const int h = color.as<rs2::video_frame>().get_height();
-        int w = DEFAULT_WIDTH;
-        int h = DEFAULT_HEIGHT;
-
-        if (settings->show_dist) {
-            // get distance of center point
-            float dist = depth.get_distance(w/2, h/2);
-            printf("from aligned depth: dist@(%d,%d) => %f\n", w/2, h/2, dist);
-        }
-
-
-        //rs2::frame depth_color_frame = depth.apply_filter(color_map);
-
-        // Create OpenCV matrix of size (w,h) from the colorized depth data
-        Mat depth_image(Size(w, h), CV_8UC3, (void*)colorized_depth.get_data());
-        Mat color_image(Size(w, h), CV_8UC3, (void*)color.get_data());
-        //Mat new_img;
-
-        int64 e2 = cv::getTickCount();
-        double elapse_time = (e2 - e1) / cv::getTickFrequency();
-        //double time = cv::getTickFrequency() / (e2 - e1);
-        if (settings->show_fps) {
-            show_cvfps(color_image, elapse_time);
-            //printf("fps: %.3f\n", elapse_time);
-        }
-
-
-        imshow(rgb_window, color_image);
-        imshow(depth_window, depth_image);
 
         int key = waitKey(1);
         if (key == 0x1B) {
             break;
         }
     }
-    pipe.stop();
+
+    if (!settings->apply_sleep) {
+        pipe.stop();
+    }
+
     destroyAllWindows();
     return EXIT_SUCCESS;
 }

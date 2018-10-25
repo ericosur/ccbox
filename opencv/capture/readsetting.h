@@ -65,6 +65,7 @@ public:
     bool show_dist = true;
     bool show_fps = true;
     int color_scheme = 2;
+    bool apply_sleep = false;
     bool apply_align = true;
     bool apply_dec = true;
     bool apply_disparity = true;

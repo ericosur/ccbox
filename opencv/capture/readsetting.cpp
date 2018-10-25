@@ -84,6 +84,8 @@ bool ReadSetting::load_json(const std::string& json_file)
         color_scheme = jsub.at("color_scheme");
         show("color_scheme", color_scheme);
 
+        apply_sleep = jsub.at("apply_sleep");
+        show("apply_sleep", apply_sleep);
         apply_align = jsub.at("apply_align");
         show("apply_align", apply_align);
         apply_dec = jsub.at("apply_dec");
