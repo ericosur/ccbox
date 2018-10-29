@@ -1,0 +1,149 @@
+{
+    "query": {
+        "count": 1,
+        "created": "2018-08-29T02:34:29Z",
+        "lang": "en-US",
+        "results": {
+            "channel": {
+                "astronomy": {
+                    "sunrise": "5:33 am",
+                    "sunset": "6:15 pm"
+                },
+                "atmosphere": {
+                    "humidity": "74",
+                    "pressure": "33423.67",
+                    "rising": "0",
+                    "visibility": "25.91"
+                },
+                "description": "Yahoo! Weather for Taipei City, Taipei City, TW",
+                "image": {
+                    "height": "18",
+                    "link": "http://weather.yahoo.com",
+                    "title": "Yahoo! Weather",
+                    "url": "http://l.yimg.com/a/i/brand/purplelogo//uh/us/news-wea.gif",
+                    "width": "142"
+                },
+                "item": {
+                    "condition": {
+                        "code": "26",
+                        "date": "Wed, 29 Aug 2018 10:00 AM CST",
+                        "temp": "31",
+                        "text": "Cloudy"
+                    },
+                    "description": "<![CDATA[<img src=\"http://l.yimg.com/a/i/us/we/52/26.gif\"/>\n<BR />\n<b>Current Conditions:</b>\n<BR />Cloudy\n<BR />\n<BR />\n<b>Forecast:</b>\n<BR /> Wed - Scattered Thunderstorms. High: 32Low: 25\n<BR /> Thu - Thunderstorms. High: 31Low: 26\n<BR /> Fri - Thunderstorms. High: 31Low: 26\n<BR /> Sat - Thunderstorms. High: 32Low: 26\n<BR /> Sun - Scattered Thunderstorms. High: 32Low: 26\n<BR />\n<BR />\n<a href=\"http://us.rd.yahoo.com/dailynews/rss/weather/Country__Country/*https://weather.yahoo.com/country/state/city-2306179/\">Full Forecast at Yahoo! Weather</a>\n<BR />\n<BR />\n<BR />\n]]>",
+                    "forecast": [
+                        {
+                            "code": "47",
+                            "date": "29 Aug 2018",
+                            "day": "Wed",
+                            "high": "32",
+                            "low": "25",
+                            "text": "Scattered Thunderstorms"
+                        },
+                        {
+                            "code": "4",
+                            "date": "30 Aug 2018",
+                            "day": "Thu",
+                            "high": "31",
+                            "low": "26",
+                            "text": "Thunderstorms"
+                        },
+                        {
+                            "code": "4",
+                            "date": "31 Aug 2018",
+                            "day": "Fri",
+                            "high": "31",
+                            "low": "26",
+                            "text": "Thunderstorms"
+                        },
+                        {
+                            "code": "4",
+                            "date": "01 Sep 2018",
+                            "day": "Sat",
+                            "high": "32",
+                            "low": "26",
+                            "text": "Thunderstorms"
+                        },
+                        {
+                            "code": "47",
+                            "date": "02 Sep 2018",
+                            "day": "Sun",
+                            "high": "32",
+                            "low": "26",
+                            "text": "Scattered Thunderstorms"
+                        },
+                        {
+                            "code": "47",
+                            "date": "03 Sep 2018",
+                            "day": "Mon",
+                            "high": "32",
+                            "low": "26",
+                            "text": "Scattered Thunderstorms"
+                        },
+                        {
+                            "code": "4",
+                            "date": "04 Sep 2018",
+                            "day": "Tue",
+                            "high": "32",
+                            "low": "26",
+                            "text": "Thunderstorms"
+                        },
+                        {
+                            "code": "4",
+                            "date": "05 Sep 2018",
+                            "day": "Wed",
+                            "high": "32",
+                            "low": "26",
+                            "text": "Thunderstorms"
+                        },
+                        {
+                            "code": "4",
+                            "date": "06 Sep 2018",
+                            "day": "Thu",
+                            "high": "32",
+                            "low": "26",
+                            "text": "Thunderstorms"
+                        },
+                        {
+                            "code": "4",
+                            "date": "07 Sep 2018",
+                            "day": "Fri",
+                            "high": "31",
+                            "low": "26",
+                            "text": "Thunderstorms"
+                        }
+                    ],
+                    "guid": {
+                        "isPermaLink": "false"
+                    },
+                    "lat": "25.086",
+                    "link": "http://us.rd.yahoo.com/dailynews/rss/weather/Country__Country/*https://weather.yahoo.com/country/state/city-2306179/",
+                    "long": "121.560997",
+                    "pubDate": "Wed, 29 Aug 2018 10:00 AM CST",
+                    "title": "Conditions for Taipei City, Taipei City, TW at 10:00 AM CST"
+                },
+                "language": "en-us",
+                "lastBuildDate": "Wed, 29 Aug 2018 10:34 AM CST",
+                "link": "http://us.rd.yahoo.com/dailynews/rss/weather/Country__Country/*https://weather.yahoo.com/country/state/city-2306179/",
+                "location": {
+                    "city": "Taipei City",
+                    "country": "Taiwan",
+                    "region": " Taipei City"
+                },
+                "title": "Yahoo! Weather - Taipei City, Taipei City, TW",
+                "ttl": "60",
+                "units": {
+                    "distance": "km",
+                    "pressure": "mb",
+                    "speed": "km/h",
+                    "temperature": "C"
+                },
+                "wind": {
+                    "chill": "88",
+                    "direction": "90",
+                    "speed": "6.44"
+                }
+            }
+        }
+    }
+}
