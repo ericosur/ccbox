@@ -6,7 +6,7 @@
 #include <string>
 #include <iostream>
 #include <fstream>
-#include <json.hpp>
+#include <nlohmann/json.hpp>
 
 #define CURL_STATICLIB
 #include <curl/curl.h>
