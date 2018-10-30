@@ -58,6 +58,8 @@ file(GLOB LIB_HEADERS
         pbox.h
     )
 
+include_directories("/usr/local/include")
+
 # Create static library
 #add_library(${LIB_NAME} STATIC ${LIB_SOURCES})
 
