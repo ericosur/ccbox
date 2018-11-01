@@ -1,6 +1,6 @@
 #include "readsetting.h"
-
 #include <unistd.h>
+
 
 bool ReadSetting::is_file_exist(const std::string& fn)
 {
@@ -37,7 +37,12 @@ void ReadSetting::show(const std::string& str, bool true_false)
     cout << str << ": " << (true_false ? "true" : "false") << endl;
 }
 
-void ReadSetting::show(const std::string &str, int val)
+void ReadSetting::show(const std::string& str, int val)
+{
+    cout << str << " = " << val << endl;
+}
+
+void ReadSetting::show(const std::string& str, float val)
 {
     cout << str << " = " << val << endl;
 }
@@ -83,6 +88,8 @@ bool ReadSetting::load_json(const std::string& json_file)
         show("show_fps", show_fps);
         color_scheme = jsub.at("color_scheme");
         show("color_scheme", color_scheme);
+        distance_limit = jsub.at("distance_limit");
+        show("distance_limit", distance_limit);
 
         apply_sleep = jsub.at("apply_sleep");
         show("apply_sleep", apply_sleep);

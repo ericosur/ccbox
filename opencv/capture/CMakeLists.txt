@@ -5,13 +5,17 @@ project(${PN})
 
 set(APPLY_INTEL_OPENCV   0)
 set(CMAKE_CXX_FLAGS "-Wall -O3")
+# if support openmp
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unknown-pragmas")
 
 set(CMAKE_CXX_STANDARD 11)
 set(APPLY_JSON         1)
 set(APPLY_REALSENSE    1)
 
 # opencv is MUST
+set(OpenCV_DIR    "/opt/intel/opencv/share/OpenCV")
+#set(OpenCV_DIR    "/usr/local/share/OpenCV")
 find_package( OpenCV REQUIRED )
 
 # if support c++11, turn on json.hpp
@@ -63,11 +67,12 @@ message("====> DEPENDENCIES: ${DEPENDENCIES}")
 
 add_executable(
     ${PN}
-    main.cpp
+    cvui.h
+    cvutil.cpp cvutil.h
+    readsetting.cpp readsetting.h
     captureDemo.cpp
-    cvutil.cpp
     rs-imshow.cpp
-    readsetting.cpp
+    main.cpp
 )
 
 target_link_libraries(

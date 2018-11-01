@@ -8,9 +8,13 @@
 #include "cvutil.h"
 #include "readsetting.h"
 
+#define CVUI_IMPLEMENTATION
+#include "cvui.h"
+
 #include <stdint.h>
 #include <cstdio>
 #include <iostream>
+#include <iomanip>
 #include <unistd.h>
 #include <librealsense2/rs.hpp> // Include RealSense Cross Platform API
 
@@ -41,6 +45,52 @@ bool show_info()
     return false;
 }
 
+float get_depth_scale(rs2::device dev)
+{
+    // Go over the device's sensors
+    for (rs2::sensor& sensor : dev.query_sensors())
+    {
+        // Check if the sensor if a depth sensor
+        if (rs2::depth_sensor dpt = sensor.as<rs2::depth_sensor>())
+        {
+            return dpt.get_depth_scale();
+        }
+    }
+    throw std::runtime_error("Device does not have a depth sensor");
+}
+
+void remove_background(rs2::video_frame& other_frame, const rs2::depth_frame& depth_frame, float depth_scale, float clipping_dist)
+{
+    const uint16_t* p_depth_frame = reinterpret_cast<const uint16_t*>(depth_frame.get_data());
+    uint8_t* p_other_frame = reinterpret_cast<uint8_t*>(const_cast<void*>(other_frame.get_data()));
+
+    int width = other_frame.get_width();
+    int height = other_frame.get_height();
+    int other_bpp = other_frame.get_bytes_per_pixel();
+
+    #pragma omp parallel for schedule(dynamic) //Using OpenMP to try to parallelise the loop
+    for (int y = 0; y < height; y++)
+    {
+        auto depth_pixel_index = y * width;
+        for (int x = 0; x < width; x++, ++depth_pixel_index)
+        {
+            // Get the depth value of the current pixel
+            auto pixels_distance = depth_scale * p_depth_frame[depth_pixel_index];
+
+            // Check if the depth value is invalid (<=0) or greater than the threashold
+            if (pixels_distance <= 0.f || pixels_distance > clipping_dist)
+            {
+                // Calculate the offset in other frame's buffer to current pixel
+                auto offset = depth_pixel_index * other_bpp;
+
+                // Set pixel to "background" color (0x999999)
+                std::memset(&p_other_frame[offset], 0x99, other_bpp);
+            }
+        }
+    }
+}
+
+//#define WINDOW_NAME "Viewer to get depth"
 const auto depth_window = "Depth Image";
 const auto rgb_window = "RGB Image";
 //const auto crop_window = "crop";
@@ -56,6 +106,9 @@ void init_windows()
 
     namedWindow(rgb_window, WINDOW_AUTOSIZE);
     moveWindow(rgb_window, DEFAULT_WIDTH+55, 0);
+
+    // Init cvui and tell it to create a OpenCV window, i.e. cv::namedWindow(WINDOW_NAME).
+    cvui::init(depth_window);
 
     // namedWindow(crop_window, WINDOW_AUTOSIZE);
     // moveWindow(crop_window, 0, DEFAULT_HEIGHT+50);
@@ -83,6 +136,37 @@ bool show_cvfps(cv::Mat& cv_img, double elapsed_time)
     return true;
 }
 
+bool save_depth_to_bin(const std::string& fn, void* buffer, size_t width, size_t height)
+{
+    using namespace std;
+    FILE* fp = fopen(fn.c_str(), "wb");
+    if (fp == NULL) {
+        cout << "cannot write: " << fn << endl;
+        return false;
+    }
+    fwrite(buffer, 1, (sizeof(uint16_t) * width * height), fp);
+    fclose(fp);
+    return true;
+}
+
+int get_dpeth_pt(const void* buffer, int x, int y)
+{
+    int res = 0;
+    if ( (x < 0 || x >= DEFAULT_WIDTH) || (y < 0 || y >= DEFAULT_HEIGHT) ) {
+        printf("%s: OOB %d,%d\n", __func__, x, y);
+        return res;
+    }
+
+    uint16_t* pt = (uint16_t*)buffer;
+    int cnt = y * DEFAULT_WIDTH + x;
+    res = (int)*(pt+cnt);
+
+    if (false)
+        printf("res: %04x\n", res);
+
+    return res;
+}
+
 int test_realsense() try
 {
     using namespace cv;
@@ -103,10 +187,13 @@ int test_realsense() try
 
     // Declare RealSense pipeline, encapsulating the actual device and sensors
     rs2::pipeline pipe;
+    float depth_scale = 0.0;
 
     if (!settings->apply_sleep) {
         // Start streaming with default recommended configuration
         rs2::pipeline_profile profile = pipe.start(cfg);
+        depth_scale = get_depth_scale(profile.get_device());
+        cout << "depth scale:" << depth_scale << endl;
     } else {
         std::cout << "pipe is sleeping..." << std::endl;
     }
@@ -131,8 +218,7 @@ int test_realsense() try
     }
 
 
-    while (true)
-    {
+    while (true) {
         int64 e1 = cv::getTickCount();
 
         if (!settings->apply_sleep) {
@@ -164,6 +250,11 @@ int test_realsense() try
 
             rs2::depth_frame depth = frameset.get_depth_frame();
             rs2::video_frame color = frameset.get_color_frame();
+
+            if (settings->distance_limit > 0.0) {
+                remove_background(color, depth, depth_scale, settings->distance_limit);
+            }
+
             auto colorized_depth = frameset.first(RS2_STREAM_DEPTH, RS2_FORMAT_RGB8);
 
             // Query frame size (width and height)
@@ -185,6 +276,17 @@ int test_realsense() try
             Mat color_image(Size(w, h), CV_8UC3, (void*)color.get_data());
             //Mat new_img;
 
+            // cv::Point pt1(230, 40);
+            // cv::Point pt2(450, 90);
+            // cv::rectangle(depth_image, pt1, pt2, cv::Scalar(49, 52, 49), CV_FILLED);
+            int x = cvui::mouse().x;
+            int y = cvui::mouse().y;
+            cvui::printf(depth_image, 240, 50, "Mouse pointer is at (%d,%d)", x, y);
+            int _depth_pt = get_dpeth_pt(depth.get_data(), x, y);
+            cvui::printf(depth_image, 240, 70, "Depth is %4d (mm)", _depth_pt, _depth_pt);
+            //float dist = depth.get_distance(x, y);
+            //cvui::printf(depth_image, 240, 90, "dist is %f", dist);
+
             int64 e2 = cv::getTickCount();
             double elapse_time = (e2 - e1) / cv::getTickFrequency();
             //double time = cv::getTickFrequency() / (e2 - e1);
@@ -194,14 +296,36 @@ int test_realsense() try
             }
             imshow(rgb_window, color_image);
             imshow(depth_window, depth_image);
+
+            int key = waitKey(1);
+            if (key == 0x1B) {
+                cout << "break" << endl;
+                break;
+            } else if (key == 's') {
+                cout << "color: " << color_image.cols << "," << color_image.rows << endl
+                    /* << " size: " << color_image.size << endl */ ;
+                cout << "depth: " << depth_image.cols << "," << depth_image.rows << endl
+                    /* << " size: " << depth_image.size << endl */ ;
+                string fn;
+                int serial = cvutil::get_timeepoch();
+
+                fn = cvutil::compose_image_fn("color", serial);
+                cout << "output color file to: " << fn << endl;
+                cvutil::save_mat_to_file(color_image, fn);
+
+                fn = cvutil::compose_image_fn("depth", serial);
+                cout << "output depth file to: " << fn << endl;
+                cvutil::save_mat_to_file(depth_image, fn);
+
+                fn = cvutil::compose_depth_bin("depth", serial);
+                save_depth_to_bin(fn, (void*)depth.get_data(), depth_image.cols, depth_image.rows);
+                cout << "output depth bin to: " << fn << endl;
+            }
+
         } else {
             usleep(SLEEP_DURATION);
         }
 
-        int key = waitKey(1);
-        if (key == 0x1B) {
-            break;
-        }
     }
 
     if (!settings->apply_sleep) {

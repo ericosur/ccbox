@@ -40,6 +40,7 @@ public:
 
     void show(const std::string& str, bool true_false);
     void show(const std::string &str, int val);
+    void show(const std::string& str, float val);
 
 protected:
     static ReadSetting* _instance;
@@ -65,6 +66,7 @@ public:
     bool show_dist = true;
     bool show_fps = true;
     int color_scheme = 2;
+    float distance_limit = 0.0; // if 0, this feature will be disabled
     bool apply_sleep = false;
     bool apply_align = true;
     bool apply_dec = true;

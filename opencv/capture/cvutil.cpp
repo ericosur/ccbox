@@ -1,9 +1,13 @@
 #include "cvutil.h"
 #include "readsetting.h"
 
+//#include <stdio.h>
 #include <cstdlib>
 #include <iostream>
+#include <sstream>
+#include <string>
 #include <ctime>
+#include <time.h>
 
 #define DEFAULT_CROP_WIDTH      240
 #define DEFAULT_CROP_HEIGHT     240
@@ -14,6 +18,42 @@ namespace cvutil {
 
 int baseline = 0;
 
+int get_timeepoch()
+{
+    time_t t = time(NULL);
+    // will same as "date +%s"
+    //printf("%d\n", (int)t);
+    return (int)t;
+}
+
+std::string intToString(int number)
+{
+    std::stringstream ss;
+    ss << number;
+    return ss.str();
+}
+
+std::string get_save_image_fn(const string& prefix)
+{
+    std::string fn;
+    fn = prefix + intToString(get_timeepoch()) + ".png";
+    return fn;
+}
+
+std::string compose_image_fn(const string& prefix, int serial)
+{
+    std::string fn;
+    fn = prefix + intToString(serial) + ".png";
+    return fn;
+}
+
+std::string compose_depth_bin(const string& prefix, int serial)
+{
+    std::string fn;
+    fn = prefix + intToString(serial) + ".bin";
+    return fn;
+}
+
 std::string save_mat_to_file(const cv::Mat& img)
 {
     ReadSetting* s = ReadSetting::getInstance();
@@ -21,6 +61,14 @@ std::string save_mat_to_file(const cv::Mat& img)
     cv::imwrite(fn, img);
     return fn;
 }
+
+std::string save_mat_to_file_prefix(const cv::Mat& img, const std::string& prefix)
+{
+    std::string fn = get_save_image_fn(prefix);
+    cv::imwrite(fn, img);
+    return fn;
+}
+
 
 float get_iou(const cv::Rect& a, const cv::Rect& b)
 {

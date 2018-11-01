@@ -20,7 +20,15 @@ void draw_dist(cv::Mat& img, float dist);
 void crop_image(const cv::Mat& orig, cv::Mat& new_img, int x, int y, int w, int h);
 void crop_image(const cv::Mat& orig, cv::Mat& new_img);
 
+int get_timeepoch();
+std::string compose_image_fn(const std::string& prefix, int serial);
+std::string compose_depth_bin(const std::string& prefix, int serial);
 std::string save_mat_to_file(const cv::Mat& img);
+std::string save_mat_to_file_prefix(const cv::Mat& img, const std::string& prefix);
+inline void save_mat_to_file(const cv::Mat& img, const std::string& fn)
+{
+    cv::imwrite(fn, img);
+}
 
 float get_iou(const cv::Rect& a, const cv::Rect& b);
 void test_iou();

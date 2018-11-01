@@ -13,13 +13,14 @@
     "realsense": {
         "show_dist": false,
         "show_fps": true,
-        "color_scheme": 0,
-        "apply_sleep": true,
+        "color_scheme": 2,
+        "distance_limit": 1.0,
+        "apply_sleep": false,
         "apply_align": true,
-        "apply_dec": false,
-        "apply_disparity": false,
-        "apply_spatial": false,
-        "apply_temporal": false,
+        "apply_disparity": true,
+        "apply_dec": true,
+        "apply_spatial": true,
+        "apply_temporal": true,
         "apply_holefill": false
     }
 }
