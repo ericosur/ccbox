@@ -15,8 +15,13 @@
 #include <cstdio>
 #include <iostream>
 #include <iomanip>
+#include <algorithm>
+
+#include <math.h>
 #include <unistd.h>
 #include <librealsense2/rs.hpp> // Include RealSense Cross Platform API
+
+vector<cv::Vec6f> results;
 
 bool show_info()
 {
@@ -93,6 +98,8 @@ void remove_background(rs2::video_frame& other_frame, const rs2::depth_frame& de
 //#define WINDOW_NAME "Viewer to get depth"
 const auto depth_window = "Depth Image";
 const auto rgb_window = "RGB Image";
+const auto edged_window = "Edged";
+
 //const auto crop_window = "crop";
 bool use_dep_win = true;
 
@@ -107,7 +114,13 @@ void init_windows()
     namedWindow(rgb_window, WINDOW_AUTOSIZE);
     moveWindow(rgb_window, DEFAULT_WIDTH+55, 0);
 
+#if 0
+    namedWindow(edged_window);
+    moveWindow(edged_window, 0, 0);
+#endif
+
     // Init cvui and tell it to create a OpenCV window, i.e. cv::namedWindow(WINDOW_NAME).
+    //cvui::init(depth_window);
     cvui::init(depth_window);
 
     // namedWindow(crop_window, WINDOW_AUTOSIZE);
@@ -153,8 +166,8 @@ int get_dpeth_pt(const void* buffer, int x, int y)
 {
     int res = 0;
     if ( (x < 0 || x >= DEFAULT_WIDTH) || (y < 0 || y >= DEFAULT_HEIGHT) ) {
-        printf("%s: OOB %d,%d\n", __func__, x, y);
-        return res;
+        //printf("%s: OOB %d,%d\n", __func__, x, y);
+        return 0;
     }
 
     uint16_t* pt = (uint16_t*)buffer;
@@ -165,6 +178,134 @@ int get_dpeth_pt(const void* buffer, int x, int y)
         printf("res: %04x\n", res);
 
     return res;
+}
+
+bool check_point(int x1, int y1, int x2, int y2)
+{
+    // area #1
+    if (y1<100 && y2<100)
+        return false;
+    if (y1>380 && y2>380)
+        return false;
+    if (x1<100 && x2<100)
+        return false;
+    if (x1>540 && x2>540)
+        return false;
+
+    return true;
+}
+
+float get_length_from_vec4i(const cv::Vec4i& v)
+{
+    int x1 = v[0], y1 = v[1], x2 = v[2], y2 = v[3];
+
+    float ans = sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2));
+    return ans;
+}
+
+bool cmp_by_length(cv::Vec6f& m, cv::Vec6f& n)
+{
+    return m[4] > n[4];
+}
+
+bool cmp_by_depth(cv::Vec6f& m, cv::Vec6f& n)
+{
+    return m[5] < n[5];
+}
+
+///
+/// [in]  color_image
+/// [out] edge_image
+///
+void find_edge(cv::Mat& color_image, const void* depth_data, cv::Mat& edge_image, vector<cv::Vec4i>& p_lines)
+{
+    using namespace cv;
+
+    Mat gray_image;
+    cvtColor(color_image, gray_image, COLOR_BGR2GRAY);
+    blur(gray_image, gray_image, Size(3,3));
+
+    const int thresh_min = 50;
+    const int thresh_max = 200;
+    //imshow(edged_window, gray_image);
+
+    Mat canny_output;
+    Canny(gray_image, canny_output, thresh_min, thresh_max);
+
+#if 0
+    // find contours
+    vector<vector<Point> > contours;
+    vector<Vec4i> hierarchy;
+    findContours(canny_output, contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE);
+    Scalar color = Scalar(255, 255, 0);
+    /// Draw contours
+    Mat drawing = Mat::zeros( canny_output.size(), CV_8UC3 );
+    for( size_t i = 0; i< contours.size(); i++ ) {
+        drawContours( drawing, contours, (int)i, color, 2, LINE_8, hierarchy, 0 );
+    }
+    imshow(edged_window, drawing);
+#endif
+
+    //vector<Vec4i> p_lines;
+    //Mat probabilistic_hough;
+    cvtColor(canny_output, edge_image, COLOR_GRAY2BGR);
+
+    results.clear();
+
+    /// Use Probabilistic Hough Transform
+    /// 5th: votes to pass
+    /// 6th: minimum line length to pass
+    /// 7th: max point to jump over
+    HoughLinesP(canny_output, p_lines, 1, CV_PI/180, 75, 140, 30);
+
+    Scalar color = Scalar(0xff, 0x66, 0xff);
+    /// Show the result
+    for( size_t i = 0; i < p_lines.size(); i++ ) {
+        Vec4i l = p_lines[i];
+#if 0
+        Scalar color;
+        if ( check_point(l[0], l[1], l[2], l[3]) ) {
+            color = Scalar(0, 0, 255);
+        } else {
+            color = Scalar(255, 0, 0);
+        }
+        line( probabilistic_hough, Point(l[0], l[1]), Point(l[2], l[3]), color, 3, LINE_AA);
+#endif
+        if (check_point(l[0], l[1], l[2], l[3])) {
+            Vec6f r;
+            r[0] = l[0];  r[1] = l[1];  r[2] = l[2];  r[3] = l[3];
+            r[4] = get_length_from_vec4i(l);
+            int tmp = get_dpeth_pt(depth_data, r[0]+r[2]/2, r[1]+r[3]/2);
+            if (tmp != 0) {
+                r[5] = tmp;
+                results.push_back(r);
+            }
+        }
+    }
+
+    char msg[128];
+
+    if (results.size()) {
+        //printf("size of results: %d\t", (int)results.size());
+#if 0
+        // find the longest line and show
+        sort(results.begin(), results.end(), cmp_by_depth);
+#else
+        // find the nearest line and show
+        sort(results.begin(), results.end(), cmp_by_length);
+#endif
+        Vec6f z = results.at(0);
+        line(edge_image, Point(z[0], z[1]), Point(z[2], z[3]), color, 2, LINE_AA);
+        sprintf(msg, "answer: %3.0f,%3.0f - %3.0f,%3.0f, %3.2f, [%3.0f]", z[0], z[1], z[2], z[3], z[4], z[5]);
+        cvui::printf(edge_image, 50, 50, msg);
+        printf("%s\n", msg);
+        //line( edge_image, Point(l[0], l[1]), Point(l[2], l[3]), color, 3, LINE_AA);
+
+    }
+    // else {
+    //     printf("answer: no answer...\n");
+    // }
+
 }
 
 int test_realsense() try
@@ -251,10 +392,11 @@ int test_realsense() try
             rs2::depth_frame depth = frameset.get_depth_frame();
             rs2::video_frame color = frameset.get_color_frame();
 
+#if 1
             if (settings->distance_limit > 0.0) {
                 remove_background(color, depth, depth_scale, settings->distance_limit);
             }
-
+#endif
             auto colorized_depth = frameset.first(RS2_STREAM_DEPTH, RS2_FORMAT_RGB8);
 
             // Query frame size (width and height)
@@ -269,21 +411,27 @@ int test_realsense() try
                 printf("from aligned depth: dist@(%d,%d) => %f\n", w/2, h/2, dist);
             }
 
-            //rs2::frame depth_color_frame = depth.apply_filter(color_map);
-
             // Create OpenCV matrix of size (w,h) from the colorized depth data
             Mat depth_image(Size(w, h), CV_8UC3, (void*)colorized_depth.get_data());
             Mat color_image(Size(w, h), CV_8UC3, (void*)color.get_data());
-            //Mat new_img;
+
+
+/// try to find edge of table ... {
+            Mat edge_image;
+            vector<Vec4i> p_lines;
+            find_edge(color_image, depth.get_data(), edge_image, p_lines);
+            //cvui::printf(depth_image, 180, 10, 0.6, 0xffffff, "p size: %d", p_lines.size());
+/// try to find edge of table ... }
 
             // cv::Point pt1(230, 40);
             // cv::Point pt2(450, 90);
             // cv::rectangle(depth_image, pt1, pt2, cv::Scalar(49, 52, 49), CV_FILLED);
             int x = cvui::mouse().x;
             int y = cvui::mouse().y;
-            cvui::printf(depth_image, 240, 50, "Mouse pointer is at (%d,%d)", x, y);
+            cvui::printf(depth_image, 180, 30, 0.6, 0xffff00, "Mouse pointer is at (%d,%d)", x, y);
             int _depth_pt = get_dpeth_pt(depth.get_data(), x, y);
-            cvui::printf(depth_image, 240, 70, "Depth is %4d (mm)", _depth_pt, _depth_pt);
+            cvui::printf(depth_image, 180, 50, 0.6, 0xffff00, "Depth is %4d (mm)", _depth_pt, _depth_pt);
+
             //float dist = depth.get_distance(x, y);
             //cvui::printf(depth_image, 240, 90, "dist is %f", dist);
 
@@ -294,7 +442,11 @@ int test_realsense() try
                 show_cvfps(color_image, elapse_time);
                 //printf("fps: %.3f\n", elapse_time);
             }
-            imshow(rgb_window, color_image);
+
+            Mat combined;
+            hconcat(edge_image, color_image, combined);
+
+            imshow(rgb_window, combined);
             imshow(depth_window, depth_image);
 
             int key = waitKey(1);

@@ -75,12 +75,30 @@ add_executable(
     main.cpp
 )
 
+add_executable(
+    cdemo
+    findContours_demo.cpp
+)
+
+add_executable(
+    hdemo
+    HoughLines_Demo.cpp
+)
+
 target_link_libraries(
     ${PN}
     ${DEPENDENCIES}
 )
 
+target_link_libraries(
+    cdemo
+    ${DEPENDENCIES}
+)
 
+target_link_libraries(
+    hdemo
+    ${DEPENDENCIES}
+)
 # add_executable(
 #     fe2d
 #     fe2d.cpp
