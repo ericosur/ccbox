@@ -309,11 +309,14 @@ int demoTest()
         int key = waitKey(500);
         if ( key == 'q' || key == 27 ) {
             break;
-        } else if (key == 's' || key == 32) {
+        }
+#if 0
+        else if (key == 's' || key == 32) {
             // save image
             std::string fn = cvutil::save_mat_to_file(cameraFeed);
             cout << "saved " << fn << endl;
         }
+#endif
     }
     destroyAllWindows();
     return 0;

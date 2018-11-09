@@ -63,6 +63,13 @@ public:
     std::string output_dir = "out";
 
 #ifdef USE_REALSENSE
+    int blur_radius = 8;
+    int canny_threshold_min = 15;
+    int canny_threshold_max = 40;
+    int hough_threshold = 75;
+    int hough_minlength = 140;
+    int hough_maxlinegap = 50;
+
     bool show_dist = true;
     bool show_fps = true;
     int color_scheme = 2;

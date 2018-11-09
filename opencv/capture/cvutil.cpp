@@ -54,6 +54,7 @@ std::string compose_depth_bin(const string& prefix, int serial)
     return fn;
 }
 
+#if 0
 std::string save_mat_to_file(const cv::Mat& img)
 {
     ReadSetting* s = ReadSetting::getInstance();
@@ -61,6 +62,7 @@ std::string save_mat_to_file(const cv::Mat& img)
     cv::imwrite(fn, img);
     return fn;
 }
+#endif
 
 std::string save_mat_to_file_prefix(const cv::Mat& img, const std::string& prefix)
 {

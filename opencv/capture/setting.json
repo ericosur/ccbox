@@ -11,10 +11,16 @@
     "output_dir": "outdir",
 
     "realsense": {
+        "blur_radius": 3,
+        "canny_threshold_min": 25,
+        "canny_threshold_max": 50,
+        "hough_threshold": 75,
+        "hough_minlength": 140,
+        "hough_maxlinegap": 50,
         "show_dist": false,
         "show_fps": true,
         "color_scheme": 2,
-        "distance_limit": 0.7,
+        "distance_limit": 0.0,
         "apply_sleep": false,
         "apply_align": true,
         "apply_disparity": true,

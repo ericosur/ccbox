@@ -22,6 +22,13 @@
 #include <librealsense2/rs.hpp> // Include RealSense Cross Platform API
 
 vector<cv::Vec6f> results;
+vector<cv::Scalar> colors;
+
+inline int my_avg(int m, int n)
+{
+    return (m+n)/2;
+}
+
 
 bool show_info()
 {
@@ -48,6 +55,17 @@ bool show_info()
 
     // no camera name with "Intel"
     return false;
+}
+
+void init_colors()
+{
+    // cv color is BGR
+    cv::Scalar c = cv::Scalar(0, 0, 0xff);
+    colors.push_back(c);
+    c = cv::Scalar(0x66, 0x66, 0xff);
+    colors.push_back(c);
+    c = cv::Scalar(0xcc, 0xcc, 0xff);
+    colors.push_back(c);
 }
 
 float get_depth_scale(rs2::device dev)
@@ -111,8 +129,8 @@ void init_windows()
         moveWindow(depth_window, 0, 0);
     }
 
-    namedWindow(rgb_window, WINDOW_AUTOSIZE);
-    moveWindow(rgb_window, DEFAULT_WIDTH+55, 0);
+    //namedWindow(rgb_window, WINDOW_AUTOSIZE);
+    //moveWindow(rgb_window, DEFAULT_WIDTH+55, 0);
 
 #if 0
     namedWindow(edged_window);
@@ -144,7 +162,7 @@ bool show_cvfps(cv::Mat& cv_img, double elapsed_time)
     cv::putText(cv_img, buffer, cv::Point(0, text.height + baseline / 2.),
           fontface, scale, CV_RGB(0, 0, 0), thickness, 8);
 
-    cv::imshow(rgb_window, cv_img);
+    //cv::imshow(rgb_window, cv_img);
 
     return true;
 }
@@ -213,24 +231,32 @@ bool cmp_by_depth(cv::Vec6f& m, cv::Vec6f& n)
     return m[5] < n[5];
 }
 
+void preprocess_for_edge(cv::Mat& input, cv::Mat& output)
+{
+    ReadSetting* settings = ReadSetting::getInstance();
+
+    Canny(input, output, settings->canny_threshold_min, settings->canny_threshold_max);
+}
+
 ///
 /// [in]  color_image
+/// [in]  depth_data
 /// [out] edge_image
+/// [out] p_lines
 ///
 void find_edge(cv::Mat& color_image, const void* depth_data, cv::Mat& edge_image, vector<cv::Vec4i>& p_lines)
 {
     using namespace cv;
 
+    ReadSetting* settings = ReadSetting::getInstance();
     Mat gray_image;
     cvtColor(color_image, gray_image, COLOR_BGR2GRAY);
-    blur(gray_image, gray_image, Size(3,3));
+    GaussianBlur(gray_image, gray_image, Size(settings->blur_radius, settings->blur_radius), 0, 0, BORDER_DEFAULT);
 
-    const int thresh_min = 50;
-    const int thresh_max = 200;
     //imshow(edged_window, gray_image);
 
     Mat canny_output;
-    Canny(gray_image, canny_output, thresh_min, thresh_max);
+    preprocess_for_edge(gray_image, canny_output);
 
 #if 0
     // find contours
@@ -256,9 +282,11 @@ void find_edge(cv::Mat& color_image, const void* depth_data, cv::Mat& edge_image
     /// 5th: votes to pass
     /// 6th: minimum line length to pass
     /// 7th: max point to jump over
-    HoughLinesP(canny_output, p_lines, 1, CV_PI/180, 75, 140, 30);
+    HoughLinesP(canny_output, p_lines, 1, CV_PI/180,
+                settings->hough_threshold, settings->hough_minlength, settings->hough_maxlinegap);
 
-    Scalar color = Scalar(0xff, 0x66, 0xff);
+    //Scalar color = Scalar(0xff, 0x66, 0xff);
+
     /// Show the result
     for( size_t i = 0; i < p_lines.size(); i++ ) {
         Vec4i l = p_lines[i];
@@ -271,6 +299,7 @@ void find_edge(cv::Mat& color_image, const void* depth_data, cv::Mat& edge_image
         }
         line( probabilistic_hough, Point(l[0], l[1]), Point(l[2], l[3]), color, 3, LINE_AA);
 #endif
+        // x1, y1, x2, y2, pt distance, depth data at center
         if (check_point(l[0], l[1], l[2], l[3])) {
             Vec6f r;
             r[0] = l[0];  r[1] = l[1];  r[2] = l[2];  r[3] = l[3];
@@ -280,32 +309,43 @@ void find_edge(cv::Mat& color_image, const void* depth_data, cv::Mat& edge_image
                 r[5] = tmp;
                 results.push_back(r);
             }
-        }
+            else {
+                printf("0");
+            }
+        }/* else {
+            printf(".");
+        }*/
     }
 
-    char msg[128];
+    //printf("size of results: %d ===>", (int)results.size());
 
-    if (results.size()) {
-        //printf("size of results: %d\t", (int)results.size());
+    char msg[128];
+    size_t num_to_show = 3;
 #if 0
-        // find the longest line and show
-        sort(results.begin(), results.end(), cmp_by_depth);
+    // find the longest line and show
+    sort(results.begin(), results.end(), cmp_by_length);
 #else
-        // find the nearest line and show
-        sort(results.begin(), results.end(), cmp_by_length);
+    // find the nearest line and show
+    sort(results.begin(), results.end(), cmp_by_depth);
 #endif
-        Vec6f z = results.at(0);
-        line(edge_image, Point(z[0], z[1]), Point(z[2], z[3]), color, 2, LINE_AA);
-        sprintf(msg, "answer: %3.0f,%3.0f - %3.0f,%3.0f, %3.2f, [%3.0f]", z[0], z[1], z[2], z[3], z[4], z[5]);
+    size_t results_size = results.size();
+    for (size_t ii = 0; ii < std::min(results_size, num_to_show); ii++) {
+        //printf("size of results: %d\t", (int)results.size());
+        Vec6f z = results.at(ii);
+        cout << z << endl;
+
+        line(edge_image, Point(z[0], z[1]), Point(z[2], z[3]), colors.at(ii), 2, LINE_AA);
+        sprintf(msg, "answer(%d): %3.0f,%3.0f - %3.0f,%3.0f, %3.2f, [%3.0f]",
+                (int)ii, z[0], z[1], z[2], z[3], z[4], z[5]);
         cvui::printf(edge_image, 50, 50, msg);
+        circle(edge_image, Point(my_avg(z[0], z[2]), my_avg(z[1], z[3])), 3, Scalar(0xff, 0, 0));
         printf("%s\n", msg);
         //line( edge_image, Point(l[0], l[1]), Point(l[2], l[3]), color, 3, LINE_AA);
-
     }
     // else {
     //     printf("answer: no answer...\n");
     // }
-
+    printf("----------\n");
 }
 
 int test_realsense() try
@@ -319,6 +359,8 @@ int test_realsense() try
         printf("no Intel Realsense camera, exit...\n");
         exit(-1);
     }
+
+    init_colors();
 
     //Create a configuration for configuring the pipeline with a non default profile
     rs2::config cfg;
@@ -419,7 +461,7 @@ int test_realsense() try
 /// try to find edge of table ... {
             Mat edge_image;
             vector<Vec4i> p_lines;
-            find_edge(color_image, depth.get_data(), edge_image, p_lines);
+            find_edge(depth_image, depth.get_data(), edge_image, p_lines);
             //cvui::printf(depth_image, 180, 10, 0.6, 0xffffff, "p size: %d", p_lines.size());
 /// try to find edge of table ... }
 
@@ -444,10 +486,11 @@ int test_realsense() try
             }
 
             Mat combined;
-            hconcat(edge_image, color_image, combined);
+            hconcat(edge_image, depth_image, combined);
+            hconcat(combined, color_image, combined);
 
-            imshow(rgb_window, combined);
-            imshow(depth_window, depth_image);
+            //imshow(rgb_window, combined);
+            imshow(depth_window, combined);
 
             int key = waitKey(1);
             if (key == 0x1B) {
