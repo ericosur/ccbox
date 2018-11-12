@@ -16,12 +16,14 @@
 #include <iostream>
 #include <iomanip>
 #include <algorithm>
+#include <functional>
+#include <vector>
 
 #include <math.h>
 #include <unistd.h>
 #include <librealsense2/rs.hpp> // Include RealSense Cross Platform API
 
-vector<cv::Vec6f> results;
+vector<cv::Vec8i> results;
 vector<cv::Scalar> colors;
 
 inline int my_avg(int m, int n)
@@ -198,6 +200,52 @@ int get_dpeth_pt(const void* buffer, int x, int y)
     return res;
 }
 
+
+/// [in] depth_data: raw data buffer of depth
+/// [in] vector to store points
+/// [out] all depth values for intput points
+void get_all_depth_data(const void* depth_data, const std::vector<cv::Point>& points, std::vector<int>& all_depth_results)
+{
+    all_depth_results.clear();
+    for (auto i=0; i<points.size(); ++i)  {
+        int res = get_dpeth_pt(depth_data, points.at(i).x, points.at(i).y);
+        if (res) {
+            all_depth_results.push_back(res);
+        }
+    }
+}
+
+
+/// [in] depth_data: raw data buffer of depth
+/// [in] vector to store points
+int get_avg_depth_from_points(const std::vector<int>& all_depth_results)
+{
+    int sum = 0;
+    for (auto ii=0; ii<all_depth_results.size(); ++ii) {
+        sum += all_depth_results.at(ii);
+    }
+
+    return sum / all_depth_results.size();
+}
+
+int get_median_depth_from_points(const std::vector<int>& all_depth_results)
+{
+    int ans = 0;
+    std::vector<int> v = all_depth_results;
+    std::nth_element(v.begin(), v.begin() + v.size()/2, v.end());
+    auto id1 = v.size() / 2;
+    if ( all_depth_results.size() % 2 ) {   // size is odd
+        ans = v[id1];
+    } else {    // size is even
+        if (v.size() / 2 >= 1) {
+            auto id0 = v.size() / 2 - 1;
+            ans = (v[id0] + v[id1]) / 2;
+        }
+    }
+
+    return ans;
+}
+
 bool check_point(int x1, int y1, int x2, int y2)
 {
     // area #1
@@ -221,14 +269,24 @@ float get_length_from_vec4i(const cv::Vec4i& v)
     return ans;
 }
 
-bool cmp_by_length(cv::Vec6f& m, cv::Vec6f& n)
+bool cmp_by_length(cv::Vec8i& m, cv::Vec8i& n)
 {
     return m[4] > n[4];
 }
 
-bool cmp_by_depth(cv::Vec6f& m, cv::Vec6f& n)
+bool cmp_by_depth(cv::Vec8i& m, cv::Vec8i& n)
 {
     return m[5] < n[5];
+}
+
+bool cmp_by_avg_depth(cv::Vec8i& m, cv::Vec8i& n)
+{
+    return m[6] < n[6];
+}
+
+bool cmp_by_med_depth(cv::Vec8i& m, cv::Vec8i& n)
+{
+    return m[7] < n[7];
 }
 
 void preprocess_for_edge(cv::Mat& input, cv::Mat& output)
@@ -299,18 +357,44 @@ void find_edge(cv::Mat& color_image, const void* depth_data, cv::Mat& edge_image
         }
         line( probabilistic_hough, Point(l[0], l[1]), Point(l[2], l[3]), color, 3, LINE_AA);
 #endif
-        // x1, y1, x2, y2, pt distance, depth data at center
+
+
+        // Vec6f means a vector with 6 floating numbers
+        // 0:x1, y1, x2, y2,
+        // 4:pt distance
+        // 5:depth data at center
+        // 6: average depth data
+        // 7: median depth data
         if (check_point(l[0], l[1], l[2], l[3])) {
-            Vec6f r;
+            Vec8i r;
             r[0] = l[0];  r[1] = l[1];  r[2] = l[2];  r[3] = l[3];
             r[4] = get_length_from_vec4i(l);
+
+            // get points from two end points
+            Point p1 = Point(r[0], r[1]);
+            Point p2 = Point(r[2], r[3]);
+            std::vector<cv::Point> points;
+            std::vector<int> all_depth_results;
+            int ret = cvutil::get_points_between_two_points(canny_output, p1, p2, points);
+            if (ret) {
+                vector<int> all_depth_results;
+                get_all_depth_data(depth_data, points, all_depth_results);
+                int avg = get_avg_depth_from_points(all_depth_results);
+                r[6] = avg;
+                int median = get_median_depth_from_points(all_depth_results);
+                r[7] = median;
+            } else {
+                printf("1:");
+            }
+
+            // get depth from center of line
             int tmp = get_dpeth_pt(depth_data, r[0]+r[2]/2, r[1]+r[3]/2);
             if (tmp != 0) {
                 r[5] = tmp;
                 results.push_back(r);
             }
             else {
-                printf("0");
+                printf("0:");
             }
         }/* else {
             printf(".");
@@ -326,17 +410,18 @@ void find_edge(cv::Mat& color_image, const void* depth_data, cv::Mat& edge_image
     sort(results.begin(), results.end(), cmp_by_length);
 #else
     // find the nearest line and show
-    sort(results.begin(), results.end(), cmp_by_depth);
+    //sort(results.begin(), results.end(), cmp_by_depth);
+    sort(results.begin(), results.end(), cmp_by_med_depth);
 #endif
     size_t results_size = results.size();
     for (size_t ii = 0; ii < std::min(results_size, num_to_show); ii++) {
         //printf("size of results: %d\t", (int)results.size());
-        Vec6f z = results.at(ii);
-        cout << z << endl;
+        Vec8i z = results.at(ii);
+        //cout << z << endl;
 
         line(edge_image, Point(z[0], z[1]), Point(z[2], z[3]), colors.at(ii), 2, LINE_AA);
-        sprintf(msg, "answer(%d): %3.0f,%3.0f - %3.0f,%3.0f, %3.2f, [%3.0f]",
-                (int)ii, z[0], z[1], z[2], z[3], z[4], z[5]);
+        sprintf(msg, "answer(%d): %3d,%3d - %3d,%3d, [%4d], avg[%4d], med[%4d]",
+                (int)ii, z[0], z[1], z[2], z[3], z[5], z[6], z[7]);
         cvui::printf(edge_image, 50, 50, msg);
         circle(edge_image, Point(my_avg(z[0], z[2]), my_avg(z[1], z[3])), 3, Scalar(0xff, 0, 0));
         printf("%s\n", msg);

@@ -35,6 +35,8 @@ inline void save_mat_to_file(const cv::Mat& img, const std::string& fn)
 float get_iou(const cv::Rect& a, const cv::Rect& b);
 void test_iou();
 
+int get_points_between_two_points(const cv::Mat& img, const cv::Point& p1, const cv::Point& p2, std::vector<cv::Point>& points);
+
 }   // namespace cvutil
 
 #endif  // __UTIL_CV_UTIL_H__
