@@ -63,6 +63,7 @@ public:
     std::string output_dir = "out";
 
 #ifdef USE_REALSENSE
+    bool find_edge = false;
     int blur_radius = 8;
     int canny_threshold_min = 15;
     int canny_threshold_max = 40;

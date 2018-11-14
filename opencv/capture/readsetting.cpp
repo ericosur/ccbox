@@ -83,6 +83,7 @@ bool ReadSetting::load_json(const std::string& json_file)
 #ifdef USE_REALSENSE
         nlohmann::json jsub = json.at("realsense");
 
+        find_edge = jsub.at("find_edge");
         blur_radius = jsub.at("blur_radius");
         canny_threshold_min = jsub.at("canny_threshold_min");
         canny_threshold_max = jsub.at("canny_threshold_max");

@@ -420,9 +420,13 @@ void find_edge(cv::Mat& color_image, const void* depth_data, cv::Mat& edge_image
         //cout << z << endl;
 
         line(edge_image, Point(z[0], z[1]), Point(z[2], z[3]), colors.at(ii), 2, LINE_AA);
-        sprintf(msg, "answer(%d): %3d,%3d - %3d,%3d, [%4d], avg[%4d], med[%4d]",
+        sprintf(msg, "ans(%d): %3d,%3d - %3d,%3d, [%4d], avg[%4d], med[%4d]",
                 (int)ii, z[0], z[1], z[2], z[3], z[5], z[6], z[7]);
-        cvui::printf(edge_image, 50, 50, msg);
+
+        if (ii == 0) {
+            rectangle(edge_image, Point(45, 45), Point(450, 80), cv::Scalar(52, 52, 52), CV_FILLED);
+            cvui::printf(edge_image, 50, 50, msg);
+        }
         circle(edge_image, Point(my_avg(z[0], z[2]), my_avg(z[1], z[3])), 3, Scalar(0xff, 0, 0));
         printf("%s\n", msg);
         //line( edge_image, Point(l[0], l[1]), Point(l[2], l[3]), color, 3, LINE_AA);
@@ -431,6 +435,19 @@ void find_edge(cv::Mat& color_image, const void* depth_data, cv::Mat& edge_image
     //     printf("answer: no answer...\n");
     // }
     printf("----------\n");
+}
+
+void draw_crosshair(cv::Mat& img, const cv::Point& pt)
+{
+    using namespace cv;
+    Scalar color = Scalar(0, 0, 0xff);
+    circle(img, pt, 8, color);
+    Point p1 = Point(pt.x - 8, pt.y - 8);
+    Point p2 = Point(pt.x + 8, pt.y + 8);
+    line(img, p1, p2, color, 1, LINE_AA);
+    Point p3 = Point(pt.x + 8, pt.y - 8);
+    Point p4 = Point(pt.x - 8, pt.y + 8);
+    line(img, p3, p4, color, 1, LINE_AA);
 }
 
 int test_realsense() try
@@ -485,6 +502,7 @@ int test_realsense() try
         waitKey(0);
     }
 
+    Point cross;
 
     while (true) {
         int64 e1 = cv::getTickCount();
@@ -541,26 +559,51 @@ int test_realsense() try
             // Create OpenCV matrix of size (w,h) from the colorized depth data
             Mat depth_image(Size(w, h), CV_8UC3, (void*)colorized_depth.get_data());
             Mat color_image(Size(w, h), CV_8UC3, (void*)color.get_data());
-
-
-/// try to find edge of table ... {
             Mat edge_image;
-            vector<Vec4i> p_lines;
-            find_edge(depth_image, depth.get_data(), edge_image, p_lines);
-            //cvui::printf(depth_image, 180, 10, 0.6, 0xffffff, "p size: %d", p_lines.size());
-/// try to find edge of table ... }
 
+            if (settings->find_edge) {
+/// try to find edge of table ... {
+                vector<Vec4i> p_lines;
+                find_edge(depth_image, depth.get_data(), edge_image, p_lines);
+                //cvui::printf(depth_image, 180, 10, 0.6, 0xffffff, "p size: %d", p_lines.size());
+/// try to find edge of table ... }
+            }
+
+/// to show depth data with mouse pointer
+#if 1
             // cv::Point pt1(230, 40);
             // cv::Point pt2(450, 90);
             // cv::rectangle(depth_image, pt1, pt2, cv::Scalar(49, 52, 49), CV_FILLED);
-            int x = cvui::mouse().x;
-            int y = cvui::mouse().y;
+            int x = cvui::mouse().x % DEFAULT_WIDTH;
+            int y = cvui::mouse().y % DEFAULT_HEIGHT;
             cvui::printf(depth_image, 180, 30, 0.6, 0xffff00, "Mouse pointer is at (%d,%d)", x, y);
+
             int _depth_pt = get_dpeth_pt(depth.get_data(), x, y);
             cvui::printf(depth_image, 180, 50, 0.6, 0xffff00, "Depth is %4d (mm)", _depth_pt, _depth_pt);
 
+            cv::Rect rectangle(0, 0, 1280, 480);
+            int status = cvui::iarea(rectangle.x, rectangle.y, rectangle.width, rectangle.height);
+            switch (status) {
+                case cvui::CLICK:
+                    //std::cout << "Rectangle was clicked!" << std::endl;
+                    //cout << "mouse click at " << x << "," << y << endl;
+                    cross.x = x;
+                    cross.y = y;
+                    break;
+                //case cvui::DOWN:
+                    //cvui::printf(frame, 240, 70, "Mouse is: DOWN");
+                    //cout << "mouse down " << x << "," << y << endl;
+                    //break;
+                default:
+                    break;
+            }
             //float dist = depth.get_distance(x, y);
             //cvui::printf(depth_image, 240, 90, "dist is %f", dist);
+            cvui::update();
+            draw_crosshair(depth_image, cross);
+            draw_crosshair(color_image, cross);
+#endif
+
 
             int64 e2 = cv::getTickCount();
             double elapse_time = (e2 - e1) / cv::getTickFrequency();
@@ -571,8 +614,12 @@ int test_realsense() try
             }
 
             Mat combined;
-            hconcat(edge_image, depth_image, combined);
-            hconcat(combined, color_image, combined);
+            if (settings->find_edge) {
+                hconcat(edge_image, depth_image, combined);
+                hconcat(combined, color_image, combined);
+            } else {
+                hconcat(depth_image, color_image, combined);
+            }
 
             //imshow(rgb_window, combined);
             imshow(depth_window, combined);
@@ -597,11 +644,15 @@ int test_realsense() try
                 cout << "output depth file to: " << fn << endl;
                 cvutil::save_mat_to_file(depth_image, fn);
 
+                if (settings->find_edge) {
+                    fn = cvutil::compose_image_fn("edged", serial);
+                    cvutil::save_mat_to_file(edge_image, fn);
+                }
+
                 fn = cvutil::compose_depth_bin("depth", serial);
                 save_depth_to_bin(fn, (void*)depth.get_data(), depth_image.cols, depth_image.rows);
                 cout << "output depth bin to: " << fn << endl;
             }
-
         } else {
             usleep(SLEEP_DURATION);
         }

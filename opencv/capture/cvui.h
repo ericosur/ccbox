@@ -1,1 +1,1 @@
-../../../github/cvui/cvui.h
+../cvui.h
