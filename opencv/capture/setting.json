@@ -11,7 +11,7 @@
     "output_dir": "outdir",
 
     "realsense": {
-        "find_edge": false,
+        "find_edge": true,
         "blur_radius": 3,
         "canny_threshold_min": 25,
         "canny_threshold_max": 50,

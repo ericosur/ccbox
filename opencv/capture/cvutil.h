@@ -3,7 +3,14 @@
 
 #include <cstdint>
 #include <string>
+
+// for opencv 4.0.0-pre, CV_FILLED
+#include <opencv2/imgproc/types_c.h>
+#include <opencv2/imgproc/imgproc_c.h>
+
 #include <opencv2/opencv.hpp>   // Include OpenCV API
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/videoio/videoio.hpp>
 
 #define DEFAULT_WIDTH    640
 #define DEFAULT_HEIGHT   480

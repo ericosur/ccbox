@@ -258,6 +258,24 @@ bool check_point(int x1, int y1, int x2, int y2)
     if (x1>540 && x2>540)
         return false;
 
+    if (x1 == x2) {
+        return false;
+    }
+
+    float dy = fabs(y1 - y2);
+    float dx = fabs(x1 - x2);
+    if (dx < 1.0 || dy < 1.0) {
+        cout << "x";
+        return false;
+    }
+
+    float slope = dy / dx;
+    cout << "dx " << dx << " dy " << dy
+        << " slope: " << slope << endl;
+    if (slope > 1.732) {
+        return false;
+    }
+
     return true;
 }
 

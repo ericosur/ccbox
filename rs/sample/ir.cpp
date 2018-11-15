@@ -4,14 +4,37 @@
 
 #include "dist.h"
 
+#define CVUI_IMPLEMENTATION
+#include "../../opencv/cvui.h"
+
+auto window_name = "Display Image";
+
+void draw_crosshair(cv::Mat& img, const cv::Point& pt)
+{
+    using namespace cv;
+    Scalar color = Scalar(0, 0, 0xff);
+    circle(img, pt, 8, color);
+    Point p1 = Point(pt.x - 8, pt.y - 8);
+    Point p2 = Point(pt.x + 8, pt.y + 8);
+    line(img, p1, p2, color, 1, LINE_AA);
+    Point p3 = Point(pt.x + 8, pt.y - 8);
+    Point p4 = Point(pt.x - 8, pt.y + 8);
+    line(img, p3, p4, color, 1, LINE_AA);
+}
+
+
 // Neighbors function returns 12 fixed neighboring pixels in an image
 //std::array<pixel, 12> neighbors(rs2::depth_frame frame, pixel p);
 
 
 int main()
 {
-    const int WIDTH = 640;
-    const int HEIGHT = 480;
+    const int DEFAULT_WIDTH = 640;
+    const int DEFAULT_HEIGHT = 480;
+
+    namedWindow(window_name, WINDOW_AUTOSIZE);
+    moveWindow(window_name, 0, 0);
+    cvui::init(window_name);
 
     //Contruct a pipeline which abstracts the device
     rs2::pipeline pipe;
@@ -21,8 +44,8 @@ int main()
 
     //Add desired streams to configuration
     //cfg.enable_stream(RS2_STREAM_INFRARED, WIDTH, HEIGHT, RS2_FORMAT_Y8, 30);
-    cfg.enable_stream(RS2_STREAM_COLOR, WIDTH, HEIGHT, RS2_FORMAT_BGR8, 30);
-    cfg.enable_stream(RS2_STREAM_DEPTH, WIDTH, HEIGHT, RS2_FORMAT_Z16, 30);
+    cfg.enable_stream(RS2_STREAM_COLOR, DEFAULT_WIDTH, DEFAULT_HEIGHT, RS2_FORMAT_BGR8, 30);
+    cfg.enable_stream(RS2_STREAM_DEPTH, DEFAULT_WIDTH, DEFAULT_HEIGHT, RS2_FORMAT_Z16, 30);
 
     //Instruct pipeline to start streaming with the requested configuration
     pipe.start(cfg);
@@ -38,7 +61,9 @@ int main()
     const int thickness = 2;
     const int radius = 6;
     //const int tail = 5;
-    Scalar white = Scalar(255, 255, 255);
+    //Scalar white = Scalar(255, 255, 255);
+    Point pt;
+    cv::Vec3f xyz;
 
     while (true) {
 
@@ -50,23 +75,38 @@ int main()
 
         // Creating OpenCV matrix from IR image
         //Mat ir(Size(WIDTH, HEIGHT), CV_8UC1, (void*)ir_frame.get_data(), Mat::AUTO_STEP);
-        Mat color(Size(WIDTH, HEIGHT), CV_8UC3, (void*)color_frame.get_data(), Mat::AUTO_STEP);
+        Mat color(Size(DEFAULT_WIDTH, DEFAULT_HEIGHT), CV_8UC3, (void*)color_frame.get_data(), Mat::AUTO_STEP);
 
         // Apply Histogram Equalization
         //equalizeHist( ir, ir );
         //applyColorMap(ir, ir, COLORMAP_JET);
+        int x = cvui::mouse().x % DEFAULT_WIDTH;
+        int y = cvui::mouse().y % DEFAULT_HEIGHT;
 
-        pixel u = {WIDTH/2, HEIGHT/2-100};
-        pixel v = {WIDTH/2, HEIGHT/2};
-        auto d = dist_3d(depth_frame, u, v);
-        cout << "d: " << d << endl;
+        cv::Rect rectangle(0, 0, DEFAULT_WIDTH, DEFAULT_HEIGHT);
+        int status = cvui::iarea(rectangle.x, rectangle.y, rectangle.width, rectangle.height);
+        switch (status) {
+            case cvui::CLICK:
+                pt.x = x;
+                pt.y = y;
+                query_uv2xyz(depth_frame, pt, xyz);
+                break;
+            //case cvui::DOWN:
+                //cvui::printf(frame, 240, 70, "Mouse is: DOWN");
+                //cout << "mouse down " << x << "," << y << endl;
+                //break;
+            default:
+                break;
+        }
 
-        circle(color, Point(u.first, u.second), radius, white, thickness);
-        circle(color, Point(v.first, v.second), radius, white, thickness);
+        //pixel u = {x, y};
+        //auto d = dist_3d(depth_frame, u, v);
+        draw_crosshair(color, pt);
+
+        cvui::update();
 
         // Display the image in GUI
-        namedWindow("Display Image", WINDOW_AUTOSIZE );
-        imshow("Display Image", color);
+        imshow(window_name, color);
 
         //cout << "press any key to quit...\n";
         if ( waitKey(1) == 0x1B ) {

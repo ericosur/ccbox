@@ -16,6 +16,11 @@
 #include "readsetting.h"
 #include "cvutil.h"
 
+// for opencv 4.0.0-pre, CV_FILLED
+#include <opencv2/imgproc/types_c.h>
+#include <opencv2/imgproc/imgproc_c.h>
+#include <opencv2/videoio/videoio_c.h>
+
 #include <opencv2/opencv.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>

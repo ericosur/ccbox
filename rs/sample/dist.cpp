@@ -5,6 +5,27 @@ void display_point(float point[3])
     cout << "(" << point[0] << "," << point[1] << "," << point[2] << ")\n";
 }
 
+void query_uv2xyz(const rs2::depth_frame& frame, const cv::Point& pt, cv::Vec3f& xyz)
+{
+    float pixel[2]; // From pixel
+    float point[3]; // From point (in 3D)
+
+    pixel[0] = pt.x;
+    pixel[1] = pt.y;
+
+    auto dist = frame.get_distance(pixel[0], pixel[1]);
+
+    // Deproject from pixel to point in 3D
+    rs2_intrinsics intr = frame.get_profile().as<rs2::video_stream_profile>().get_intrinsics(); // Calibration data
+    rs2_deproject_pixel_to_point(point, &intr, pixel, dist);
+    cout << "point: ";
+    display_point(point);
+
+    xyz[0] = point[0];
+    xyz[1] = point[1];
+    xyz[2] = point[2];
+}
+
 float dist_3d(const rs2::depth_frame& frame, pixel u, pixel v)
 {
     float upixel[2]; // From pixel
