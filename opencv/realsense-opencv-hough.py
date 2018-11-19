@@ -48,11 +48,11 @@ def check_line(p1, p2):
         return True
     return False
 
-def hough_lines(src):
+def hough_lines(src, depth_frame):
     ''' reference from opencv python examples houghlines.py '''
     p0 = (0, 0)
-
-    canny = cv2.Canny(src, 50, 200)
+    thresh = 100
+    canny = cv2.Canny(src, thresh, thresh * 2)
     #print('canny.shape', canny.shape)
     #cv2.imshow('test', dst)
 
@@ -71,9 +71,7 @@ def hough_lines(src):
             p1 = (lines[i][0][0], lines[i][0][1])
             p2 = (lines[i][0][2], lines[i][0][3])
             cv2.line(cdst, p1, p2, (255, 255, 0), 1, cv2.LINE_AA)
-            if check_line(p1, p2):
-                #print("{}: {}".format(i, s))
-                ok_idx.append(i)
+            ok_idx.append(i)
     except AttributeError:
         #print('.', end='')
         return cdst, (p0, p0)
@@ -85,17 +83,24 @@ def hough_lines(src):
         for ii in ok_idx:
             p1 = (lines[ii][0][0], lines[ii][0][1])
             p2 = (lines[ii][0][2], lines[ii][0][3])
-            if check_line(p1, p2):
-                # this is a problem here
-                d = dist_2d(p1, p2)
-                ok_dists.append(d)
+            d = dist_2d(p1, p2)
+            ok_dists.append(d)
 
         imax = max(ok_dists)
         longest_idx = ok_dists.index(imax)
         p1 = (lines[longest_idx][0][0], lines[longest_idx][0][1])
         p2 = (lines[longest_idx][0][2], lines[longest_idx][0][3])
-        print("longest_idx:{} imax:{} slope:{}".format(longest_idx, imax, slope(p1, p2)))
+        d_p1 = depth_frame.get_distance(p1[0], p1[1])
+        d_p2 = depth_frame.get_distance(p2[0], p2[1])
+        #print("longest_idx:{} imax:{}, d_p1:{} d_p2:{}".format(longest_idx, imax, d_p1, d_p2))
+        print("d_p1:{:.3f} d_p2:{:.3f} imax:{}".format(d_p1, d_p2, imax))
         cv2.line(cdst, p1, p2, (255, 0, 255), 2, cv2.LINE_AA)
+        msg1 = '{}'.format(d_p1);
+        msg2 = '{}'.format(d_p2);
+        fontface = cv2.FONT_HERSHEY_SIMPLEX
+        scale = 0.5
+        cv2.putText(cdst, msg1, p1, fontface, scale, (127,0,255), 1, cv2.LINE_AA)
+        cv2.putText(cdst, msg2, p2, fontface, scale, (127,0,255), 1, cv2.LINE_AA)
     except ValueError:
         pass
 
@@ -103,18 +108,23 @@ def hough_lines(src):
     return cdst, (p1, p2)
 
 
-def process_image(src):
+def process_image(color_img, depth_frame):
     e0 = cv2.getTickCount()
-    ifrm = src.copy()
-    blur = cv2.GaussianBlur(ifrm, (5, 5), 1);
-    cvimg, (p1, p2) = hough_lines(ifrm)
+    ifrm = color_img.copy()
+
+    # Convert image to gray and blur it
+    src_gray = cv2.cvtColor(ifrm, cv2.COLOR_BGR2GRAY);
+    src_gray = cv2.blur(src_gray, (3,3));
+    #blur = cv2.GaussianBlur(ifrm, (5, 5), 1);
+
+    cvimg, (p1, p2) = hough_lines(src_gray, depth_frame)
     e1 = cv2.getTickCount()
     elapsed = (e1 - e0) / cv2.getTickFrequency()
     show_fps(cvimg, elapsed)
     #print("line: ", p1, p2, slope(p1, p2))
     #blue = self.split_blue(ifrm)
     #cv2.imshow('test', cvimg)
-    return blur, cvimg
+    return ifrm, cvimg
 
 
 def main():
@@ -150,11 +160,11 @@ def main():
             #cimg = try_image(color_image)
             #cimg = cv2.cvtColor(color_image, cv2.COLOR_RGB2GRAY)
 
-            cimg, himg = process_image(color_image)
+            blur_img, cv_img = process_image(color_image, depth_frame)
             # Stack both images horizontally
             #images = np.hstack((color_image, depth_colormap))
             #images = np.hstack((color_image, himg))
-            images = np.hstack((cimg, himg))
+            images = np.hstack((blur_img, cv_img))
 
             # Show images
             cv2.imshow('RealSense', images)
