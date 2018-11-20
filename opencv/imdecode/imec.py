@@ -3,13 +3,19 @@
 
 # refer to http://cctg.blogspot.tw/2017/07/socket-opencv-client.html
 
+import os
 import cv2
 import numpy
 
-ifn = 'lena.jpg'
+ifn = '../data/lena600.jpg'
 ofn = 'out.jpg'
 tfn = 'out.txt'
-img = cv2.imread(ifn)
+
+if os.path.isfile(ifn):
+    img = cv2.imread(ifn)
+else:
+    print('{} is not found, exit'.format(ifn))
+    os.exit(1)
 
 encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 90]
 result, img_str = cv2.imencode('.jpg', img, encode_param)
