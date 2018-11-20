@@ -1,8 +1,7 @@
 #include <iostream>
 #include <opencv2/opencv.hpp>
 
-using namespace std;
-using namespace cv;
+const auto TEST_IMAGE = "../../data/banana600.jpg";
 
 int hello_cv2()
 {
@@ -15,6 +14,8 @@ int hello_cv2()
 /// [out] points
 int iter(const cv::Mat& img, const cv::Point& p1, const cv::Point& p2, std::vector<cv::Point>& points)
 {
+    using namespace cv;
+
     LineIterator it(img, p1, p2);
 
     //cout << "from " << p1 << " to " << p2 << "\t";
@@ -32,16 +33,22 @@ int iter(const cv::Mat& img, const cv::Point& p1, const cv::Point& p2, std::vect
 
 void test_iter()
 {
+    using namespace std;
+    using namespace cv;
+
     Point p1 = Point(50, 5);
     Point p2 = Point(128, 153);
-    Mat img = imread("../small.png");
-    std::vector<cv::Point> points;
+    Mat img = imread(TEST_IMAGE);
+    vector<cv::Point> points;
 
     int ret = iter(img, p1, p2, points);
     if (ret) {
         for (size_t i=0; i<points.size(); i++) {
-            cout << points.at(i) << endl;
+            cout << points.at(i) << "    ";
         }
+        cout << endl;
+    } else {
+        cout << "there is no points to iterate\n";
     }
 
 }
