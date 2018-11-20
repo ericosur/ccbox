@@ -1,5 +1,6 @@
-#include <opencv2/core.hpp>
+#include <stdio.h>
 #include <opencv2/opencv.hpp>
+#include <opencv2/core.hpp>
 
 #define FRAME_WIDTH    640
 #define FRAME_HEIGHT   480
@@ -21,15 +22,22 @@ int test()
     cap.set(CV_CAP_PROP_FRAME_WIDTH, FRAME_WIDTH);
     cap.set(CV_CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT);
 
-    Mat cameraFeed;
+    Mat frame;
     printf("press ESC or 'q' to quit %s...\n", __func__);
+    printf("press 's' to save image...\n");
+    int cnt = 0;
+    char fn_buffer[40];
     while (true) {
         //store image to matrix
-        cap.read(cameraFeed);
-        imshow(VIDEO_WIN, cameraFeed);
+        cap.read(frame);
+        imshow(VIDEO_WIN, frame);
         int key = waitKey(1);
         if (key == 27 || key == 'q') {
             break;
+        } else if (key == 's') {
+            sprintf(fn_buffer, "saved%04d.jpg", cnt);
+            imwrite(fn_buffer, frame);
+            printf("%s saved\n", fn_buffer);
         }
     }
     destroyAllWindows();
