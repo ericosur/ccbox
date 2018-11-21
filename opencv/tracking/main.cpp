@@ -1,10 +1,13 @@
-#include <opencv2/core/utility.hpp>
-#include <opencv2/tracking.hpp>
-#include <opencv2/videoio.hpp>
-#include <opencv2/highgui.hpp>
+#include "samples_utility.hpp"
+
 #include <iostream>
 #include <cstring>
-#include "samples_utility.hpp"
+
+#include <opencv2/opencv.hpp>
+#include <opencv2/core/utility.hpp>
+#include <opencv2/video/tracking.hpp>
+#include <opencv2/videoio.hpp>
+#include <opencv2/highgui.hpp>
 
 using namespace std;
 using namespace cv;
@@ -30,7 +33,8 @@ static void help()
        "\tp - pause video\n";
 }
 
-int main( int argc, char** argv ){
+int main( int argc, char** argv )
+{
   CommandLineParser parser( argc, argv, keys );
 
   String tracker_algorithm = parser.get<String>( 0 );
@@ -83,7 +87,7 @@ int main( int argc, char** argv ){
   if (!bHack)
     cap.set( CAP_PROP_POS_FRAMES, start_frame );
 
-  if( !cap.isOpened() )
+  if ( !cap.isOpened() )
   {
     help();
     cout << "***Could not initialize capturing...***\n";

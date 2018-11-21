@@ -1,7 +1,8 @@
 #ifndef _SAMPLES_UTILITY_HPP_
 #define _SAMPLES_UTILITY_HPP_
 
-#include <opencv2/tracking.hpp>
+#include <opencv2/opencv.hpp>
+#include <opencv2/tracking/tracker.hpp>
 
 inline cv::Ptr<cv::Tracker> createTrackerByName(cv::String name)
 {

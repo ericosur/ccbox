@@ -1,8 +1,9 @@
 # Readme
 
-## precondition
+## NOTICE
 
-It needs opencv 3.4.1-dev with extra tracker/tracking modules built.
+You need extra module: tracker/tracking to make this project built/compiled.
+
 
 ## howto
 
