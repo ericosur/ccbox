@@ -21,30 +21,38 @@ target_link_libraries(
 )
 
 add_executable(
-    fe2d
-    fe2d.cpp
+    fe2d fe2d.cpp sett.cpp sett.h
 )
 target_link_libraries(
-    fe2d
-    ${OpenCV_LIBS}
+    fe2d ${OpenCV_LIBS}
 )
 
 add_executable(
-    latch
-    latch.cpp
+    surfdemo surfdemo.cpp sett.cpp sett.h
 )
 target_link_libraries(
-    latch
-    ${OpenCV_LIBS}
+    surfdemo ${OpenCV_LIBS}
 )
 
-if(0)
+
 add_executable(
-    surf
-    surf.cpp
+    latch latch.cpp  sett.cpp sett.h
 )
 target_link_libraries(
-    surf
-    ${OpenCV_LIBS}
+    latch ${OpenCV_LIBS}
 )
-endif()
+
+add_executable(
+    surf surf.cpp  sett.cpp sett.h
+)
+target_link_libraries(
+    surf ${OpenCV_LIBS}
+)
+
+add_executable(
+    surflann surflann.cpp  sett.cpp sett.h
+)
+target_link_libraries(
+    surflann ${OpenCV_LIBS}
+)
+

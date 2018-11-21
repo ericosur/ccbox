@@ -1,6 +1,6 @@
 #include <iostream>
-
-#include "opencv2/opencv_modules.hpp"
+#include <opencv2/opencv_modules.hpp>
+#include "sett.h"
 
 #ifdef HAVE_OPENCV_XFEATURES2D
 
@@ -18,6 +18,9 @@
 using namespace std;
 using namespace cv;
 
+const string json_fn = "../surfdemo.json";
+std::vector<std::string> files;
+
 const float inlier_threshold = 2.5f; // Distance threshold to identify inliers
 const float nn_match_ratio = 0.8f;   // Nearest neighbor matching ratio
 
@@ -27,8 +30,20 @@ int main(int argc, char* argv[])
                              "{@img1 | ../data/graf1.png | input image 1}"
                              "{@img2 | ../data/graf3.png | input image 2}"
                              "{@homography | ../data/H1to3p.xml | homography matrix}");
-    Mat img1 = imread(parser.get<String>("@img1"), IMREAD_GRAYSCALE);
-    Mat img2 = imread(parser.get<String>("@img2"), IMREAD_GRAYSCALE);
+
+    if (argc >= 3) {
+        files.push_back(parser.get<String>("img1"));
+        files.push_back(parser.get<String>("img2"));
+    } else {
+        load_json(json_fn, files);
+    }
+
+    Mat img1 = imread(files[0], IMREAD_GRAYSCALE);
+    Mat img2 = imread(files[1], IMREAD_GRAYSCALE);
+    if ( img1.empty() || img2.empty() ) {
+        cout << "Could not open or find the image!\n" << endl;
+        return -2;
+    }
 
     Mat homography;
     FileStorage fs(parser.get<String>("@homography"), FileStorage::READ);

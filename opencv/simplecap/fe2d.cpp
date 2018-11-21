@@ -1,45 +1,13 @@
+
+#include "sett.h"
 #include <iostream>
 #include <vector>
 
 #include <opencv2/opencv.hpp>
 
-#include <fstream>
-#include <nlohmann/json.hpp>
 const auto json_file = "../fe2d.json";
 const auto window_name = "feature 2D";
 
-int Threshold = 50;
-std::vector<std::string> files;
-
-bool load_json()
-{
-    using namespace std;
-    using namespace nlohmann;
-
-    cout << "load settings from: " << json_file << "\n";
-    json j;
-    json jarray = json::array();
-
-    try {
-        ifstream infile(json_file);
-        infile >> j;
-        jarray = j.at("files");
-        Threshold = j.at("threshold");
-        //cout << setw(4) << j << endl;
-    }
-    catch (json::parse_error& e) {
-        cout << "parse json error: " << e.what();
-        return false;
-    }
-
-    // maybe there is a more efficient way to load json array into std::vector
-    for (json::iterator it = jarray.begin(); it != jarray.end(); ++it) {
-        //cout << *it << endl;
-        files.push_back(it->get<string>());
-    }
-
-    return true;
-}
 
 void load_images(std::vector<cv::Mat>& imgs, std::vector<std::string>& files)
 {
@@ -59,7 +27,9 @@ int test()
     const auto RADIUS = 5;
     vector<Mat> imgs;
 
-    load_json();    // will fill vector 'files'
+    int Threshold = 50;
+    vector<std::string> files;
+    load_json(json_file, files, Threshold);    // will fill vector 'files'
     load_images(imgs, files);   // fill 'imgs'
 
     // vector of keyPoints
