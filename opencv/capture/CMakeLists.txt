@@ -99,12 +99,4 @@ target_link_libraries(
 #     hdemo
 #     ${DEPENDENCIES}
 # )
-# add_executable(
-#     fe2d
-#     fe2d.cpp
-# )
 
-# target_link_libraries(
-#     fe2d
-#     ${DEPENDENCIES}
-# )
