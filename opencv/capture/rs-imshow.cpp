@@ -7,6 +7,7 @@
 
 #include "cvutil.h"
 #include "readsetting.h"
+#include "dist.h"
 
 #define CVUI_IMPLEMENTATION
 #include "cvui.h"
@@ -57,6 +58,22 @@ bool show_info()
 
     // no camera name with "Intel"
     return false;
+}
+
+void show_answer(cv::Mat& img, const cv::Vec8i& z, const cv::Scalar& color, int idx)
+{
+    using namespace cv;
+    char msg[128];
+
+    line(img, Point(z[0], z[1]), Point(z[2], z[3]), color, 2, LINE_AA);
+    sprintf(msg, "ans(%d): %3d,%3d - %3d,%3d, [%4d], avg[%4d], med[%4d], deg:%03d",
+            (int)idx, z[0], z[1], z[2], z[3], z[5], z[6], z[7], z[4]);
+
+    rectangle(img, Point(45, 45), Point(450, 80), cv::Scalar(52, 52, 52), CV_FILLED);
+    cvui::printf(img, 50, 50, msg);
+
+    circle(img, Point(my_avg(z[0], z[2]), my_avg(z[1], z[3])), 3, Scalar(0xff, 0, 0));
+    printf("%s\n", msg);
 }
 
 void init_colors()
@@ -246,7 +263,7 @@ int get_median_depth_from_points(const std::vector<int>& all_depth_results)
     return ans;
 }
 
-bool check_point(int x1, int y1, int x2, int y2)
+bool check_point(int x1, int y1, int x2, int y2, double& degree)
 {
     // area #1
     if (y1<100 && y2<100)
@@ -265,13 +282,15 @@ bool check_point(int x1, int y1, int x2, int y2)
     float dy = fabs(y1 - y2);
     float dx = fabs(x1 - x2);
     if (dx < 1.0 || dy < 1.0) {
-        cout << "x";
+        //cout << "x";
         return false;
     }
 
+    const double PI = 3.141592653589793238462643383279502884;
     float slope = dy / dx;
-    cout << "dx " << dx << " dy " << dy
-        << " slope: " << slope << endl;
+    degree = atan(slope) * 180.0 / PI;
+    cout << "dx " << dx << " dy " << dy << " slope: " << slope
+         << " theta: " << degree << endl;
     if (slope > 1.732) {
         return false;
     }
@@ -383,10 +402,12 @@ void find_edge(cv::Mat& color_image, const void* depth_data, cv::Mat& edge_image
         // 5:depth data at center
         // 6: average depth data
         // 7: median depth data
-        if (check_point(l[0], l[1], l[2], l[3])) {
+        double degree = 0.0;
+        if (check_point(l[0], l[1], l[2], l[3], degree)) {
             Vec8i r;
             r[0] = l[0];  r[1] = l[1];  r[2] = l[2];  r[3] = l[3];
-            r[4] = get_length_from_vec4i(l);
+            //r[4] = get_length_from_vec4i(l);
+            r[4] = degree;
 
             // get points from two end points
             Point p1 = Point(r[0], r[1]);
@@ -421,7 +442,6 @@ void find_edge(cv::Mat& color_image, const void* depth_data, cv::Mat& edge_image
 
     //printf("size of results: %d ===>", (int)results.size());
 
-    char msg[128];
     size_t num_to_show = 3;
 #if 0
     // find the longest line and show
@@ -432,21 +452,14 @@ void find_edge(cv::Mat& color_image, const void* depth_data, cv::Mat& edge_image
     sort(results.begin(), results.end(), cmp_by_med_depth);
 #endif
     size_t results_size = results.size();
+
+
+    // show answers
     for (size_t ii = 0; ii < std::min(results_size, num_to_show); ii++) {
         //printf("size of results: %d\t", (int)results.size());
         Vec8i z = results.at(ii);
         //cout << z << endl;
-
-        line(edge_image, Point(z[0], z[1]), Point(z[2], z[3]), colors.at(ii), 2, LINE_AA);
-        sprintf(msg, "ans(%d): %3d,%3d - %3d,%3d, [%4d], avg[%4d], med[%4d]",
-                (int)ii, z[0], z[1], z[2], z[3], z[5], z[6], z[7]);
-
-        if (ii == 0) {
-            rectangle(edge_image, Point(45, 45), Point(450, 80), cv::Scalar(52, 52, 52), CV_FILLED);
-            cvui::printf(edge_image, 50, 50, msg);
-        }
-        circle(edge_image, Point(my_avg(z[0], z[2]), my_avg(z[1], z[3])), 3, Scalar(0xff, 0, 0));
-        printf("%s\n", msg);
+        show_answer(edge_image, z, colors.at(ii % colors.size()), ii);
         //line( edge_image, Point(l[0], l[1]), Point(l[2], l[3]), color, 3, LINE_AA);
     }
     // else {

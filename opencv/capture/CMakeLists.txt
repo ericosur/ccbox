@@ -7,7 +7,7 @@ set(APPLY_INTEL_OPENCV   0)
 set(CMAKE_CXX_FLAGS "-Wall -O3")
 # if support openmp
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unknown-pragmas")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unknown-pragmas -Wno-unused-function")
 
 set(CMAKE_CXX_STANDARD 11)
 set(APPLY_JSON         1)
@@ -70,33 +70,13 @@ add_executable(
     cvui.h
     cvutil.cpp cvutil.h
     readsetting.cpp readsetting.h
+    dist.cpp dist.h
     captureDemo.cpp
     rs-imshow.cpp
     main.cpp
 )
 
-# add_executable(
-#     cdemo
-#     findContours_demo.cpp
-# )
-
-# add_executable(
-#     hdemo
-#     HoughLines_Demo.cpp
-# )
-
 target_link_libraries(
     ${PN}
     ${DEPENDENCIES}
 )
-
-# target_link_libraries(
-#     cdemo
-#     ${DEPENDENCIES}
-# )
-
-# target_link_libraries(
-#     hdemo
-#     ${DEPENDENCIES}
-# )
-
