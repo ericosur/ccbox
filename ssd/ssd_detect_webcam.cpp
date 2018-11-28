@@ -22,6 +22,8 @@
 #include "detector.h"
 
 #include <opencv2/opencv.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/videoio.hpp>
 
 #include <algorithm>
 #include <iomanip>
@@ -130,26 +132,28 @@ int baseline = 0;
 void show_distwin(float dist)
 {
 #ifdef USE_DISTWIN
-  // will show dist into another window
-  using namespace cv;
-  Mat img = Mat::zeros(320, 240, CV_8UC3 );
+    // will show dist into another window
+    using namespace cv;
+    Mat img = Mat::zeros(320, 240, CV_8UC3 );
 
-  Scalar c = Scalar(0, 255, 0);
-  double sz = 1.25;
-  char str[40];
+    Scalar c = Scalar(0, 255, 0);
+    double sz = 1.25;
+    char str[40];
 
-  if (dist <= -1.0) {
+    if (dist <= -1.0) {
     snprintf(str, 40, "no obj");
-  } else {
+    } else {
     snprintf(str, 40, "%.2fm", dist);
-  }
-  putText(img, str, Point(10, 100), fontface, sz, c);
-  imshow(DIST_WINDOW, img);
+    }
+    putText(img, str, Point(10, 100), fontface, sz, c);
+    imshow(DIST_WINDOW, img);
 #endif
 }
 
 bool show_fps(cv::Mat& cv_img, double elapsed_time)
 {
+    using namespace cv;
+
     static double total_time = 0.0;
     static int frame_count = 0;
     static float fps = 0.0;
@@ -170,10 +174,10 @@ bool show_fps(cv::Mat& cv_img, double elapsed_time)
         frame_count ++;
     }
     snprintf(buffer, BUFFER_SIZE, "FPS: %.2f", fps);
-    cv::Size text = cv::getTextSize(buffer, fontface, scale, thickness, &baseline);
-    cv::rectangle(cv_img, cv::Point(0, 0),cv::Point(text.width, text.height + baseline),
-          CV_RGB(255, 255, 255), CV_FILLED);
-    cv::putText(cv_img, buffer, cv::Point(0, text.height + baseline / 2.),
+    Size text = getTextSize(buffer, fontface, scale, thickness, &baseline);
+    rectangle(cv_img, Point(0, 0), Point(text.width, text.height + baseline),
+          CV_RGB(255, 255, 255), FILLED);
+    putText(cv_img, buffer, Point(0, text.height + baseline / 2.),
           fontface, scale, CV_RGB(0, 0, 0), thickness, 8);
 
     if (settings->do_imshow) {
@@ -228,19 +232,21 @@ std::string show_detection_box(cv::Mat& cv_img,
                         const std::vector< std::vector<float> >& detections,
                         int rx=0, int ry=0)
 {
+  using namespace cv;
+
   char buffer[BUFFER_SIZE] = {0};
   int detected = 0;
   bool hasDog = false;
   bool hasPerson = false;
   int dist = 0;
   SsdSetting* settings = SsdSetting::getInstance();
-  const cv::Scalar& color = cv::Scalar( 255, 255, 255 );
+  const Scalar& color = Scalar( 255, 255, 255 );
   //PersonRect last_rect;
   std::vector<PersonRect> vv;
   // if (showDebug)
      //printf("%s +++\n", __func__);
 
-  cv::Mat orig_img = cv_img.clone();
+  Mat orig_img = cv_img.clone();
 
   for (size_t i = 0; i < detections.size(); ++i) {
 
@@ -360,7 +366,7 @@ std::string show_detection_box(cv::Mat& cv_img,
       cv::Size text = cv::getTextSize(buffer, fontface, scale, thickness, &baseline);
       cv::rectangle(cv_img, bottom_left_pt + cv::Point(0, 0),
           bottom_left_pt + cv::Point(text.width, -text.height-baseline),
-          color, CV_FILLED);
+          color, FILLED);
       cv::putText(cv_img, buffer, bottom_left_pt - cv::Point(0, baseline),
           fontface, scale, CV_RGB(0, 0, 0), thickness, 8);
     } // if ( hasDog || hasPerson )
@@ -1262,10 +1268,10 @@ int main(int argc, char** argv)
         CV_Assert("Cam open failed");
       }
       pbox::mylog("webcam", "before setting capturing device");
-      cap.set(CV_CAP_PROP_FRAME_WIDTH, 640);
-      cap.set(CV_CAP_PROP_FRAME_HEIGHT, 480);
-      cap.set(CV_CAP_PROP_AUTOFOCUS, 0);
-      cap.set(CV_CAP_PROP_FPS, 30);
+      cap.set(cv::CAP_PROP_FRAME_WIDTH, 640);
+      cap.set(cv::CAP_PROP_FRAME_HEIGHT, 480);
+      cap.set(cv::CAP_PROP_AUTOFOCUS, 0);
+      cap.set(cv::CAP_PROP_FPS, 30);
       for(;;) {
         cv::Mat cv_img;
         cap >> cv_img;

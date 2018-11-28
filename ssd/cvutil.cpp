@@ -355,16 +355,18 @@ void draw_aim(cv::Mat& img, int w, int h)
 
 void draw_dist(cv::Mat& img, float dist)
 {
+    using namespace cv;
+
     const int buffer_size = 128;
     using namespace cv;
     char buffer[buffer_size];
     int baseline = 0;
 
     snprintf(buffer, buffer_size, "dist: %.3fm", dist);
-    cv::Size text = cv::getTextSize(buffer, fontface, scale, thickness, &baseline);
-    cv::rectangle(img, cv::Point(0, 0),cv::Point(text.width, text.height + baseline),
-          CV_RGB(255, 255, 255), CV_FILLED);
-    cv::putText(img, buffer, cv::Point(0, text.height + baseline / 2.),
+    Size text = cv::getTextSize(buffer, fontface, scale, thickness, &baseline);
+    rectangle(img, cv::Point(0, 0), Point(text.width, text.height + baseline),
+          CV_RGB(255, 255, 255), FILLED);
+    putText(img, buffer, Point(0, text.height + baseline / 2.),
           fontface, scale, CV_RGB(0, 0, 0), thickness, 8);
 }
 
