@@ -78,7 +78,7 @@ int test()
     moveWindow(window_name, 0, 0);
     hconcat(imgs[0], imgs[1], combined);
     imshow(window_name, combined);
-    cvWaitKey(0);
+    waitKey(0);
     destroyAllWindows();
 
     return 0;

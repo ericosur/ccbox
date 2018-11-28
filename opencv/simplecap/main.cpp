@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <opencv2/opencv.hpp>
 #include <opencv2/core.hpp>
+#include <opencv2/videoio.hpp>
 
 #define FRAME_WIDTH    640
 #define FRAME_HEIGHT   480
@@ -19,8 +20,8 @@ int test()
         return -1;
 
     //set height and width of capture frame
-    cap.set(CV_CAP_PROP_FRAME_WIDTH, FRAME_WIDTH);
-    cap.set(CV_CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT);
+    cap.set(CAP_PROP_FRAME_WIDTH, FRAME_WIDTH);
+    cap.set(CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT);
 
     Mat frame;
     printf("press ESC or 'q' to quit %s...\n", __func__);
