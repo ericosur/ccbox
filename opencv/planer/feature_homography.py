@@ -25,7 +25,9 @@ Select a textured planar object to track by drawing a box with a mouse.
 # Python 2/3 compatibility
 from __future__ import print_function
 
+import sys
 import json
+import math
 import numpy as np
 import cv2 as cv
 
@@ -40,17 +42,23 @@ from plane_tracker import PlaneTracker
 import myutil
 
 FRAME_FN = 'frame.jpg'
+WIN_NAME = 'plane'
 
 class App(object):
     def __init__(self, src):
+        cv.namedWindow(WIN_NAME)
+        cv.moveWindow(WIN_NAME, 0, 0)
         self.cap = video.create_capture(src, presets['book'])
         self.frame = None
         self.paused = False
         self.tracker = PlaneTracker()
-
-        cv.namedWindow('plane')
         self.rect_sel = common.RectSelector('plane', self.on_rect)
         self.user_selected_rect = None
+        self.focal_length = 0.0
+        self.horizontal_angel = 0.0
+        self.KNOWN_WIDTH = 40
+        self.KNOWN_HEIGHT = 40
+        self.msg = None
 
     def on_rect(self, rect):
         self.tracker.clear()
@@ -90,6 +98,8 @@ class App(object):
             return None
 
         rect = data['rect']
+        self.focal_length = self.calc_focallength(rect)
+
         rect = tuple(map(np.int16, rect))
         print(rect)
         self.tracker.clear()
@@ -97,27 +107,96 @@ class App(object):
         print('preset loaded')
         return frame
 
+    def calc_focallength(self, rect):
+        # initialize the known distance from the camera to the object, which
+        # preset distance from samples
+        KNOWN_DISTANCE = 200
+        # initialize the known object width, which in this case, the piece of
+        # paper, unit mm
+        width = rect[2] - rect[0]
+        focalLength = (width * KNOWN_DISTANCE) / self.KNOWN_WIDTH
+        print('width: {} focal length: {:.2f}'.format(width, focalLength))
+        return focalLength
+
+    def distance_to_camera(self, knownWidth, focalLength, perWidth):
+        # compute and return the distance from the maker to the camera
+        if perWidth == 0.0:
+            return 0.0
+        return (knownWidth * focalLength) / perWidth
+
+    @staticmethod
+    def get_dist2d(p1, p2):
+        return math.sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2)
+
     @staticmethod
     def write_file(fn, frame):
         cv.imwrite(fn, frame)
         print('output to %s' % fn)
 
+    @staticmethod
+    def get_slope(p1, p2):
+        delta_x = float(p2[0] - p1[0])
+        delta_y = float(p2[1] - p1[1])
+        if delta_x == 0:
+            return -1.0
+        return math.fabs(delta_y / delta_x)
+
+    @staticmethod
+    def get_degree(slope):
+        if slope < 0.0:
+            return 90.0
+        deg = math.atan(slope) * 180.0 / math.pi
+        return deg
 
     def show_wtf(self, wtf):
         print('wtf: {} -- {}'.format(wtf, self.user_selected_rect))
 
-    def check_wtf(self, wtf):
+    def check_wtf(self, wtf, debug=False):
+        self.msg = None
         for ww in wtf:
             xx, yy = ww
             if xx > 640 or yy > 480 or xx < 0 or yy < 0:
+                if debug:
+                    print('OOB')
                 return False
+        ang1 = self.get_degree(self.get_slope(wtf[0], wtf[1]))
+        ang2 = self.get_degree(self.get_slope(wtf[2], wtf[3]))
+        if ang1 > 30.0 or ang2 > 30:
+            if debug:
+                print('h ang')
+            return False
+
+        self.horizontal_angel = ang1
+        dist = self.get_dist2d(wtf[0], wtf[1])
+        h_dist = dist * math.cos(self.horizontal_angel * math.pi / 180.0)
+        detph = self.distance_to_camera(self.KNOWN_WIDTH, self.focal_length, h_dist)
+        #print('ang{:4.2f} dist{:4.2f}'.format(self.horizontal_angel, dist), end=' ')
+        #print('hdist {:4.2f}'.format(h_dist), end=' ')
+        self.msg = 'depth {:4.2f} mm'.format(detph)
+
+        s1 = self.get_slope(wtf[1], wtf[2])
+        s2 = self.get_slope(wtf[0], wtf[3])
+        if s1 < 0.0 or s2 < 0.0:
+            if debug:
+                print('t slopy')
+            return False
+        ang1 = self.get_degree(s1)
+        ang2 = self.get_degree(s2)
+        if ang1 < 60.0 or ang2 < 60.0:
+            if debug:
+                print('too s')
+            return False
+
         return True
+
 
     def run(self):
         if True and myutil.isfile('homo.json'):
             print('preset exists')
             tmp_frame = self.load_config('homo.json')
             #self.frame = tmp_frame
+
+        print('test: {}'.format(self.distance_to_camera(self.KNOWN_WIDTH, self.focal_length, 135)))
 
         while True:
             playing = not self.paused and not self.rect_sel.dragging
@@ -139,33 +218,43 @@ class App(object):
                 x0, y0, x1, y1 = target.rect
                 cv.rectangle(vis, (x0+w, y0), (x1+w, y1), (0, 255, 0), 2)
 
+            is_ok_to_export = False
             if playing:
                 tracked = self.tracker.track(self.frame)
                 if len(tracked) > 0:
                     tracked = tracked[0]
                     wtf = np.int32(tracked.quad)
                     if self.check_wtf(wtf):
-                        #self.show_wtf(wtf)
+                        cv.putText(vis, self.msg, (50, 50), cv.FONT_HERSHEY_SIMPLEX, 1.0, (0,0,0), lineType=cv.LINE_AA)
                         cv.polylines(vis, [np.int32(tracked.quad)], True, (255, 255, 255), 2)
+                        cv.fillPoly(vis, [np.int32(tracked.quad)], (255,0,0))
                         for (x0, y0), (x1, y1) in zip(np.int32(tracked.p0), np.int32(tracked.p1)):
                             cv.line(vis, (x0+w, y0), (x1, y1), (0, 255, 0))
+                        is_ok_to_export = True
+
 
             draw_keypoints(vis, self.tracker.frame_points)
 
             self.rect_sel.draw(vis)
-            cv.imshow('plane', vis)
+            cv.imshow(WIN_NAME, vis)
             ch = cv.waitKey(1)
             if ch == ord(' '):
                 self.paused = not self.paused
-            if ch == 27:
+            elif ch == 27:
                 break
+            elif ch == ord('s'):
+                cv.imwrite('homo.png', vis)
 
-if __name__ == '__main__':
-    #print(__doc__)
 
-    import sys
+def main():
     try:
         video_src = sys.argv[1]
     except:
         video_src = 0
     App(video_src).run()
+
+
+if __name__ == '__main__':
+    #print(__doc__)
+    main()
+
