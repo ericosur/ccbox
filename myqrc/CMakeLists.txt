@@ -7,13 +7,16 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_FLAGS "-Wall -O3")
 set(CMAKE_C_FLAGS "-Wall -O3")
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-function -Wno-sign-compare")
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCPU_ONLY=1 -DUSE_OPENCV -DUSE_MKL")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DOPENCV_IMSHOW")
 
+set(USE_LIBPBOX     0)
 
 # pbox library
+if(USE_LIBPBOX)
 include_directories("/usr/local/include/pbox")
-include_directories("/usr/local/include")
 link_directories("/usr/local/lib/pbox")
+set(LIBPBOX      libpbox.so)
+endif()
 
 # quirc
 include_directories("/usr/local/include")
@@ -32,7 +35,7 @@ add_executable(
 
 target_link_libraries(
     ${PN}
-    libpbox.so
+    ${LIBPBOX}
     libquirc.so
     ${DEPENDENCIES}
 )
