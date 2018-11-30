@@ -69,7 +69,7 @@ void show_answer(cv::Mat& img, const cv::Vec8i& z, const cv::Scalar& color, int 
     sprintf(msg, "ans(%d): %3d,%3d - %3d,%3d, [%4d], avg[%4d], med[%4d], deg:%03d",
             (int)idx, z[0], z[1], z[2], z[3], z[5], z[6], z[7], z[4]);
 
-    rectangle(img, Point(45, 45), Point(450, 80), cv::Scalar(52, 52, 52), CV_FILLED);
+    rectangle(img, Point(45, 45), Point(500, 80), cv::Scalar(52, 52, 52), CV_FILLED);
     cvui::printf(img, 50, 50, msg);
 
     circle(img, Point(my_avg(z[0], z[2]), my_avg(z[1], z[3])), 3, Scalar(0xff, 0, 0));
@@ -265,21 +265,22 @@ int get_median_depth_from_points(const std::vector<int>& all_depth_results)
 
 bool check_point(int x1, int y1, int x2, int y2, double& degree)
 {
+    const int margin = 100;
     // area #1
-    if (y1<100 && y2<100)
+    if (y1<margin && y2<margin)
         return false;
-    if (y1>380 && y2>380)
+    if (y1>DEFAULT_HEIGHT-margin && y2>DEFAULT_HEIGHT-margin)
         return false;
-    if (x1<100 && x2<100)
+    if (x1<margin && x2<margin)
         return false;
-    if (x1>540 && x2>540)
+    if (x1>DEFAULT_WIDTH-margin && x2>DEFAULT_WIDTH-margin)
         return false;
 
     if (x1 == x2) {
         return false;
     }
 
-    float dy = fabs(y1 - y2);
+    float dy = y1 - y2;
     float dx = fabs(x1 - x2);
     if (dx < 1.0 || dy < 1.0) {
         //cout << "x";
@@ -291,7 +292,7 @@ bool check_point(int x1, int y1, int x2, int y2, double& degree)
     degree = atan(slope) * 180.0 / PI;
     cout << "dx " << dx << " dy " << dy << " slope: " << slope
          << " theta: " << degree << endl;
-    if (slope > 1.732) {
+    if (degree > 75.0) {
         return false;
     }
 
