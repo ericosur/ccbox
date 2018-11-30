@@ -287,11 +287,9 @@ bool check_point(int x1, int y1, int x2, int y2, double& degree)
         return false;
     }
 
-    const double PI = 3.141592653589793238462643383279502884;
     float slope = dy / dx;
-    degree = atan(slope) * 180.0 / PI;
-    cout << "dx " << dx << " dy " << dy << " slope: " << slope
-         << " theta: " << degree << endl;
+    degree = atan(slope) * 180.0 / M_PI;
+    //cout << "dx " << dx << " dy " << dy << " slope: " << slope << " theta: " << degree << endl;
     if (degree > 75.0) {
         return false;
     }
@@ -397,10 +395,10 @@ void find_edge(cv::Mat& color_image, const void* depth_data, cv::Mat& edge_image
 #endif
 
 
-        // Vec6f means a vector with 6 floating numbers
+        // Vec8f means a vector with 6 floating numbers
         // 0:x1, y1, x2, y2,
-        // 4:pt distance
-        // 5:depth data at center
+        // 4: degree for 2D
+        // 5: depth data at center
         // 6: average depth data
         // 7: median depth data
         double degree = 0.0;
@@ -424,7 +422,7 @@ void find_edge(cv::Mat& color_image, const void* depth_data, cv::Mat& edge_image
                 int median = get_median_depth_from_points(all_depth_results);
                 r[7] = median;
             } else {
-                printf("1:");
+                //printf("1:");
             }
 
             // get depth from center of line
@@ -434,7 +432,7 @@ void find_edge(cv::Mat& color_image, const void* depth_data, cv::Mat& edge_image
                 results.push_back(r);
             }
             else {
-                printf("0:");
+                //printf("0:");
             }
         }/* else {
             printf(".");
@@ -443,7 +441,7 @@ void find_edge(cv::Mat& color_image, const void* depth_data, cv::Mat& edge_image
 
     //printf("size of results: %d ===>", (int)results.size());
 
-    size_t num_to_show = 3;
+    size_t num_to_show = 1;
 #if 0
     // find the longest line and show
     sort(results.begin(), results.end(), cmp_by_length);
@@ -466,21 +464,24 @@ void find_edge(cv::Mat& color_image, const void* depth_data, cv::Mat& edge_image
     // else {
     //     printf("answer: no answer...\n");
     // }
-    printf("----------\n");
+    //printf("----------\n");
 }
 
 void draw_crosshair(cv::Mat& img, const cv::Point& pt)
 {
     using namespace cv;
+    const int slen = 40;
+    const int radius = 10;
     Scalar color = Scalar(0, 0, 0xff);
-    circle(img, pt, 8, color);
-    Point p1 = Point(pt.x - 8, pt.y - 8);
-    Point p2 = Point(pt.x + 8, pt.y + 8);
+    circle(img, pt, radius, color);
+    Point p1 = Point(pt.x - slen, pt.y );
+    Point p2 = Point(pt.x + slen, pt.y );
     line(img, p1, p2, color, 1, LINE_AA);
-    Point p3 = Point(pt.x + 8, pt.y - 8);
-    Point p4 = Point(pt.x - 8, pt.y + 8);
+    Point p3 = Point(pt.x, pt.y - slen);
+    Point p4 = Point(pt.x, pt.y + slen);
     line(img, p3, p4, color, 1, LINE_AA);
 }
+
 
 int test_realsense() try
 {
@@ -535,6 +536,7 @@ int test_realsense() try
     }
 
     Point cross;
+    cv::Vec3f xyz;
 
     while (true) {
         int64 e1 = cv::getTickCount();
@@ -603,15 +605,20 @@ int test_realsense() try
 
 /// to show depth data with mouse pointer
 #if 1
+        {
             // cv::Point pt1(230, 40);
             // cv::Point pt2(450, 90);
             // cv::rectangle(depth_image, pt1, pt2, cv::Scalar(49, 52, 49), CV_FILLED);
             int x = cvui::mouse().x % DEFAULT_WIDTH;
             int y = cvui::mouse().y % DEFAULT_HEIGHT;
-            cvui::printf(depth_image, 180, 30, 0.6, 0xffff00, "Mouse pointer is at (%d,%d)", x, y);
+            cvui::printf(depth_image, 180, 30, 0.6, 0xffff00, "Mouse pointer is at (%d,%d)", cross.x, cross.y);
 
-            int _depth_pt = get_dpeth_pt(depth.get_data(), x, y);
+            int _depth_pt = get_dpeth_pt(depth.get_data(), cross.x, cross.y);
             cvui::printf(depth_image, 180, 50, 0.6, 0xffff00, "Depth is %4d (mm)", _depth_pt, _depth_pt);
+
+            query_uv2xyz(depth, cross, xyz);
+            xyz = xyz * 1000;
+            cvui::printf(depth_image, 180, 70, 0.6, 0xffff00, "xyz: %.0f,%.0f,%.0f", xyz[0], xyz[1], xyz[2]);
 
             cv::Rect rectangle(0, 0, 1280, 480);
             int status = cvui::iarea(rectangle.x, rectangle.y, rectangle.width, rectangle.height);
@@ -634,6 +641,7 @@ int test_realsense() try
             cvui::update();
             draw_crosshair(depth_image, cross);
             draw_crosshair(color_image, cross);
+        }
 #endif
 
 
