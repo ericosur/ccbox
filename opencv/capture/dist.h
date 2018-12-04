@@ -21,4 +21,6 @@ float dist_2d(const pixel& a, const pixel& b);
 
 void query_uv2xyz(const rs2::depth_frame& frame, const cv::Point& pt, cv::Vec3f& xyz, bool debug=false);
 
+bool get_vec_deg(cv::Mat& v, double& degree, bool debug=false);
+
 #endif

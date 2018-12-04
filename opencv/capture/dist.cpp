@@ -69,3 +69,27 @@ float dist_2d(const pixel& a, const pixel& b)
 {
     return pow(a.first - b.first, 2) + pow(a.second - b.second, 2);
 }
+
+bool get_vec_deg(cv::Mat& v, double& degree, bool debug)
+{
+    float d1[] = {1000, 0, 0};
+    Mat w(3,1,CV_32F,d1);
+
+    double upper = w.dot(v);
+    if (debug) {
+        cout << "get_vec_deg: dot = " << upper << endl;
+    }
+
+    double k1 = norm(w, NORM_L2);
+    double k2 = norm(v, NORM_L2);
+    double lower = k1 * k2;
+    if (lower != 0.0) {
+        double costheta = upper / lower;
+        degree = acos(costheta) * 180.0 / M_PI;
+        if (debug) {
+            cout << "get_vec_deg: deg: " << degree << endl;
+        }
+        return true;
+    }
+    return false;
+}
