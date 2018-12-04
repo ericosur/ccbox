@@ -613,12 +613,25 @@ int test_realsense() try
             int y = cvui::mouse().y % DEFAULT_HEIGHT;
             cvui::printf(depth_image, 180, 30, 0.6, 0xffff00, "Mouse pointer is at (%d,%d)", cross.x, cross.y);
 
-            int _depth_pt = get_dpeth_pt(depth.get_data(), cross.x, cross.y);
-            cvui::printf(depth_image, 180, 50, 0.6, 0xffff00, "Depth is %4d (mm)", _depth_pt, _depth_pt);
+            if (cross.x == 0 && cross.y == 0) {
+                // do nothing
+            } else {
+                int _depth_pt = get_dpeth_pt(depth.get_data(), cross.x, cross.y);
+                cvui::printf(depth_image, 180, 50, 0.6, 0xffff00, "Depth is %4d (mm)", _depth_pt, _depth_pt);
 
-            query_uv2xyz(depth, cross, xyz);
-            xyz = xyz * 1000;
-            cvui::printf(depth_image, 180, 70, 0.6, 0xffff00, "xyz: %.0f,%.0f,%.0f", xyz[0], xyz[1], xyz[2]);
+                query_uv2xyz(depth, cross, xyz);
+                xyz = xyz * 1000;
+                cvui::printf(depth_image, 180, 70, 0.6, 0xffff00, "xyz: %.0f,%.0f,%.0f", xyz[0], xyz[1], xyz[2]);
+
+                double dd[3];
+                dd[0] = xyz[0];  dd[1] = 0.0;  dd[2] = xyz[2];
+                Mat v(3, 1, CV_32F, dd);
+
+                double t_deg = 0.0;
+                if (get_vec_deg(v, t_deg, true)) {
+                    cvui::printf(depth_image, 180, 90, 0.6, 0xffff00, "deg v to u: %.2f", t_deg);
+                }
+            }
 
             cv::Rect rectangle(0, 0, 1280, 480);
             int status = cvui::iarea(rectangle.x, rectangle.y, rectangle.width, rectangle.height);
