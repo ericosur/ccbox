@@ -12,7 +12,7 @@ pnp and single eye depth
 
 ## files
 
-Currently the following two files use checker board to do distance 
+Currently the following two files use checker board to do distance
 estimation.
 
 webcam-est-dist.py uses webcam to estimate distance

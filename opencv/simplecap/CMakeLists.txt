@@ -56,3 +56,10 @@ target_link_libraries(
     surflann ${OpenCV_LIBS}
 )
 
+
+add_executable(
+    vec vec.cpp
+)
+target_link_libraries(
+    vec ${OpenCV_LIBS}
+)
