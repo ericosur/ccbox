@@ -4,10 +4,6 @@
 #include <cstdint>
 #include <string>
 
-// for opencv 4.0.0-pre, CV_FILLED
-#include <opencv2/imgproc/types_c.h>
-#include <opencv2/imgproc/imgproc_c.h>
-
 #include <opencv2/opencv.hpp>   // Include OpenCV API
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/videoio/videoio.hpp>
@@ -43,6 +39,12 @@ float get_iou(const cv::Rect& a, const cv::Rect& b);
 void test_iou();
 
 int get_points_between_two_points(const cv::Mat& img, const cv::Point& p1, const cv::Point& p2, std::vector<cv::Point>& points);
+
+bool check_point(int x1, int y1, int x2, int y2, double& degree);
+int get_avg_depth_from_points(const std::vector<int>& all_depth_results);
+int get_median_depth_from_points(const std::vector<int>& all_depth_results);
+bool show_cvfps(cv::Mat& cv_img, double elapsed_time);
+void draw_crosshair(cv::Mat& img, const cv::Point& pt);
 
 }   // namespace cvutil
 

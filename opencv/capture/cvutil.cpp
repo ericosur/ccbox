@@ -7,6 +7,7 @@
 #include <string>
 #include <ctime>
 #include <time.h>
+#include <math.h>
 
 #define DEFAULT_CROP_WIDTH      240
 #define DEFAULT_CROP_HEIGHT     240
@@ -224,6 +225,108 @@ void test_get_points_between_two_points()
         }
     }
 
+}
+
+bool check_point(int x1, int y1, int x2, int y2, double& degree)
+{
+    const int margin = 100;
+    // area #1
+    if (y1<margin && y2<margin)
+        return false;
+    if (y1>DEFAULT_HEIGHT-margin && y2>DEFAULT_HEIGHT-margin)
+        return false;
+    if (x1<margin && x2<margin)
+        return false;
+    if (x1>DEFAULT_WIDTH-margin && x2>DEFAULT_WIDTH-margin)
+        return false;
+
+    if (x1 == x2) {
+        return false;
+    }
+
+    float dy = y1 - y2;
+    float dx = fabs(x1 - x2);
+    if (dx < 1.0 || dy < 1.0) {
+        //cout << "x";
+        return false;
+    }
+
+    float slope = dy / dx;
+    degree = atan(slope) * 180.0 / M_PI;
+    //cout << "dx " << dx << " dy " << dy << " slope: " << slope << " theta: " << degree << endl;
+    if (degree > 75.0) {
+        return false;
+    }
+
+    return true;
+}
+
+/// [in] depth_data: raw data buffer of depth
+/// [in] vector to store points
+int get_avg_depth_from_points(const std::vector<int>& all_depth_results)
+{
+    int sum = 0;
+    for (size_t ii=0; ii<all_depth_results.size(); ++ii) {
+        sum += all_depth_results.at(ii);
+    }
+
+    return sum / all_depth_results.size();
+}
+
+
+int get_median_depth_from_points(const std::vector<int>& all_depth_results)
+{
+    int ans = 0;
+    std::vector<int> v = all_depth_results;
+    std::nth_element(v.begin(), v.begin() + v.size()/2, v.end());
+    auto id1 = v.size() / 2;
+    if ( all_depth_results.size() % 2 ) {   // size is odd
+        ans = v[id1];
+    } else {    // size is even
+        if (v.size() / 2 >= 1) {
+            auto id0 = v.size() / 2 - 1;
+            ans = (v[id0] + v[id1]) / 2;
+        }
+    }
+
+    return ans;
+}
+
+bool show_cvfps(cv::Mat& cv_img, double elapsed_time)
+{
+    int fontface = cv::FONT_HERSHEY_SIMPLEX;
+    double scale = 0.75;
+    int baseline = 0;
+    int thickness = 2;
+    const int BUFFER_SIZE = 80;
+    char buffer[BUFFER_SIZE];
+    double fps = 1.0 / elapsed_time;
+
+    snprintf(buffer, BUFFER_SIZE, "elapsed: %.3f fps(%.1f)", elapsed_time, fps);
+    cv::Size text = cv::getTextSize(buffer, fontface, scale, thickness, &baseline);
+    cv::rectangle(cv_img, cv::Point(0, 0),cv::Point(text.width, text.height + baseline),
+          CV_RGB(255, 255, 255), CV_FILLED);
+    cv::putText(cv_img, buffer, cv::Point(0, text.height + baseline / 2.),
+          fontface, scale, CV_RGB(0, 0, 0), thickness, 8);
+
+    //cv::imshow(rgb_window, cv_img);
+
+    return true;
+}
+
+void draw_crosshair(cv::Mat& img, const cv::Point& pt)
+{
+    using namespace cv;
+    const int slen = 40;
+    const int radius = 10;
+    Scalar color = Scalar(0, 0, 0xff);
+    circle(img, pt, radius, color);
+    Point p1 = Point(pt.x - slen, pt.y );
+    Point p2 = Point(pt.x + slen, pt.y );
+    line(img, p1, p2, color, 1, LINE_AA);
+    Point p3 = Point(pt.x, pt.y - slen);
+    Point p4 = Point(pt.x, pt.y + slen);
+    line(img, p3, p4, color, 1, LINE_AA);
 }
 
 

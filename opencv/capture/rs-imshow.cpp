@@ -5,9 +5,9 @@
 
 #ifdef USE_REALSENSE
 
-#include "cvutil.h"
 #include "readsetting.h"
-#include "dist.h"
+#include "cvutil.h"
+#include "rsutil.h"
 
 #define CVUI_IMPLEMENTATION
 #include "cvui.h"
@@ -24,8 +24,14 @@
 #include <unistd.h>
 #include <librealsense2/rs.hpp> // Include RealSense Cross Platform API
 
+#if 0
+#define show_line() \
+    printf("@line %04d\n", __LINE__);
+#else
+#define show_line()
+#endif
+
 vector<cv::Vec8i> results;
-vector<cv::Scalar> colors;
 
 inline int my_avg(int m, int n)
 {
@@ -33,33 +39,12 @@ inline int my_avg(int m, int n)
 }
 
 
-bool show_info()
-{
-    rs2::context ctx;
-    auto devices = ctx.query_devices();
-    size_t device_count = devices.size();
-    for (size_t i = 0; i < device_count; ++i)
-    {
-        auto dev = devices[i];
-        string dev_name = dev.get_info(RS2_CAMERA_INFO_NAME);
-        if ( dev_name.find("Intel") != std::string::npos) {
-            std::cout << "found Intel!" << '\n';
-            if ( dev.get_info(RS2_CAMERA_INFO_NAME) ) {
-                cout << left
-                << setw(4) << "[" << i << "] "
-                << setw(30) << dev.get_info(RS2_CAMERA_INFO_NAME)
-                << setw(20) << dev.get_info(RS2_CAMERA_INFO_SERIAL_NUMBER)
-                << setw(20) << dev.get_info(RS2_CAMERA_INFO_FIRMWARE_VERSION)
-                << endl;
-            }
-            return true;
-        }
-    }
-
-    // no camera name with "Intel"
-    return false;
-}
-
+// Vec8f means a vector with 6 floating numbers
+// 0:x1, y1, x2, y2,
+// 4: degree for 2D
+// 5: depth data at center
+// 6: average depth data
+// 7: median depth data
 void show_answer(cv::Mat& img, const cv::Vec8i& z, const cv::Scalar& color, int idx)
 {
     using namespace cv;
@@ -76,61 +61,18 @@ void show_answer(cv::Mat& img, const cv::Vec8i& z, const cv::Scalar& color, int 
     printf("%s\n", msg);
 }
 
-void init_colors()
+void init_colors(std::vector<cv::Scalar> clrs)
 {
     // cv color is BGR
     cv::Scalar c = cv::Scalar(0, 0, 0xff);
-    colors.push_back(c);
+    clrs.push_back(c);
     c = cv::Scalar(0x66, 0x66, 0xff);
-    colors.push_back(c);
+    clrs.push_back(c);
     c = cv::Scalar(0xcc, 0xcc, 0xff);
-    colors.push_back(c);
+    clrs.push_back(c);
+    cout << "clrs.size(): " << clrs.size() << endl;
 }
 
-float get_depth_scale(rs2::device dev)
-{
-    // Go over the device's sensors
-    for (rs2::sensor& sensor : dev.query_sensors())
-    {
-        // Check if the sensor if a depth sensor
-        if (rs2::depth_sensor dpt = sensor.as<rs2::depth_sensor>())
-        {
-            return dpt.get_depth_scale();
-        }
-    }
-    throw std::runtime_error("Device does not have a depth sensor");
-}
-
-void remove_background(rs2::video_frame& other_frame, const rs2::depth_frame& depth_frame, float depth_scale, float clipping_dist)
-{
-    const uint16_t* p_depth_frame = reinterpret_cast<const uint16_t*>(depth_frame.get_data());
-    uint8_t* p_other_frame = reinterpret_cast<uint8_t*>(const_cast<void*>(other_frame.get_data()));
-
-    int width = other_frame.get_width();
-    int height = other_frame.get_height();
-    int other_bpp = other_frame.get_bytes_per_pixel();
-
-    #pragma omp parallel for schedule(dynamic) //Using OpenMP to try to parallelise the loop
-    for (int y = 0; y < height; y++)
-    {
-        auto depth_pixel_index = y * width;
-        for (int x = 0; x < width; x++, ++depth_pixel_index)
-        {
-            // Get the depth value of the current pixel
-            auto pixels_distance = depth_scale * p_depth_frame[depth_pixel_index];
-
-            // Check if the depth value is invalid (<=0) or greater than the threashold
-            if (pixels_distance <= 0.f || pixels_distance > clipping_dist)
-            {
-                // Calculate the offset in other frame's buffer to current pixel
-                auto offset = depth_pixel_index * other_bpp;
-
-                // Set pixel to "background" color (0x999999)
-                std::memset(&p_other_frame[offset], 0x99, other_bpp);
-            }
-        }
-    }
-}
 
 //#define WINDOW_NAME "Viewer to get depth"
 const auto depth_window = "Depth Image";
@@ -148,20 +90,17 @@ void init_windows()
         moveWindow(depth_window, 0, 0);
     }
 
-    //namedWindow(rgb_window, WINDOW_AUTOSIZE);
-    //moveWindow(rgb_window, DEFAULT_WIDTH+55, 0);
-
 #if 0
+    namedWindow(rgb_window, WINDOW_AUTOSIZE);
+    moveWindow(rgb_window, DEFAULT_WIDTH+55, 0);
     namedWindow(edged_window);
     moveWindow(edged_window, 0, 0);
+    namedWindow(crop_window, WINDOW_AUTOSIZE);
+    moveWindow(crop_window, 0, DEFAULT_HEIGHT+50);
 #endif
 
     // Init cvui and tell it to create a OpenCV window, i.e. cv::namedWindow(WINDOW_NAME).
-    //cvui::init(depth_window);
     cvui::init(depth_window);
-
-    // namedWindow(crop_window, WINDOW_AUTOSIZE);
-    // moveWindow(crop_window, 0, DEFAULT_HEIGHT+50);
 }
 
 bool show_cvfps(cv::Mat& cv_img, double elapsed_time)
@@ -232,71 +171,6 @@ void get_all_depth_data(const void* depth_data, const std::vector<cv::Point>& po
     }
 }
 
-
-/// [in] depth_data: raw data buffer of depth
-/// [in] vector to store points
-int get_avg_depth_from_points(const std::vector<int>& all_depth_results)
-{
-    int sum = 0;
-    for (auto ii=0; ii<all_depth_results.size(); ++ii) {
-        sum += all_depth_results.at(ii);
-    }
-
-    return sum / all_depth_results.size();
-}
-
-int get_median_depth_from_points(const std::vector<int>& all_depth_results)
-{
-    int ans = 0;
-    std::vector<int> v = all_depth_results;
-    std::nth_element(v.begin(), v.begin() + v.size()/2, v.end());
-    auto id1 = v.size() / 2;
-    if ( all_depth_results.size() % 2 ) {   // size is odd
-        ans = v[id1];
-    } else {    // size is even
-        if (v.size() / 2 >= 1) {
-            auto id0 = v.size() / 2 - 1;
-            ans = (v[id0] + v[id1]) / 2;
-        }
-    }
-
-    return ans;
-}
-
-bool check_point(int x1, int y1, int x2, int y2, double& degree)
-{
-    const int margin = 100;
-    // area #1
-    if (y1<margin && y2<margin)
-        return false;
-    if (y1>DEFAULT_HEIGHT-margin && y2>DEFAULT_HEIGHT-margin)
-        return false;
-    if (x1<margin && x2<margin)
-        return false;
-    if (x1>DEFAULT_WIDTH-margin && x2>DEFAULT_WIDTH-margin)
-        return false;
-
-    if (x1 == x2) {
-        return false;
-    }
-
-    float dy = y1 - y2;
-    float dx = fabs(x1 - x2);
-    if (dx < 1.0 || dy < 1.0) {
-        //cout << "x";
-        return false;
-    }
-
-    float slope = dy / dx;
-    degree = atan(slope) * 180.0 / M_PI;
-    //cout << "dx " << dx << " dy " << dy << " slope: " << slope << " theta: " << degree << endl;
-    if (degree > 75.0) {
-        return false;
-    }
-
-    return true;
-}
-
 float get_length_from_vec4i(const cv::Vec4i& v)
 {
     int x1 = v[0], y1 = v[1], x2 = v[2], y2 = v[3];
@@ -327,9 +201,35 @@ bool cmp_by_med_depth(cv::Vec8i& m, cv::Vec8i& n)
 
 void preprocess_for_edge(cv::Mat& input, cv::Mat& output)
 {
-    ReadSetting* settings = ReadSetting::getInstance();
+    using namespace cv;
 
+    ReadSetting* settings = ReadSetting::getInstance();
     Canny(input, output, settings->canny_threshold_min, settings->canny_threshold_max);
+}
+
+void save_procedure(const cv::Mat& color_image, const cv::Mat& depth_image, const cv::Mat& edge_image, const void* depth_data)
+{
+    ReadSetting* settings = ReadSetting::getInstance();
+    string fn;
+    int serial = cvutil::get_timeepoch();
+
+    fn = cvutil::compose_image_fn("color", serial);
+    cout << "output color file to: " << fn << endl;
+    cvutil::save_mat_to_file(color_image, fn);
+
+    fn = cvutil::compose_image_fn("depth", serial);
+    cout << "output depth file to: " << fn << endl;
+    cvutil::save_mat_to_file(depth_image, fn);
+
+    if (settings->find_edge) {
+        fn = cvutil::compose_image_fn("edged", serial);
+        cvutil::save_mat_to_file(edge_image, fn);
+    }
+
+    fn = cvutil::compose_depth_bin("depth", serial);
+    save_depth_to_bin(fn, (void*)depth_data, depth_image.cols, depth_image.rows);
+
+    cout << "output depth bin to: " << fn << endl;
 }
 
 ///
@@ -342,29 +242,18 @@ void find_edge(cv::Mat& color_image, const void* depth_data, cv::Mat& edge_image
 {
     using namespace cv;
 
+    if (color_image.total() == 0) {
+        std::cout << "[ERROR] color_image is size 0\n";
+        return;
+    }
+
     ReadSetting* settings = ReadSetting::getInstance();
     Mat gray_image;
     cvtColor(color_image, gray_image, COLOR_BGR2GRAY);
     GaussianBlur(gray_image, gray_image, Size(settings->blur_radius, settings->blur_radius), 0, 0, BORDER_DEFAULT);
 
-    //imshow(edged_window, gray_image);
-
     Mat canny_output;
     preprocess_for_edge(gray_image, canny_output);
-
-#if 0
-    // find contours
-    vector<vector<Point> > contours;
-    vector<Vec4i> hierarchy;
-    findContours(canny_output, contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE);
-    Scalar color = Scalar(255, 255, 0);
-    /// Draw contours
-    Mat drawing = Mat::zeros( canny_output.size(), CV_8UC3 );
-    for( size_t i = 0; i< contours.size(); i++ ) {
-        drawContours( drawing, contours, (int)i, color, 2, LINE_8, hierarchy, 0 );
-    }
-    imshow(edged_window, drawing);
-#endif
 
     //vector<Vec4i> p_lines;
     //Mat probabilistic_hough;
@@ -384,16 +273,6 @@ void find_edge(cv::Mat& color_image, const void* depth_data, cv::Mat& edge_image
     /// Show the result
     for( size_t i = 0; i < p_lines.size(); i++ ) {
         Vec4i l = p_lines[i];
-#if 0
-        Scalar color;
-        if ( check_point(l[0], l[1], l[2], l[3]) ) {
-            color = Scalar(0, 0, 255);
-        } else {
-            color = Scalar(255, 0, 0);
-        }
-        line( probabilistic_hough, Point(l[0], l[1]), Point(l[2], l[3]), color, 3, LINE_AA);
-#endif
-
 
         // Vec8f means a vector with 6 floating numbers
         // 0:x1, y1, x2, y2,
@@ -402,7 +281,7 @@ void find_edge(cv::Mat& color_image, const void* depth_data, cv::Mat& edge_image
         // 6: average depth data
         // 7: median depth data
         double degree = 0.0;
-        if (check_point(l[0], l[1], l[2], l[3], degree)) {
+        if (cvutil::check_point(l[0], l[1], l[2], l[3], degree)) {
             Vec8i r;
             r[0] = l[0];  r[1] = l[1];  r[2] = l[2];  r[3] = l[3];
             //r[4] = get_length_from_vec4i(l);
@@ -417,9 +296,9 @@ void find_edge(cv::Mat& color_image, const void* depth_data, cv::Mat& edge_image
             if (ret) {
                 vector<int> all_depth_results;
                 get_all_depth_data(depth_data, points, all_depth_results);
-                int avg = get_avg_depth_from_points(all_depth_results);
+                int avg = cvutil::get_avg_depth_from_points(all_depth_results);
                 r[6] = avg;
-                int median = get_median_depth_from_points(all_depth_results);
+                int median = cvutil::get_median_depth_from_points(all_depth_results);
                 r[7] = median;
             } else {
                 //printf("1:");
@@ -442,24 +321,23 @@ void find_edge(cv::Mat& color_image, const void* depth_data, cv::Mat& edge_image
     //printf("size of results: %d ===>", (int)results.size());
 
     size_t num_to_show = 1;
-#if 0
+
     // find the longest line and show
-    sort(results.begin(), results.end(), cmp_by_length);
-#else
+    //sort(results.begin(), results.end(), cmp_by_length);
     // find the nearest line and show
     //sort(results.begin(), results.end(), cmp_by_depth);
     sort(results.begin(), results.end(), cmp_by_med_depth);
-#endif
     size_t results_size = results.size();
-
-
-    // show answers
-    for (size_t ii = 0; ii < std::min(results_size, num_to_show); ii++) {
-        //printf("size of results: %d\t", (int)results.size());
-        Vec8i z = results.at(ii);
-        //cout << z << endl;
-        show_answer(edge_image, z, colors.at(ii % colors.size()), ii);
-        //line( edge_image, Point(l[0], l[1]), Point(l[2], l[3]), color, 3, LINE_AA);
+    if (results_size) {
+        // show answers
+        for (size_t ii = 0; ii < std::min(results_size, num_to_show); ii++) {
+            //printf("size of results: %d\t", (int)results.size());
+            Vec8i z = results.at(ii);
+            //cout << z << endl;
+            show_line();
+            show_answer(edge_image, z, Scalar(0, 0, 0xff), ii);
+            //line( edge_image, Point(l[0], l[1]), Point(l[2], l[3]), color, 3, LINE_AA);
+        }
     }
     // else {
     //     printf("answer: no answer...\n");
@@ -467,19 +345,58 @@ void find_edge(cv::Mat& color_image, const void* depth_data, cv::Mat& edge_image
     //printf("----------\n");
 }
 
-void draw_crosshair(cv::Mat& img, const cv::Point& pt)
+void do_click_window(rs2::depth_frame depth, cv::Mat& color_image, cv::Mat& depth_image)
 {
-    using namespace cv;
-    const int slen = 40;
-    const int radius = 10;
-    Scalar color = Scalar(0, 0, 0xff);
-    circle(img, pt, radius, color);
-    Point p1 = Point(pt.x - slen, pt.y );
-    Point p2 = Point(pt.x + slen, pt.y );
-    line(img, p1, p2, color, 1, LINE_AA);
-    Point p3 = Point(pt.x, pt.y - slen);
-    Point p4 = Point(pt.x, pt.y + slen);
-    line(img, p3, p4, color, 1, LINE_AA);
+    const int printx = 180;
+    const int print_inc_y = 20;
+    const int print_color = 0xffff00;
+    const float print_size = 0.6;
+    int printy = 30;
+
+    static cv::Point cross;
+    static cv::Vec3f xyz;
+
+    int x = cvui::mouse().x % DEFAULT_WIDTH;
+    int y = cvui::mouse().y % DEFAULT_HEIGHT;
+    cvui::printf(depth_image, printx, printy, print_size, print_color, "Mouse pointer is at (%d,%d)", cross.x, cross.y);
+    printy += print_inc_y;
+
+    if (cross.x == 0 && cross.y == 0) {
+        // do nothing
+    } else {
+        int _depth_pt = get_dpeth_pt(depth.get_data(), cross.x, cross.y);
+        cvui::printf(depth_image, printx, printy, print_size, print_color, "Depth is %4d (mm)", _depth_pt, _depth_pt);
+        printy += print_inc_y;
+
+        rsutil::query_uv2xyz(depth, cross, xyz);
+        xyz = xyz * 1000;
+        cvui::printf(depth_image, printx, printy, print_size, print_color, "xyz: %.0f,%.0f,%.0f", xyz[0], xyz[1], xyz[2]);
+        printy += print_inc_y;
+
+        double dd[3];
+        dd[0] = xyz[0];  dd[1] = 0.0;  dd[2] = xyz[2];
+        cv::Mat v(3, 1, CV_32F, dd);
+
+        double t_deg = 0.0;
+        if (rsutil::get_vec_deg(v, t_deg, true)) {
+            cvui::printf(depth_image, printx, printy, print_size, print_color, "deg v to u: %.2f", t_deg);
+            printy += print_inc_y;
+        }
+    }
+
+    cv::Rect rectangle(0, 0, DEFAULT_WIDTH*2, DEFAULT_HEIGHT);
+    int status = cvui::iarea(rectangle.x, rectangle.y, rectangle.width, rectangle.height);
+    switch (status) {
+        case cvui::CLICK:
+            cross.x = x;
+            cross.y = y;
+            break;
+    }
+    //float dist = depth.get_distance(x, y);
+    //cvui::printf(depth_image, 240, 90, "dist is %f", dist);
+    cvui::update();
+    cvutil::draw_crosshair(depth_image, cross);
+    cvutil::draw_crosshair(color_image, cross);
 }
 
 
@@ -490,12 +407,10 @@ int test_realsense() try
     ReadSetting* settings = ReadSetting::getInstance();
 
     init_windows();
-    if ( !show_info() ) {
+    if ( !rsutil::show_rsinfo() ) {
         printf("no Intel Realsense camera, exit...\n");
         exit(-1);
     }
-
-    init_colors();
 
     //Create a configuration for configuring the pipeline with a non default profile
     rs2::config cfg;
@@ -510,7 +425,7 @@ int test_realsense() try
     if (!settings->apply_sleep) {
         // Start streaming with default recommended configuration
         rs2::pipeline_profile profile = pipe.start(cfg);
-        depth_scale = get_depth_scale(profile.get_device());
+        depth_scale = rsutil::get_depth_scale(profile.get_device());
         cout << "depth scale:" << depth_scale << endl;
     } else {
         std::cout << "pipe is sleeping..." << std::endl;
@@ -535,14 +450,14 @@ int test_realsense() try
         waitKey(0);
     }
 
-    Point cross;
-    cv::Vec3f xyz;
-
     while (true) {
         int64 e1 = cv::getTickCount();
-
         if (!settings->apply_sleep) {
             rs2::frameset frameset = pipe.wait_for_frames(); // Wait for next set of frames from the camera
+            if (!frameset) {
+                cout << "no frameset...\n";
+                continue;
+            }
 
             if (settings->apply_align) {
                 frameset = frameset.apply_filter(align_to);
@@ -571,11 +486,9 @@ int test_realsense() try
             rs2::depth_frame depth = frameset.get_depth_frame();
             rs2::video_frame color = frameset.get_color_frame();
 
-#if 1
             if (settings->distance_limit > 0.0) {
-                remove_background(color, depth, depth_scale, settings->distance_limit);
+                rsutil::remove_background(color, depth, depth_scale, settings->distance_limit);
             }
-#endif
             auto colorized_depth = frameset.first(RS2_STREAM_DEPTH, RS2_FORMAT_RGB8);
 
             // Query frame size (width and height)
@@ -603,60 +516,8 @@ int test_realsense() try
 /// try to find edge of table ... }
             }
 
-/// to show depth data with mouse pointer
-#if 1
-        {
-            // cv::Point pt1(230, 40);
-            // cv::Point pt2(450, 90);
-            // cv::rectangle(depth_image, pt1, pt2, cv::Scalar(49, 52, 49), CV_FILLED);
-            int x = cvui::mouse().x % DEFAULT_WIDTH;
-            int y = cvui::mouse().y % DEFAULT_HEIGHT;
-            cvui::printf(depth_image, 180, 30, 0.6, 0xffff00, "Mouse pointer is at (%d,%d)", cross.x, cross.y);
-
-            if (cross.x == 0 && cross.y == 0) {
-                // do nothing
-            } else {
-                int _depth_pt = get_dpeth_pt(depth.get_data(), cross.x, cross.y);
-                cvui::printf(depth_image, 180, 50, 0.6, 0xffff00, "Depth is %4d (mm)", _depth_pt, _depth_pt);
-
-                query_uv2xyz(depth, cross, xyz);
-                xyz = xyz * 1000;
-                cvui::printf(depth_image, 180, 70, 0.6, 0xffff00, "xyz: %.0f,%.0f,%.0f", xyz[0], xyz[1], xyz[2]);
-
-                double dd[3];
-                dd[0] = xyz[0];  dd[1] = 0.0;  dd[2] = xyz[2];
-                Mat v(3, 1, CV_32F, dd);
-
-                double t_deg = 0.0;
-                if (get_vec_deg(v, t_deg, true)) {
-                    cvui::printf(depth_image, 180, 90, 0.6, 0xffff00, "deg v to u: %.2f", t_deg);
-                }
-            }
-
-            cv::Rect rectangle(0, 0, 1280, 480);
-            int status = cvui::iarea(rectangle.x, rectangle.y, rectangle.width, rectangle.height);
-            switch (status) {
-                case cvui::CLICK:
-                    //std::cout << "Rectangle was clicked!" << std::endl;
-                    //cout << "mouse click at " << x << "," << y << endl;
-                    cross.x = x;
-                    cross.y = y;
-                    break;
-                //case cvui::DOWN:
-                    //cvui::printf(frame, 240, 70, "Mouse is: DOWN");
-                    //cout << "mouse down " << x << "," << y << endl;
-                    //break;
-                default:
-                    break;
-            }
-            //float dist = depth.get_distance(x, y);
-            //cvui::printf(depth_image, 240, 90, "dist is %f", dist);
-            cvui::update();
-            draw_crosshair(depth_image, cross);
-            draw_crosshair(color_image, cross);
-        }
-#endif
-
+            /// to show depth data with mouse pointer
+            do_click_window(depth, color_image, depth_image);
 
             int64 e2 = cv::getTickCount();
             double elapse_time = (e2 - e1) / cv::getTickFrequency();
@@ -682,34 +543,11 @@ int test_realsense() try
                 cout << "break" << endl;
                 break;
             } else if (key == 's') {
-                cout << "color: " << color_image.cols << "," << color_image.rows << endl
-                    /* << " size: " << color_image.size << endl */ ;
-                cout << "depth: " << depth_image.cols << "," << depth_image.rows << endl
-                    /* << " size: " << depth_image.size << endl */ ;
-                string fn;
-                int serial = cvutil::get_timeepoch();
-
-                fn = cvutil::compose_image_fn("color", serial);
-                cout << "output color file to: " << fn << endl;
-                cvutil::save_mat_to_file(color_image, fn);
-
-                fn = cvutil::compose_image_fn("depth", serial);
-                cout << "output depth file to: " << fn << endl;
-                cvutil::save_mat_to_file(depth_image, fn);
-
-                if (settings->find_edge) {
-                    fn = cvutil::compose_image_fn("edged", serial);
-                    cvutil::save_mat_to_file(edge_image, fn);
-                }
-
-                fn = cvutil::compose_depth_bin("depth", serial);
-                save_depth_to_bin(fn, (void*)depth.get_data(), depth_image.cols, depth_image.rows);
-                cout << "output depth bin to: " << fn << endl;
+                save_procedure(color_image, depth_image, edge_image, depth.get_data());
             }
         } else {
             usleep(SLEEP_DURATION);
         }
-
     }
 
     if (!settings->apply_sleep) {
