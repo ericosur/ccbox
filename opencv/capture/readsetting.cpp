@@ -27,9 +27,18 @@ ReadSetting* ReadSetting::getInstance()
 
 ReadSetting::ReadSetting()
 {
-    if (load_json(JSON_FILE)) {
+}
 
+bool ReadSetting::read_setting()
+{
+    bool ret = load_json(JSON_FILE);
+    if (ret) {
+        isOpened = true;
+    } else {
+        cout << "[ERROR] load json error\n";
+        isOpened = false;
     }
+    return ret;
 }
 
 void ReadSetting::show(const std::string& str, bool true_false)
@@ -113,6 +122,9 @@ bool ReadSetting::load_json(const std::string& json_file)
         show("apply_temporal", apply_temporal);
         apply_holefill = jsub.at("apply_holefill");
         show("apply_holefill", apply_holefill);
+
+        max_degree = jsub.at("max_degree");
+        show("max_degree", max_degree);
 #endif
     }
     catch (nlohmann::json::parse_error& e) {

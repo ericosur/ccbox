@@ -74,6 +74,7 @@ add_executable(
     cvui.h
     cvutil.cpp cvutil.h
     rsutil.cpp rsutil.h
+    miscutil.cpp miscutil.h
     readsetting.cpp readsetting.h
     captureDemo.cpp
     rs-imshow.cpp

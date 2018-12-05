@@ -43,21 +43,23 @@ inline int my_avg(int m, int n)
 // 0:x1, y1, x2, y2,
 // 4: degree for 2D
 // 5: depth data at center
-// 6: average depth data
+// 6: average depth data/
 // 7: median depth data
-void show_answer(cv::Mat& img, const cv::Vec8i& z, const cv::Scalar& color, int idx)
+void show_answer(cv::Mat& depth_img, cv::Mat& color_img, const cv::Vec8i& z, const cv::Scalar& color, int idx)
 {
     using namespace cv;
     char msg[128];
 
-    line(img, Point(z[0], z[1]), Point(z[2], z[3]), color, 2, LINE_AA);
+    line(depth_img, Point(z[0], z[1]), Point(z[2], z[3]), color, 2, LINE_AA);
+    line(color_img, Point(z[0], z[1]), Point(z[2], z[3]), color, 2, LINE_AA);
     sprintf(msg, "ans(%d): %3d,%3d - %3d,%3d, [%4d], avg[%4d], med[%4d], deg:%03d",
             (int)idx, z[0], z[1], z[2], z[3], z[5], z[6], z[7], z[4]);
 
-    rectangle(img, Point(45, 45), Point(500, 80), cv::Scalar(52, 52, 52), CV_FILLED);
-    cvui::printf(img, 50, 50, msg);
+    rectangle(depth_img, Point(45, 45), Point(500, 80), cv::Scalar(52, 52, 52), CV_FILLED);
+    cvui::printf(depth_img, 50, 50, msg);
 
-    circle(img, Point(my_avg(z[0], z[2]), my_avg(z[1], z[3])), 3, Scalar(0xff, 0, 0));
+    circle(depth_img, Point(my_avg(z[0], z[2]), my_avg(z[1], z[3])), 3, Scalar(0xff, 0, 0));
+    circle(color_img, Point(my_avg(z[0], z[2]), my_avg(z[1], z[3])), 3, Scalar(0xff, 0, 0));
     printf("%s\n", msg);
 }
 
@@ -249,13 +251,21 @@ void find_edge(cv::Mat& color_image, const void* depth_data, cv::Mat& edge_image
 
     ReadSetting* settings = ReadSetting::getInstance();
     Mat gray_image;
-    cvtColor(color_image, gray_image, COLOR_BGR2GRAY);
-    GaussianBlur(gray_image, gray_image, Size(settings->blur_radius, settings->blur_radius), 0, 0, BORDER_DEFAULT);
+    cvtColor(color_image , gray_image, COLOR_BGR2GRAY);
+    Mat gauss;
+    GaussianBlur(gray_image, gauss, Size(settings->blur_radius, settings->blur_radius), 3);
+    addWeighted(gray_image, 1.5, gauss, -0.5, 0, gray_image);
 
     Mat canny_output;
-    preprocess_for_edge(gray_image, canny_output);
+    Canny(gray_image, canny_output, settings->canny_threshold_min, settings->canny_threshold_max);
 
-    //vector<Vec4i> p_lines;
+    Mat dst;
+    float ratio = 0.4;
+    // resize to 25%
+    resize(canny_output, dst, Size(), ratio, ratio, INTER_AREA);
+    // resize to original size
+    resize(dst, canny_output, Size(), 1.0/ratio, 1.0/ratio, INTER_LINEAR);
+
     //Mat probabilistic_hough;
     cvtColor(canny_output, edge_image, COLOR_GRAY2BGR);
 
@@ -320,7 +330,7 @@ void find_edge(cv::Mat& color_image, const void* depth_data, cv::Mat& edge_image
 
     //printf("size of results: %d ===>", (int)results.size());
 
-    size_t num_to_show = 1;
+    size_t num_to_show = 3;
 
     // find the longest line and show
     //sort(results.begin(), results.end(), cmp_by_length);
@@ -334,15 +344,10 @@ void find_edge(cv::Mat& color_image, const void* depth_data, cv::Mat& edge_image
             //printf("size of results: %d\t", (int)results.size());
             Vec8i z = results.at(ii);
             //cout << z << endl;
-            show_line();
-            show_answer(edge_image, z, Scalar(0, 0, 0xff), ii);
+            show_answer(edge_image, color_image, z, Scalar(((ii&&ii%2)?0x7f:0), (ii?0x7f:0), 0xff), ii);
             //line( edge_image, Point(l[0], l[1]), Point(l[2], l[3]), color, 3, LINE_AA);
         }
     }
-    // else {
-    //     printf("answer: no answer...\n");
-    // }
-    //printf("----------\n");
 }
 
 void do_click_window(rs2::depth_frame depth, cv::Mat& color_image, cv::Mat& depth_image)
@@ -376,12 +381,13 @@ void do_click_window(rs2::depth_frame depth, cv::Mat& color_image, cv::Mat& dept
         double dd[3];
         dd[0] = xyz[0];  dd[1] = 0.0;  dd[2] = xyz[2];
         cv::Mat v(3, 1, CV_32F, dd);
-
+#if 0
         double t_deg = 0.0;
         if (rsutil::get_vec_deg(v, t_deg, true)) {
             cvui::printf(depth_image, printx, printy, print_size, print_color, "deg v to u: %.2f", t_deg);
             printy += print_inc_y;
         }
+#endif
     }
 
     cv::Rect rectangle(0, 0, DEFAULT_WIDTH*2, DEFAULT_HEIGHT);
@@ -397,6 +403,20 @@ void do_click_window(rs2::depth_frame depth, cv::Mat& color_image, cv::Mat& dept
     cvui::update();
     cvutil::draw_crosshair(depth_image, cross);
     cvutil::draw_crosshair(color_image, cross);
+}
+
+int test_from_image(const std::string& fn)
+{
+    using namespace cv;
+    if (!ReadSetting::is_file_exist(fn)) {
+        cout << "image not found!\n";
+        return -1;
+    }
+
+    Mat img = imread(fn);
+    imshow("test", img);
+    waitKey(0);
+    return 0;
 }
 
 
@@ -415,8 +435,8 @@ int test_realsense() try
     //Create a configuration for configuring the pipeline with a non default profile
     rs2::config cfg;
     //Add desired streams to configuration
-    cfg.enable_stream(RS2_STREAM_COLOR, DEFAULT_WIDTH, DEFAULT_HEIGHT, RS2_FORMAT_BGR8, 30);
-    cfg.enable_stream(RS2_STREAM_DEPTH, DEFAULT_WIDTH, DEFAULT_HEIGHT, RS2_FORMAT_Z16);
+    cfg.enable_stream(RS2_STREAM_COLOR, DEFAULT_WIDTH, DEFAULT_HEIGHT, RS2_FORMAT_BGR8, 15);
+    cfg.enable_stream(RS2_STREAM_DEPTH, DEFAULT_WIDTH, DEFAULT_HEIGHT, RS2_FORMAT_Z16, 15);
 
     // Declare RealSense pipeline, encapsulating the actual device and sensors
     rs2::pipeline pipe;
@@ -506,6 +526,8 @@ int test_realsense() try
             // Create OpenCV matrix of size (w,h) from the colorized depth data
             Mat depth_image(Size(w, h), CV_8UC3, (void*)colorized_depth.get_data());
             Mat color_image(Size(w, h), CV_8UC3, (void*)color.get_data());
+            Mat orig_depth_image = depth_image.clone();
+            Mat orig_color_image = color_image.clone();
             Mat edge_image;
 
             if (settings->find_edge) {
@@ -544,6 +566,8 @@ int test_realsense() try
                 break;
             } else if (key == 's') {
                 save_procedure(color_image, depth_image, edge_image, depth.get_data());
+            } else if (key == 'c') {
+                save_procedure(orig_color_image, orig_depth_image, edge_image, depth.get_data());
             }
         } else {
             usleep(SLEEP_DURATION);

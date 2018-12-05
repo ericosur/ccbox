@@ -25,6 +25,7 @@ public:
     static bool is_file_exist(const std::string& fn);
 
 #ifdef USE_JSON
+    bool read_setting();
     bool load_json(const std::string& json_file);
 #endif
 
@@ -54,6 +55,8 @@ protected:
     }
 
 public:
+    bool isOpened = false;
+
     int video_id = 0;
     int default_width = DEFAULT_WIDTH;
     int default_height = DEFAULT_HEIGHT;
@@ -82,6 +85,9 @@ public:
     bool apply_temporal = true;
     bool apply_spatial = true;
     bool apply_holefill = true;
+
+    float max_degree = 60.0;
+    std::string input_image = "";
 #endif
 
 private:

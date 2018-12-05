@@ -15,9 +15,9 @@
         "blur_radius": 3,
         "canny_threshold_min": 25,
         "canny_threshold_max": 50,
-        "hough_threshold": 75,
-        "hough_minlength": 140,
-        "hough_maxlinegap": 50,
+        "hough_threshold": 70,
+        "hough_minlength": 130,
+        "hough_maxlinegap": 45,
         "show_dist": false,
         "show_fps": true,
         "color_scheme": 2,
@@ -28,6 +28,7 @@
         "apply_dec": true,
         "apply_spatial": true,
         "apply_temporal": true,
-        "apply_holefill": true
+        "apply_holefill": true,
+        "max_degree": 45
     }
 }

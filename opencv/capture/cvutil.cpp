@@ -1,4 +1,5 @@
 #include "cvutil.h"
+#include "readsetting.h"
 
 #include <stdio.h>
 #include <cstdlib>
@@ -229,7 +230,9 @@ void test_get_points_between_two_points()
 
 bool check_point(int x1, int y1, int x2, int y2, double& degree)
 {
-    const int margin = 100;
+    ReadSetting* sett = ReadSetting::getInstance();
+    const int margin = 80;
+    const float ang_too_slope = sett->max_degree;
     // area #1
     if (y1<margin && y2<margin)
         return false;
@@ -254,7 +257,7 @@ bool check_point(int x1, int y1, int x2, int y2, double& degree)
     float slope = dy / dx;
     degree = atan(slope) * 180.0 / M_PI;
     //cout << "dx " << dx << " dy " << dy << " slope: " << slope << " theta: " << degree << endl;
-    if (degree > 75.0) {
+    if (degree > ang_too_slope) {
         return false;
     }
 
