@@ -228,6 +228,7 @@ void test_get_points_between_two_points()
 
 }
 
+#ifdef USE_REALSENSE
 bool check_point(int x1, int y1, int x2, int y2, double& degree)
 {
     ReadSetting* sett = ReadSetting::getInstance();
@@ -263,6 +264,7 @@ bool check_point(int x1, int y1, int x2, int y2, double& degree)
 
     return true;
 }
+#endif
 
 /// [in] depth_data: raw data buffer of depth
 /// [in] vector to store points

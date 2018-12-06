@@ -12,11 +12,12 @@ namespace miscutil {
 void print_help()
 {
     printf("help!\n"
-        "-i input dir\n"
+        "-i input image\n"
         "-h help message\n"
         );
 }
 
+#ifdef USE_REALSENSE
 bool handleOpt(int argc, char** argv)
 {
     bool configured = false;
@@ -51,6 +52,6 @@ bool handleOpt(int argc, char** argv)
 
     return configured;
 }
-
+#endif
 
 }   // namespace miscutil

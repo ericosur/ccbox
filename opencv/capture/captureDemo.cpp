@@ -216,8 +216,10 @@ int demoCapture()
     }
 
 	//set height and width of capture frame
-	capture.set(CV_CAP_PROP_FRAME_WIDTH, FRAME_WIDTH);
-	capture.set(CV_CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT);
+    cout << "width: " << FRAME_WIDTH << endl
+         << "height: " << FRAME_HEIGHT << endl;
+	capture.set(CAP_PROP_FRAME_WIDTH, FRAME_WIDTH);
+	capture.set(CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT);
 
     // create namedWindows
     namedWindow(WINDOW_ORIGIN, WINDOW_AUTOSIZE);
@@ -296,8 +298,10 @@ int demoTest()
     moveWindow(WIN_EDGE, 50, 300);
 
     //set height and width of capture frame
-    cap.set(CV_CAP_PROP_FRAME_WIDTH, FRAME_WIDTH);
-    cap.set(CV_CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT);
+    cout << "width: " << FRAME_WIDTH << endl
+         << "height: " << FRAME_HEIGHT << endl;
+    cap.set(CAP_PROP_FRAME_WIDTH, FRAME_WIDTH);
+    cap.set(CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT);
 
     printf("press ESC/q to quit %s...\npress SPACE/s to save RGB mat\n", __func__);
     while (true) {
@@ -313,6 +317,7 @@ int demoTest()
 
         int key = waitKey(500);
         if ( key == 'q' || key == 27 ) {
+            destroyAllWindows();
             break;
         }
 #if 0
@@ -323,6 +328,7 @@ int demoTest()
         }
 #endif
     }
-    destroyAllWindows();
+
+    cap.release();
     return 0;
 }

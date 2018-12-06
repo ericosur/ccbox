@@ -40,7 +40,9 @@ void test_iou();
 
 int get_points_between_two_points(const cv::Mat& img, const cv::Point& p1, const cv::Point& p2, std::vector<cv::Point>& points);
 
+#ifdef USE_REALSENSE
 bool check_point(int x1, int y1, int x2, int y2, double& degree);
+#endif
 int get_avg_depth_from_points(const std::vector<int>& all_depth_results);
 int get_median_depth_from_points(const std::vector<int>& all_depth_results);
 bool show_cvfps(cv::Mat& cv_img, double elapsed_time);

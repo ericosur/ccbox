@@ -3,7 +3,9 @@
 
 namespace miscutil {
 
+#ifdef USE_REALSENSE
 bool handleOpt(int argc, char** argv);
+#endif
 
 }   // namespace miscutil
 
