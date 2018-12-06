@@ -9,6 +9,7 @@
     "use_hsv_test": false,
 
     "output_dir": "outdir",
+    "debug": false,
 
     "realsense": {
         "find_edge": true,

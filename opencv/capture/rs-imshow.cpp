@@ -127,6 +127,19 @@ bool show_cvfps(cv::Mat& cv_img, double elapsed_time)
     return true;
 }
 
+bool load_bin_to_buffer(const std::string& fn, uint8_t* buffer, size_t buffer_size)
+{
+    FILE* fptr = fopen(fn.c_str(), "rb");
+    if (fptr == NULL) {
+        return false;
+    }
+    size_t rs = fread(buffer, sizeof(uint8_t), buffer_size, fptr);
+    //printf("rs: %d\n", (int)rs);
+    (void)rs;
+    fclose(fptr);
+    return true;
+}
+
 bool save_depth_to_bin(const std::string& fn, void* buffer, size_t width, size_t height)
 {
     using namespace std;
@@ -249,12 +262,19 @@ void find_edge(cv::Mat& color_image, const void* depth_data, cv::Mat& edge_image
         return;
     }
 
+    cout << "cols: " << color_image.cols << endl
+         << "rows: " << color_image.rows << endl;
+
     ReadSetting* settings = ReadSetting::getInstance();
     Mat gray_image;
     cvtColor(color_image , gray_image, COLOR_BGR2GRAY);
+    show_line();
     Mat gauss;
     GaussianBlur(gray_image, gauss, Size(settings->blur_radius, settings->blur_radius), 3);
+    show_line();
+
     addWeighted(gray_image, 1.5, gauss, -0.5, 0, gray_image);
+    show_line();
 
     Mat canny_output;
     Canny(gray_image, canny_output, settings->canny_threshold_min, settings->canny_threshold_max);
@@ -405,7 +425,41 @@ void do_click_window(rs2::depth_frame depth, cv::Mat& color_image, cv::Mat& dept
     cvutil::draw_crosshair(color_image, cross);
 }
 
-int test_from_image(const std::string& fn)
+int test_from_image()
+{
+    using namespace cv;
+
+    ReadSetting* sett = ReadSetting::getInstance();
+    const std::string& cfn = sett->color_image;
+    const std::string& dfn = sett->depth_image;
+    const std::string& datfn = sett->depth_data;
+    cout << "cfn: " << cfn << endl
+         << "dfn: " << dfn << endl
+         << "data: " << datfn << endl;
+
+    // UINT16, 2bytes
+    const int dep_buffer_size = DEFAULT_WIDTH * DEFAULT_HEIGHT * 2;
+    uint8_t dep_buffer[dep_buffer_size];
+
+    Mat color_img;
+    Mat depth_img;
+    Mat edge_img;
+
+    color_img = imread(cfn);
+    depth_img = imread(dfn);
+
+    load_bin_to_buffer(datfn, dep_buffer, dep_buffer_size);
+    vector<Vec4i> p_lines;
+    find_edge(depth_img, dep_buffer, edge_img, p_lines);
+    imshow("edge1", edge_img);
+    find_edge(color_img, dep_buffer, edge_img, p_lines);
+    imshow("edge2", edge_img);
+    waitKey(0);
+
+    return 0;
+}
+
+int show_image(const std::string& fn)
 {
     using namespace cv;
     if (!ReadSetting::is_file_exist(fn)) {

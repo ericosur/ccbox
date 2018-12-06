@@ -56,6 +56,7 @@ protected:
 
 public:
     bool isOpened = false;
+    bool debug = false;
 
     int video_id = 0;
     int default_width = DEFAULT_WIDTH;
@@ -67,7 +68,7 @@ public:
 
 #ifdef USE_REALSENSE
     bool find_edge = false;
-    int blur_radius = 8;
+    int blur_radius = 8;    // it is INVALID value, I put it here on purpose, MUST BE an odd number
     int canny_threshold_min = 15;
     int canny_threshold_max = 40;
     int hough_threshold = 75;
@@ -88,6 +89,9 @@ public:
 
     float max_degree = 60.0;
     std::string input_image = "";
+    std::string color_image = "";
+    std::string depth_image = "";
+    std::string depth_data = "";
 #endif
 
 private:

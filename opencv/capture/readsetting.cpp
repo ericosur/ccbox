@@ -74,10 +74,10 @@ bool ReadSetting::load_json(const std::string& json_file)
         cout << "video_id: " << vid << endl;
         video_id = vid;
 
-        default_width = json.at("default_width");
-        show("default_width", default_width);
-        default_height = json.at("default_height");
-        show("default_height", default_height);
+        // default_width = json.at("default_width");
+        // show("default_width", default_width);
+        // default_height = json.at("default_height");
+        // show("default_height", default_height);
 
         use_realsense = json.at("use_realsense");
 
@@ -88,6 +88,9 @@ bool ReadSetting::load_json(const std::string& json_file)
 
         std::string _dir = json.at("output_dir");
         output_dir = _dir;
+
+        bool _debug = json.at("debug");
+        debug = _debug;
 
 #ifdef USE_REALSENSE
         nlohmann::json jsub = json.at("realsense");
