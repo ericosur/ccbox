@@ -50,15 +50,20 @@ class App(object):
         cv.moveWindow(WIN_NAME, 0, 0)
         self.cap = video.create_capture(src, presets['book'])
         self.frame = None
+        self.auto_output_frame = None
         self.paused = False
         self.tracker = PlaneTracker()
         self.rect_sel = common.RectSelector('plane', self.on_rect)
         self.user_selected_rect = None
         self.focal_length = 0.0
         self.horizontal_angel = 0.0
+        self.known_distance = 200
         self.KNOWN_WIDTH = 40
         self.KNOWN_HEIGHT = 40
         self.msg = None
+        self.serial = 0
+        self.auto_save = False
+        self.auto_serial = 0
 
     def on_rect(self, rect):
         self.tracker.clear()
@@ -86,6 +91,15 @@ class App(object):
         with open('homo.json', 'w') as homo:
             homo.write(j)
 
+    def load_setting(self, fn):
+        data = myutil.read_jsonfile(fn, debug=True)
+        try:
+            tmp = data['auto_save']
+            self.auto_save = tmp
+        except:
+            pass
+        print('setting loaded, auto_save: {}'.format(self.auto_save))
+
     def load_config(self, fn):
         data = myutil.read_jsonfile(fn, debug=True)
         #print(data['fn'])
@@ -110,11 +124,11 @@ class App(object):
     def calc_focallength(self, rect):
         # initialize the known distance from the camera to the object, which
         # preset distance from samples
-        KNOWN_DISTANCE = 200
+        self.known_distance = 200
         # initialize the known object width, which in this case, the piece of
         # paper, unit mm
         width = rect[2] - rect[0]
-        focalLength = (width * KNOWN_DISTANCE) / self.KNOWN_WIDTH
+        focalLength = (width * self.known_distance) / self.KNOWN_WIDTH
         print('width: {} focal length: {:.2f}'.format(width, focalLength))
         return focalLength
 
@@ -190,7 +204,17 @@ class App(object):
         return True
 
 
+    def draw_result(self, img, wtf):
+        cv.putText(img, self.msg, (50, 50), cv.FONT_HERSHEY_SIMPLEX, 1.0, (0,0,0), lineType=cv.LINE_AA)
+        cv.polylines(img, [np.int32(wtf)], True, (255, 255, 255), 2)
+
+
     def run(self):
+        setting_fn = 'setting.json'
+        if myutil.isfile(setting_fn):
+            print('setting exists')
+            self.load_setting(setting_fn)
+        # load preset frame and rect
         if True and myutil.isfile('homo.json'):
             print('preset exists')
             tmp_frame = self.load_config('homo.json')
@@ -205,6 +229,7 @@ class App(object):
                 if not ret:
                     break
                 self.frame = frame.copy()
+                self.auto_output_frame = frame.copy()
 
             w, h = getsize(self.frame)
             vis = np.zeros((h, w*2, 3), np.uint8)
@@ -225,13 +250,16 @@ class App(object):
                     tracked = tracked[0]
                     wtf = np.int32(tracked.quad)
                     if self.check_wtf(wtf):
-                        cv.putText(vis, self.msg, (50, 50), cv.FONT_HERSHEY_SIMPLEX, 1.0, (0,0,0), lineType=cv.LINE_AA)
-                        cv.polylines(vis, [np.int32(tracked.quad)], True, (255, 255, 255), 2)
-                        cv.fillPoly(vis, [np.int32(tracked.quad)], (255,0,0))
+                        self.draw_result(vis, wtf)
+                        cv.fillPoly(vis, [wtf], (255,0,0))
                         for (x0, y0), (x1, y1) in zip(np.int32(tracked.p0), np.int32(tracked.p1)):
                             cv.line(vis, (x0+w, y0), (x1, y1), (0, 255, 0))
                         is_ok_to_export = True
-
+                        if self.auto_save:
+                            self.draw_result(self.auto_output_frame, wtf)
+                            fn = 'autosave_{:04d}.png'.format(self.auto_serial)
+                            self.save_image(fn, self.auto_output_frame)
+                            self.auto_serial += 1
 
             draw_keypoints(vis, self.tracker.frame_points)
 
@@ -243,7 +271,13 @@ class App(object):
             elif ch == 27:
                 break
             elif ch == ord('s'):
-                cv.imwrite('homo.png', vis)
+                fn = 'saved_{:04d}.png'.format(self.serial)
+                self.serial += 1
+                self.save_image(fn, vis)
+
+    def save_image(self, fn, img):
+        print('save image to {}'.format(fn))
+        cv.imwrite(fn, img)
 
 
 def main():

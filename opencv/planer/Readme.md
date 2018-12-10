@@ -29,3 +29,8 @@ a bounding box. It will draw keypoints and related if they are matched.
 
 Modified version will save the frame and bounding box, if no newer bounding box
 is provided, it will use last-saved setting to extract features.
+
+### homo.json
+
+This json file is temporary use for frame and its rect. Use __setting.json__ to
+configure settings.
