@@ -2,12 +2,32 @@
 #include "readsetting.h"
 
 #include <iostream>
+#include <regex>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 
 namespace miscutil {
 
+// input "color1544508130.png"
+// return first group of number digits: "1544508130"
+bool fetch_first_numbers(const std::string& s, std::string& match_str)
+{
+    std::regex word_regex("(\\d+)");
+    auto words_begin =
+        std::sregex_iterator(s.begin(), s.end(), word_regex);
+    auto words_end = std::sregex_iterator();
+
+    for (std::sregex_iterator i = words_begin; i != words_end; ++i) {
+        std::smatch match = *i;
+        std::string m_str = match.str();
+        if (m_str.size()) {
+            match_str = m_str;
+            return true;
+        }
+    }
+    return false;
+}
 
 void print_help()
 {
@@ -43,7 +63,7 @@ bool handleOpt(int argc, char** argv)
         }
 
         while(1) {
-            int cmd_opt = getopt(argc, argv, "hi:c:d:");
+            int cmd_opt = getopt(argc, argv, "hi:c:d:p:");
             if (cmd_opt == -1) {
                 //qDebug() << "cmd_opt == -1";
                 break;
@@ -59,6 +79,21 @@ bool handleOpt(int argc, char** argv)
                 }
                 sett->input_image = optarg;
                 configured = true;
+                break;
+            case 'p':   // prefix
+            {
+                if (debug) {
+                    cout << "prefix: " << optarg << endl;
+                }
+                string s = optarg;
+                string n;
+                if (fetch_first_numbers(s, n)) {
+                    sett->color_image = string("color") + n + string(".png");
+                    sett->depth_image = string("depth") + n + string(".png");
+                    sett->depth_data = string("depth") + n + string(".bin");
+                }
+                configured = true;
+            }
                 break;
             case 'c':
                 if (debug) {

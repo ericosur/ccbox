@@ -30,6 +30,6 @@
         "apply_spatial": true,
         "apply_temporal": true,
         "apply_holefill": true,
-        "max_degree": 45
+        "max_degree": 60
     }
 }

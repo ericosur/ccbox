@@ -24,14 +24,16 @@
 #include <unistd.h>
 #include <librealsense2/rs.hpp> // Include RealSense Cross Platform API
 
-#if 0
+#if 1
 #define show_line() \
     printf("@line %04d\n", __LINE__);
 #else
 #define show_line()
 #endif
 
-vector<cv::Vec8i> results;
+typedef cv::Vec<int, 10> Vec10i;
+
+vector<Vec10i> results;
 
 inline int my_avg(int m, int n)
 {
@@ -45,15 +47,27 @@ inline int my_avg(int m, int n)
 // 5: depth data at center
 // 6: average depth data/
 // 7: median depth data
-void show_answer(cv::Mat& depth_img, cv::Mat& color_img, const cv::Vec8i& z, const cv::Scalar& color, int idx)
+///
+// 8: lhs depth
+// 9: rhs depth
+void show_answer(cv::Mat& depth_img, cv::Mat& color_img, const Vec10i& z, const cv::Scalar& color, int idx)
 {
     using namespace cv;
+
+    if (depth_img.total() == 0)
+        cout << "depth_img is 0\n";
+    if (color_img.total() == 0)
+        cout << "color_img is 0\n";
+
     char msg[128];
 
     line(depth_img, Point(z[0], z[1]), Point(z[2], z[3]), color, 2, LINE_AA);
     line(color_img, Point(z[0], z[1]), Point(z[2], z[3]), color, 2, LINE_AA);
-    sprintf(msg, "ans(%d): %3d,%3d - %3d,%3d, [%4d], avg[%4d], med[%4d], deg:%03d",
-            (int)idx, z[0], z[1], z[2], z[3], z[5], z[6], z[7], z[4]);
+    sprintf(msg, "[%d]: %3d,%3d,%4d - %3d,%3d,%4d, [%4d], a[%4d], m[%4d], d:%02d",
+            (int)idx,
+            z[0], z[1], z[8],
+            z[2], z[3], z[9],
+            z[5], z[6], z[7], z[4]);
 
     rectangle(depth_img, Point(45, 45), Point(500, 80), cv::Scalar(52, 52, 52), CV_FILLED);
     cvui::printf(depth_img, 50, 50, msg);
@@ -170,8 +184,34 @@ int get_dpeth_pt(const void* buffer, int x, int y)
 
     return res;
 }
+#if 0
+int get_dpeth_pt1(const void* buffer, int x, int y)
+{
+    const int size_dx = 9;
+    int dx[] = {-1, 0, 1, -1, 0, 1, -1, 0, 1};
+    int dy[] = {-1, -1, -1, 0, 0, 0, 1, 1, 1};
+    int tmp = get_dpeth_pt0(buffer, x, y);
+    if (tmp == 0) {
+        printf("retry depth...  ");
+        // try to get depth from around
+        int sum = 0;
+        int cnt = 0;
+        for (int i = 0; i < size_dx; i++) {
+            int _d = get_dpeth_pt(buffer, x+dx[i], y+dy[i]);
+            if (_d) {
+                cnt ++;
+                sum += _d;
+            }
+        }
+        if (cnt == 0) {
+            return 0;
+        }
+        return sum/cnt;
+    }
 
-
+    return tmp;
+}
+#endif
 /// [in] depth_data: raw data buffer of depth
 /// [in] vector to store points
 /// [out] all depth values for intput points
@@ -194,22 +234,22 @@ float get_length_from_vec4i(const cv::Vec4i& v)
     return ans;
 }
 
-bool cmp_by_length(cv::Vec8i& m, cv::Vec8i& n)
+bool cmp_by_length(Vec10i& m, Vec10i& n)
 {
     return m[4] > n[4];
 }
 
-bool cmp_by_depth(cv::Vec8i& m, cv::Vec8i& n)
+bool cmp_by_depth(Vec10i& m, Vec10i& n)
 {
     return m[5] < n[5];
 }
 
-bool cmp_by_avg_depth(cv::Vec8i& m, cv::Vec8i& n)
+bool cmp_by_avg_depth(Vec10i& m, Vec10i& n)
 {
     return m[6] < n[6];
 }
 
-bool cmp_by_med_depth(cv::Vec8i& m, cv::Vec8i& n)
+bool cmp_by_med_depth(Vec10i& m, Vec10i& n)
 {
     return m[7] < n[7];
 }
@@ -262,31 +302,39 @@ void find_edge(cv::Mat& color_image, const void* depth_data, cv::Mat& edge_image
         return;
     }
 
-    cout << "cols: " << color_image.cols << endl
-         << "rows: " << color_image.rows << endl;
+    // cout << "cols: " << color_image.cols << endl
+    //      << "rows: " << color_image.rows << endl;
 
     ReadSetting* settings = ReadSetting::getInstance();
     Mat gray_image;
     cvtColor(color_image , gray_image, COLOR_BGR2GRAY);
-    show_line();
     Mat gauss;
-    GaussianBlur(gray_image, gauss, Size(settings->blur_radius, settings->blur_radius), 3);
-    show_line();
+    //gauss = gray_image;
+    //GaussianBlur(gray_image, gauss, Size(settings->blur_radius, settings->blur_radius), 3);
+    GaussianBlur(gray_image, gauss, Size(21, 21), 0, 0);
 
-    addWeighted(gray_image, 1.5, gauss, -0.5, 0, gray_image);
-    show_line();
+#if 0
+    threshold(gauss, gauss, 115, 250, THRESH_TRUNC);
+    addWeighted(gray_image, 2.1, gauss, -0.9, 0, gray_image);
+#endif
+    gray_image = gauss;
+    //imshow("gauss", gray_image);
+    //moveWindow("gauss", 70, 670);
+    //gray_image = gauss;
 
     Mat canny_output;
+#if 1
+    //Canny(gray_image, canny_output, settings->canny_threshold_min, settings->canny_threshold_max);
     Canny(gray_image, canny_output, settings->canny_threshold_min, settings->canny_threshold_max);
 
     Mat dst;
-    float ratio = 0.4;
+    float ratio = 0.25;
     // resize to 25%
     resize(canny_output, dst, Size(), ratio, ratio, INTER_AREA);
     // resize to original size
     resize(dst, canny_output, Size(), 1.0/ratio, 1.0/ratio, INTER_LINEAR);
-
-    //Mat probabilistic_hough;
+#endif
+    //canny_output = gauss;   // hacks
     cvtColor(canny_output, edge_image, COLOR_GRAY2BGR);
 
     results.clear();
@@ -311,8 +359,10 @@ void find_edge(cv::Mat& color_image, const void* depth_data, cv::Mat& edge_image
         // 6: average depth data
         // 7: median depth data
         double degree = 0.0;
-        if (cvutil::check_point(l[0], l[1], l[2], l[3], degree)) {
-            Vec8i r;
+        int z1 = get_dpeth_pt(depth_data, l[0], l[1]);
+        int z2 = get_dpeth_pt(depth_data, l[2], l[3]);
+        if (cvutil::check_point2(l[0], l[1], z1, l[2], l[3], z2, degree)) {
+            Vec10i r;
             r[0] = l[0];  r[1] = l[1];  r[2] = l[2];  r[3] = l[3];
             //r[4] = get_length_from_vec4i(l);
             r[4] = degree;
@@ -330,19 +380,16 @@ void find_edge(cv::Mat& color_image, const void* depth_data, cv::Mat& edge_image
                 r[6] = avg;
                 int median = cvutil::get_median_depth_from_points(all_depth_results);
                 r[7] = median;
-            } else {
-                //printf("1:");
             }
-
             // get depth from center of line
+            r[8] = z1;
+            r[9] = z2;
             int tmp = get_dpeth_pt(depth_data, r[0]+r[2]/2, r[1]+r[3]/2);
             if (tmp != 0) {
                 r[5] = tmp;
                 results.push_back(r);
             }
-            else {
-                //printf("0:");
-            }
+
         }/* else {
             printf(".");
         }*/
@@ -362,7 +409,7 @@ void find_edge(cv::Mat& color_image, const void* depth_data, cv::Mat& edge_image
         // show answers
         for (size_t ii = 0; ii < std::min(results_size, num_to_show); ii++) {
             //printf("size of results: %d\t", (int)results.size());
-            Vec8i z = results.at(ii);
+            Vec10i z = results.at(ii);
             //cout << z << endl;
             show_answer(edge_image, color_image, z, Scalar(((ii&&ii%2)?0x7f:0), (ii?0x7f:0), 0xff), ii);
             //line( edge_image, Point(l[0], l[1]), Point(l[2], l[3]), color, 3, LINE_AA);
@@ -427,6 +474,7 @@ void do_click_window(rs2::depth_frame depth, cv::Mat& color_image, cv::Mat& dept
 
 int test_from_image()
 {
+//#define USE_EDGE2
     using namespace cv;
 
     ReadSetting* sett = ReadSetting::getInstance();
@@ -445,15 +493,33 @@ int test_from_image()
     Mat depth_img;
     Mat edge_img;
 
+    string edge1_win = "edge1";
+    namedWindow(edge1_win);
+    moveWindow(edge1_win, 0, 0);
+    string dep_win = "colorized depth";
+    namedWindow(dep_win);
+    moveWindow(dep_win, 0, 400);
+#ifdef USE_EDGE2
+    string edge2_win = "edge2";
+    namedWindow(edge2_win);
+    moveWindow(edge2_win, 660, 0);
+#endif
+
     color_img = imread(cfn);
     depth_img = imread(dfn);
 
+    imshow(dep_win, depth_img);
+
     load_bin_to_buffer(datfn, dep_buffer, dep_buffer_size);
     vector<Vec4i> p_lines;
+    cout << "from depth_img:\n";
     find_edge(depth_img, dep_buffer, edge_img, p_lines);
-    imshow("edge1", edge_img);
+    imshow(edge1_win, edge_img);
+#ifdef USE_EDGE2
+    cout << "from color_img:\n";
     find_edge(color_img, dep_buffer, edge_img, p_lines);
-    imshow("edge2", edge_img);
+    imshow(edge2_win, edge_img);
+#endif
     waitKey(0);
 
     return 0;

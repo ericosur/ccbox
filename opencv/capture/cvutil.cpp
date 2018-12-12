@@ -15,6 +15,13 @@
 
 using namespace std;
 
+#if 0
+#define show_line() \
+    printf("@line %04d\n", __LINE__);
+#else
+#define show_line()
+#endif
+
 namespace cvutil {
 
 int baseline = 0;
@@ -150,7 +157,7 @@ void crop_image(const cv::Mat& orig, cv::Mat& new_img
         // no need to srand again;
     }
 
-    cout << "orig: " << orig.cols << " , " << orig.rows << endl;
+    //cout << "orig: " << orig.cols << " , " << orig.rows << endl;
 
     int base_x = 80;
     int base_y = 230;
@@ -229,7 +236,26 @@ void test_get_points_between_two_points()
 }
 
 #ifdef USE_REALSENSE
-bool check_point(int x1, int y1, int x2, int y2, double& degree)
+bool check_point2(int x1, int y1, int z1, int x2, int y2, int z2, double& degree, bool debug)
+{
+    if (z1 == 0 || z2 == 0) {
+        if (debug) {
+            cout << "0 ";
+        }
+        // useless depth
+    } else {
+        if (abs(z1 - z2) > 500) {
+            // not good
+            if (debug) {
+                cout << "> ";
+            }
+            return false;
+        }
+    }
+    return check_point(x1, y1, x2, y2, degree);
+}
+
+bool check_point(int x1, int y1, int x2, int y2, double& degree, bool debug)
 {
     ReadSetting* sett = ReadSetting::getInstance();
     const int margin = 80;
@@ -248,16 +274,52 @@ bool check_point(int x1, int y1, int x2, int y2, double& degree)
         return false;
     }
 
-    float dy = y1 - y2;
-    float dx = fabs(x1 - x2);
-    if (dx < 1.0 || dy < 1.0) {
-        //cout << "x";
+    double dy = y2 - y1;
+    double dx = x2 - x1;
+    if (fabs(dx) < 10.0 || fabs(dy) < 1.0) {
+        if (debug) {
+            cout << "x ";
+        }
         return false;
     }
 
-    float slope = dy / dx;
-    degree = atan(slope) * 180.0 / M_PI;
+    if (debug) {
+        if (dy > 0 && dx > 0) {
+            cout << "/ ";
+        } else {
+            cout << "\\ ";
+        }
+        if (dx == 0.0) {
+            cout << "div ";
+        }
+    }
+
+    double slope = dy / dx;
+    if (debug) {
+        cout << "dx " << dx << " dy " << dy << " slope: " << slope << endl;
+    }
+
+    const double pos_slope = 11.43;
+    const double neg_slope = -pos_slope;
+    const double pos_max_degree = 85.0;
+    const double neg_max_degree = -pos_max_degree;
+    if (slope > pos_slope) {
+        show_line();
+        degree = pos_max_degree;
+    } else if (slope < neg_slope) {
+        show_line();
+        degree = neg_max_degree;
+    } else {
+        double _a = atan(slope);
+        show_line();
+        (void)_a;
+        //cout << "_a: " << _a << endl;
+        degree = _a * 180.0 / M_PI;
+    }
     //cout << "dx " << dx << " dy " << dy << " slope: " << slope << " theta: " << degree << endl;
+    if (debug) {
+        cout << " theta: " << degree << endl;
+    }
     if (degree > ang_too_slope) {
         return false;
     }
