@@ -69,7 +69,6 @@ add_executable(
     dist.cpp dist.h
     rsutil.cpp rsutil.h
 )
-
 target_link_libraries(
     ir
     ${DEPENDENCIES}
@@ -79,8 +78,10 @@ add_executable(
     bgr
     bgr.cpp
 )
-
 target_link_libraries(
     bgr
     ${DEPENDENCIES}
 )
+
+add_executable(showrs showrs.cpp rsutil.cpp rsutil.h)
+target_link_libraries(showrs ${DEPENDENCIES})

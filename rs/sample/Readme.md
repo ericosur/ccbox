@@ -28,3 +28,9 @@ distance: 1.351 meter will be 0x1351 in hex
 
 ## opencv python examples
 /home/rasmus/src/github/librealsense/wrappers/python/examples
+
+
+## showrs
+
+A simple sample code to list version of librealsense SDK, and fetch
+serial number and firmware version of realsense camera (if connected).
