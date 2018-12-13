@@ -9,7 +9,7 @@
 #include <opencv2/videoio/videoio.hpp>
 
 #define DEFAULT_WIDTH    640
-#define DEFAULT_HEIGHT   480
+#define DEFAULT_HEIGHT   360
 
 namespace cvutil {
 
