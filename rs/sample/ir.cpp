@@ -3,22 +3,28 @@
  **/
 
 #include "dist.h"
+#include "rsutil.h"
+
+#include <iostream>
+#include <iomanip>
 
 #define CVUI_IMPLEMENTATION
 #include "../../opencv/cvui.h"
+
 
 auto window_name = "Display Image";
 
 void draw_crosshair(cv::Mat& img, const cv::Point& pt)
 {
     using namespace cv;
+    const int slen = 40;
     Scalar color = Scalar(0, 0, 0xff);
     circle(img, pt, 8, color);
-    Point p1 = Point(pt.x - 8, pt.y - 8);
-    Point p2 = Point(pt.x + 8, pt.y + 8);
+    Point p1 = Point(pt.x - slen, pt.y );
+    Point p2 = Point(pt.x + slen, pt.y );
     line(img, p1, p2, color, 1, LINE_AA);
-    Point p3 = Point(pt.x + 8, pt.y - 8);
-    Point p4 = Point(pt.x - 8, pt.y + 8);
+    Point p3 = Point(pt.x, pt.y - slen);
+    Point p4 = Point(pt.x, pt.y + slen);
     line(img, p3, p4, color, 1, LINE_AA);
 }
 
@@ -35,6 +41,11 @@ int main()
     namedWindow(window_name, WINDOW_AUTOSIZE);
     moveWindow(window_name, 0, 0);
     cvui::init(window_name);
+
+    if ( !rsutil::show_rsinfo() ) {
+        printf("no Intel Realsense camera, exit...\n");
+        exit(-1);
+    }
 
     //Contruct a pipeline which abstracts the device
     rs2::pipeline pipe;
@@ -102,6 +113,8 @@ int main()
         //pixel u = {x, y};
         //auto d = dist_3d(depth_frame, u, v);
         draw_crosshair(color, pt);
+
+
 
         cvui::update();
 

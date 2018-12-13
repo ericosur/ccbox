@@ -30,13 +30,14 @@ if(APPLY_REALSENSE)
     find_library(
         REALSENSE_LIB
         NAMES realsense2
-        PATHS /usr/local/lib /usr/libx86_64-linux-gnu /usr/lib  )
+        PATHS /usr/local/lib /usr/lib/x86_64-linux-gnu /usr/lib  )
 
     if (REALSENSE_LIB)
         message("=====> apply intel realsense2")
         #include_directories()
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_REALSENSE")
         set(DEPENDENCIES ${DEPENDENCIES} realsense2 gflags ${OpenCV_LIBS})
+        message("rs2: ${REALSENSE_LIB}")
 
         set(librealsense_dir "$ENV{HOME}/src/github/librealsense/build")
         if ( IS_DIRECTORY librealsense_dir )
@@ -60,12 +61,13 @@ if(APPLY_REALSENSE)
 endif()
 
 
-message("DEPENDENCIES: ${DEPENDENCIES}")
+#message("DEPENDENCIES: ${DEPENDENCIES}")
 
 add_executable(
     ir
     ir.cpp
-    dist.cpp
+    dist.cpp dist.h
+    rsutil.cpp rsutil.h
 )
 
 target_link_libraries(

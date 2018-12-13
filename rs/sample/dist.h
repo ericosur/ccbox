@@ -19,6 +19,8 @@ float dist_3d(const rs2::depth_frame& frame, pixel u, pixel v);
 // Distance 2D returns the distance in pixels between two pixels
 float dist_2d(const pixel& a, const pixel& b);
 
-void query_uv2xyz(const rs2::depth_frame& frame, const cv::Point& pt, cv::Vec3f& xyz);
+void query_uv2xyz(const rs2::depth_frame& frame, const cv::Point& pt, cv::Vec3f& xyz, bool debug=false);
+
+void test(const rs2::depth_frame& frame);
 
 #endif
