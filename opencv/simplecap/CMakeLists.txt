@@ -63,3 +63,6 @@ add_executable(
 target_link_libraries(
     vec ${OpenCV_LIBS}
 )
+
+add_executable(fcd findContours_demo.cpp)
+target_link_libraries(fcd ${OpenCV_LIBS})

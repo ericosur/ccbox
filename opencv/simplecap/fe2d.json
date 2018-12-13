@@ -1,6 +1,8 @@
 {
     "threshold": 100,
     "files": [
+        "../data/asus/img_0270.jpg",
+        "../data/asus/img_0266.jpg",
         "../data/asus/img_0264.jpg",
         "../data/asus/img_0269.jpg"
     ]
