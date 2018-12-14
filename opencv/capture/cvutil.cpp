@@ -34,6 +34,17 @@ int get_timeepoch()
     return (int)t;
 }
 
+inline double rad_to_deg(double rad)
+{
+    return rad * 180.0 / M_PI;
+}
+
+inline double deg_to_rad(double deg)
+{
+    return deg * M_PI / 180.0;
+}
+
+
 std::string intToString(int number)
 {
     std::stringstream ss;
@@ -255,31 +266,19 @@ bool check_point2(int x1, int y1, int z1, int x2, int y2, int z2, double& degree
     return check_point(x1, y1, x2, y2, degree);
 }
 
-bool check_point(int x1, int y1, int x2, int y2, double& degree, bool debug)
+bool get_angle_from_dx_dy(double& degree, double dx, double dy, bool debug)
 {
-    ReadSetting* sett = ReadSetting::getInstance();
-    const int margin = 80;
-    const float ang_too_slope = sett->max_degree;
-    // area #1
-    if (y1<margin && y2<margin)
-        return false;
-    if (y1>DEFAULT_HEIGHT-margin && y2>DEFAULT_HEIGHT-margin)
-        return false;
-    if (x1<margin && x2<margin)
-        return false;
-    if (x1>DEFAULT_WIDTH-margin && x2>DEFAULT_WIDTH-margin)
-        return false;
+    //ReadSetting* sett = ReadSetting::getInstance();
+    const double pos_max_degree = 85.0;
+    const double neg_max_degree = -pos_max_degree;
+    const double pos_slope = tan(deg_to_rad(pos_max_degree));
+    const double neg_slope = -pos_slope;
 
-    if (x1 == x2) {
-        return false;
-    }
-
-    double dy = y2 - y1;
-    double dx = x2 - x1;
     if (fabs(dx) < 10.0 || fabs(dy) < 1.0) {
         if (debug) {
             cout << "x ";
         }
+        degree = pos_max_degree;
         return false;
     }
 
@@ -299,31 +298,51 @@ bool check_point(int x1, int y1, int x2, int y2, double& degree, bool debug)
         cout << "dx " << dx << " dy " << dy << " slope: " << slope << endl;
     }
 
-    const double pos_slope = 11.43;
-    const double neg_slope = -pos_slope;
-    const double pos_max_degree = 85.0;
-    const double neg_max_degree = -pos_max_degree;
     if (slope > pos_slope) {
-        show_line();
         degree = pos_max_degree;
     } else if (slope < neg_slope) {
-        show_line();
         degree = neg_max_degree;
     } else {
         double _a = atan(slope);
-        show_line();
         (void)_a;
         //cout << "_a: " << _a << endl;
-        degree = _a * 180.0 / M_PI;
+        degree = rad_to_deg(_a);
     }
-    //cout << "dx " << dx << " dy " << dy << " slope: " << slope << " theta: " << degree << endl;
     if (debug) {
         cout << " theta: " << degree << endl;
     }
-    if (degree > ang_too_slope) {
+    return true;
+}
+
+bool check_point(int x1, int y1, int x2, int y2, double& degree, bool debug)
+{
+    ReadSetting* sett = ReadSetting::getInstance();
+    const int margin = sett->ignore_margin;
+    const float ang_too_slope = sett->max_degree;
+    // area #1
+    if (y1<margin && y2<margin)
+        return false;
+    if (y1>DEFAULT_HEIGHT-margin && y2>DEFAULT_HEIGHT-margin)
+        return false;
+    if (x1<margin && x2<margin)
+        return false;
+    if (x1>DEFAULT_WIDTH-margin && x2>DEFAULT_WIDTH-margin)
+        return false;
+
+    if (x1 == x2) {
         return false;
     }
 
+    double dy = y2 - y1;
+    double dx = x2 - x1;
+    double deg = 0.0;
+    bool ret = get_angle_from_dx_dy(deg, dx, dy);
+
+    if (!ret || (deg > ang_too_slope || deg < -ang_too_slope)) {
+        cout << "ang_too_slope: " << deg << endl;
+        return false;
+    }
+    degree = deg;
     return true;
 }
 #endif

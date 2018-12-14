@@ -5,20 +5,13 @@ use opencv + librealsense to perform hough line detection, and depth measurement
 ## note
 
 * use cmake to build this project
+* needed libraries:
+  * opencv
+  * librealsense
 
-## running 'capture'
+## about 'Capture'
 
-press ESC to quit program
-press 's' to save images which is marked results
-press 'c' to save original images
-
-## command line interface
-
-```
-capture -i image_fn.png
-```
-
-to unit test with image_fn.png
+see [Capture.md](Capture.md)
 
 ## CMakeLists.txt
 

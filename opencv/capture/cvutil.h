@@ -1,10 +1,11 @@
 #ifndef __UTIL_CV_UTIL_H__
 #define __UTIL_CV_UTIL_H__
 
+#include "cv_custom_type.h"
+
 #include <cstdint>
 #include <string>
 
-#include <opencv2/opencv.hpp>   // Include OpenCV API
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/videoio/videoio.hpp>
 
@@ -39,6 +40,8 @@ float get_iou(const cv::Rect& a, const cv::Rect& b);
 void test_iou();
 
 int get_points_between_two_points(const cv::Mat& img, const cv::Point& p1, const cv::Point& p2, std::vector<cv::Point>& points);
+
+bool get_angle_from_dx_dy(double& degree, double dx, double dy, bool debug = false);
 
 #ifdef USE_REALSENSE
 bool check_point2(int x1, int y1, int z1, int x2, int y2, int z2, double& degree, bool debug=false);

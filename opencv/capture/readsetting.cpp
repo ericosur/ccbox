@@ -103,11 +103,11 @@ bool ReadSetting::load_json(const std::string& json_file)
         hough_minlength = jsub.at("hough_minlength");
         hough_maxlinegap = jsub.at("hough_maxlinegap");
         show_dist = jsub.at("show_dist");
-        show("show_dist", show_dist);
+        //show("show_dist", show_dist);
         show_fps = jsub.at("show_fps");
-        show("show_fps", show_fps);
+        //show("show_fps", show_fps);
         color_scheme = jsub.at("color_scheme");
-        show("color_scheme", color_scheme);
+        //show("color_scheme", color_scheme);
         distance_limit = jsub.at("distance_limit");
         show("distance_limit", distance_limit);
 
@@ -128,6 +128,12 @@ bool ReadSetting::load_json(const std::string& json_file)
 
         max_degree = jsub.at("max_degree");
         show("max_degree", max_degree);
+
+        ignore_margin = jsub.at("ignore_margin");
+        show("ignore_margin", ignore_margin);
+
+        max_show_answer = jsub.at("max_show_answer");
+        show("max_show_answer", max_show_answer);
 #endif
     }
     catch (nlohmann::json::parse_error& e) {

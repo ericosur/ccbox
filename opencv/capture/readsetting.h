@@ -86,8 +86,11 @@ public:
     bool apply_temporal = true;
     bool apply_spatial = true;
     bool apply_holefill = true;
+    int max_show_answer = 3;
 
     float max_degree = 60.0;
+    int ignore_margin = 40;
+
     std::string input_image = "";
     std::string color_image = "";
     std::string depth_image = "";

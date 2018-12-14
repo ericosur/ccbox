@@ -55,7 +55,7 @@ if(APPLY_REALSENSE)
         set(DEPENDENCIES "realsense2;${DEPENDENCIES}")
 
         include_directories("$ENV{HOME}/src/github/librealsense/include")
-        include_directories("$ENV{HOME}/src/librealsense/include")
+        #include_directories("$ENV{HOME}/src/librealsense/include")
 
         message("rs: ${REALSENSE_LIB}")
     else()

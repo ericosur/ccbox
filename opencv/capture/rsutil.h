@@ -3,13 +3,12 @@
 
 #ifdef USE_REALSENSE
 
+#include "cv_custom_type.h"
+
 #include <iostream>
 // include the librealsense C++ header file
 #include <librealsense2/rs.hpp>
 #include <librealsense2/rsutil.h>
-
-// include OpenCV header file
-#include <opencv2/opencv.hpp>
 
 namespace rsutil {
 

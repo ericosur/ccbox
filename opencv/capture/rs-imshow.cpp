@@ -24,14 +24,12 @@
 #include <unistd.h>
 #include <librealsense2/rs.hpp> // Include RealSense Cross Platform API
 
-#if 1
+#if 0
 #define show_line() \
     printf("@line %04d\n", __LINE__);
 #else
 #define show_line()
 #endif
-
-typedef cv::Vec<int, 10> Vec10i;
 
 vector<Vec10i> results;
 
@@ -55,14 +53,15 @@ void show_answer(cv::Mat& depth_img, cv::Mat& color_img, const Vec10i& z, const 
     using namespace cv;
 
     if (depth_img.total() == 0)
-        cout << "depth_img is 0\n";
+        cout << "[WARNING] depth_img is 0\n";
     if (color_img.total() == 0)
-        cout << "color_img is 0\n";
+        cout << "[WARNING] color_img is 0\n";
 
     char msg[128];
 
     line(depth_img, Point(z[0], z[1]), Point(z[2], z[3]), color, 2, LINE_AA);
     line(color_img, Point(z[0], z[1]), Point(z[2], z[3]), color, 2, LINE_AA);
+
     sprintf(msg, "[%d]: %3d,%3d,%4d - %3d,%3d,%4d, [%4d], a[%4d], m[%4d], d:%02d",
             (int)idx,
             z[0], z[1], z[8],
@@ -77,6 +76,7 @@ void show_answer(cv::Mat& depth_img, cv::Mat& color_img, const Vec10i& z, const 
     printf("%s\n", msg);
 }
 
+#if 0
 void init_colors(std::vector<cv::Scalar> clrs)
 {
     // cv color is BGR
@@ -88,7 +88,7 @@ void init_colors(std::vector<cv::Scalar> clrs)
     clrs.push_back(c);
     cout << "clrs.size(): " << clrs.size() << endl;
 }
-
+#endif
 
 //#define WINDOW_NAME "Viewer to get depth"
 const auto depth_window = "Depth Image";
@@ -305,12 +305,12 @@ void find_edge(cv::Mat& color_image, const void* depth_data, cv::Mat& edge_image
     // cout << "cols: " << color_image.cols << endl
     //      << "rows: " << color_image.rows << endl;
 
-    ReadSetting* settings = ReadSetting::getInstance();
+    ReadSetting* sett = ReadSetting::getInstance();
     Mat gray_image;
     cvtColor(color_image , gray_image, COLOR_BGR2GRAY);
     Mat gauss;
     //gauss = gray_image;
-    //GaussianBlur(gray_image, gauss, Size(settings->blur_radius, settings->blur_radius), 3);
+    //GaussianBlur(gray_image, gauss, Size(sett->blur_radius, sett->blur_radius), 3);
     GaussianBlur(gray_image, gauss, Size(21, 21), 0, 0);
 
 #if 0
@@ -325,7 +325,7 @@ void find_edge(cv::Mat& color_image, const void* depth_data, cv::Mat& edge_image
     Mat canny_output;
 #if 1
     //Canny(gray_image, canny_output, settings->canny_threshold_min, settings->canny_threshold_max);
-    Canny(gray_image, canny_output, settings->canny_threshold_min, settings->canny_threshold_max);
+    Canny(gray_image, canny_output, sett->canny_threshold_min, sett->canny_threshold_max);
 
     Mat dst;
     float ratio = 0.25;
@@ -344,7 +344,7 @@ void find_edge(cv::Mat& color_image, const void* depth_data, cv::Mat& edge_image
     /// 6th: minimum line length to pass
     /// 7th: max point to jump over
     HoughLinesP(canny_output, p_lines, 1, CV_PI/180,
-                settings->hough_threshold, settings->hough_minlength, settings->hough_maxlinegap);
+                sett->hough_threshold, sett->hough_minlength, sett->hough_maxlinegap);
 
     //Scalar color = Scalar(0xff, 0x66, 0xff);
 
@@ -397,8 +397,6 @@ void find_edge(cv::Mat& color_image, const void* depth_data, cv::Mat& edge_image
 
     //printf("size of results: %d ===>", (int)results.size());
 
-    size_t num_to_show = 3;
-
     // find the longest line and show
     //sort(results.begin(), results.end(), cmp_by_length);
     // find the nearest line and show
@@ -407,7 +405,7 @@ void find_edge(cv::Mat& color_image, const void* depth_data, cv::Mat& edge_image
     size_t results_size = results.size();
     if (results_size) {
         // show answers
-        for (size_t ii = 0; ii < std::min(results_size, num_to_show); ii++) {
+        for (size_t ii = 0; ii < std::min(results_size, (size_t)sett->max_show_answer); ii++) {
             //printf("size of results: %d\t", (int)results.size());
             Vec10i z = results.at(ii);
             //cout << z << endl;
@@ -417,7 +415,7 @@ void find_edge(cv::Mat& color_image, const void* depth_data, cv::Mat& edge_image
     }
 }
 
-void do_click_window(rs2::depth_frame depth, cv::Mat& color_image, cv::Mat& depth_image)
+void do_click_window(rs2::depth_frame& depth, cv::Mat& color_image, cv::Mat& depth_image)
 {
     const int printx = 180;
     const int print_inc_y = 20;
@@ -540,6 +538,45 @@ int show_image(const std::string& fn)
 }
 
 
+// Vec8f means a vector with 6 floating numbers
+// 0:x1, y1, x2, y2,
+// 4: degree for 2D
+// 5: depth data at center
+// 6: average depth data/
+// 7: median depth data
+// 8: lhs depth
+// 9: rhs depth
+void get_3d_angle(const rs2::depth_frame& depth)
+{
+    cv::Point pt1;
+    cv::Vec3f xyz1;
+    pt1.x = results[0][0];
+    pt1.y = results[0][1];
+    rsutil::query_uv2xyz(depth, pt1, xyz1);
+    xyz1 *= 1000;
+    printf("%s: xyz1: %.0f,%.0f,%.0f  ", __func__, xyz1[0], xyz1[1], xyz1[2]);
+
+    cv::Point pt2;
+    cv::Vec3f xyz2;
+    pt2.x = results[0][2];
+    pt2.y = results[0][3];
+    rsutil::query_uv2xyz(depth, pt2, xyz2);
+    xyz2 *= 1000;
+    printf("xyz2: %.0f,%.0f,%.0f  ", xyz2[0], xyz2[1], xyz2[2]);
+
+    double dx = xyz2[0] - xyz1[0];
+    double dz = xyz2[2] - xyz1[2];
+
+    double deg = 0.0;
+    if ( cvutil::get_angle_from_dx_dy(deg, dx, dz) ) {
+        printf("deg: %.3f\n", deg);
+    } else {
+        printf("\n");
+    }
+
+}
+
+
 int test_realsense() try
 {
     using namespace cv;
@@ -656,6 +693,11 @@ int test_realsense() try
                 find_edge(depth_image, depth.get_data(), edge_image, p_lines);
                 //cvui::printf(depth_image, 180, 10, 0.6, 0xffffff, "p size: %d", p_lines.size());
 /// try to find edge of table ... }
+
+                // get xyz vector angle...
+                #if 1
+                get_3d_angle(depth);
+                #endif
             }
 
             /// to show depth data with mouse pointer
