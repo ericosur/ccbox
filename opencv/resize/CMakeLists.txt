@@ -6,7 +6,7 @@ set(PN "resize")
 project(${PN})
 
 # turn it to 1 to use intel optimized opencv
-set(APPLY_INTEL_OPENCV     0)
+set(APPLY_INTEL_OPENCV     1)
 
 if(APPLY_INTEL_OPENCV)
     set(OpenCV_DIR    "/opt/intel/opencv/share/OpenCV")

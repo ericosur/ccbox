@@ -68,7 +68,7 @@ void show_answer(cv::Mat& depth_img, cv::Mat& color_img, const Vec10i& z, const 
             z[2], z[3], z[9],
             z[5], z[6], z[7], z[4]);
 
-    rectangle(depth_img, Point(45, 45), Point(500, 80), cv::Scalar(52, 52, 52), CV_FILLED);
+    rectangle(depth_img, Point(45, 45), Point(500, 80), cv::Scalar(52, 52, 52), cv::FILLED);
     cvui::printf(depth_img, 50, 50, msg);
 
     circle(depth_img, Point(my_avg(z[0], z[2]), my_avg(z[1], z[3])), 3, Scalar(0xff, 0, 0));
@@ -132,7 +132,7 @@ bool show_cvfps(cv::Mat& cv_img, double elapsed_time)
     snprintf(buffer, BUFFER_SIZE, "elapsed: %.3f fps(%.1f)", elapsed_time, fps);
     cv::Size text = cv::getTextSize(buffer, fontface, scale, thickness, &baseline);
     cv::rectangle(cv_img, cv::Point(0, 0),cv::Point(text.width, text.height + baseline),
-          CV_RGB(255, 255, 255), CV_FILLED);
+          CV_RGB(255, 255, 255), cv::FILLED);
     cv::putText(cv_img, buffer, cv::Point(0, text.height + baseline / 2.),
           fontface, scale, CV_RGB(0, 0, 0), thickness, 8);
 

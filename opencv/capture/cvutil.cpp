@@ -135,7 +135,7 @@ void draw_dist(cv::Mat& img, float dist)
     snprintf(buffer, buffer_size, "dist: %.3fm", dist);
     cv::Size text = cv::getTextSize(buffer, fontface, scale, thickness, &baseline);
     cv::rectangle(img, cv::Point(0, 0),cv::Point(text.width, text.height + baseline),
-          CV_RGB(255, 255, 255), CV_FILLED);
+          CV_RGB(255, 255, 255), FILLED);
     cv::putText(img, buffer, cv::Point(0, text.height + baseline / 2.),
           fontface, scale, CV_RGB(0, 0, 0), thickness, 8);
 }
@@ -391,7 +391,7 @@ bool show_cvfps(cv::Mat& cv_img, double elapsed_time)
     snprintf(buffer, BUFFER_SIZE, "elapsed: %.3f fps(%.1f)", elapsed_time, fps);
     cv::Size text = cv::getTextSize(buffer, fontface, scale, thickness, &baseline);
     cv::rectangle(cv_img, cv::Point(0, 0),cv::Point(text.width, text.height + baseline),
-          CV_RGB(255, 255, 255), CV_FILLED);
+          CV_RGB(255, 255, 255), cv::FILLED);
     cv::putText(cv_img, buffer, cv::Point(0, text.height + baseline / 2.),
           fontface, scale, CV_RGB(0, 0, 0), thickness, 8);
 
