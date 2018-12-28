@@ -11,6 +11,7 @@ int test()
 {
     using namespace cv;
     int vid_idx = 0;
+    const size_t MAX_FN_LENGTH = 128;
 
     namedWindow(VIDEO_WIN, WINDOW_AUTOSIZE);
     moveWindow(VIDEO_WIN, 50, 50);
@@ -27,7 +28,7 @@ int test()
     printf("press ESC or 'q' to quit %s...\n", __func__);
     printf("press 's' to save image...\n");
     int cnt = 0;
-    char fn_buffer[40];
+    char fn_buffer[MAX_FN_LENGTH];
     while (true) {
         //store image to matrix
         cap.read(frame);
@@ -39,6 +40,7 @@ int test()
             sprintf(fn_buffer, "saved%04d.jpg", cnt);
             imwrite(fn_buffer, frame);
             printf("%s saved\n", fn_buffer);
+            cnt ++;
         }
     }
     destroyAllWindows();

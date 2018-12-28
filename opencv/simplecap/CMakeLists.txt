@@ -9,7 +9,19 @@ find_package( OpenCV REQUIRED )
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_FLAGS "-Wall -O3")
 
-include_directories("/usr/local/include")
+# opencv is MUST
+# turn it to 1 to use intel optimized opencv
+set(APPLY_INTEL_OPENCV     0)
+if(APPLY_INTEL_OPENCV)
+    set(OpenCV_DIR    "/opt/intel/opencv/share/OpenCV")
+else()
+    set(OpenCV_DIR    "/usr/local/share/OpenCV")
+endif()
+message("OpenCV_DIR: ${OpenCV_DIR}")
+find_package( OpenCV REQUIRED )
+message("opencv ver: ${OpenCV_VERSION}")
+
+# build each programs
 
 add_executable(
     ${PN}
