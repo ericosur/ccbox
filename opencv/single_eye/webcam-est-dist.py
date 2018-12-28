@@ -2,11 +2,13 @@
 # -*- coding: utf-8 -*-
 
 #import the necessary packages
+import os
 from glob import glob
 import math
 import numpy as np
 import cv2
 #import pyrealsense2 as rs
+import myutil
 
 # 找到目标函数
 def find_marker(image):
@@ -50,14 +52,14 @@ def main():
     KNOWN_WIDTH = 252
     KNOWN_HEIGHT = 201
 
-    # initialize the list of images that we'll be using
-    IMAGE_PATHS = ["pic0001.png", "pic0002.png", "pic0003.png"]
-
     # load the furst image that contains an object that is KNOWN TO BE 2 feet
     # from our camera, then find the paper marker in the image, and initialize
     # the focal length
-    #读入第一张图，通过已知距离计算相机焦距
-    fn = IMAGE_PATHS[0]
+    home = os.environ["HOME"]
+    fn = home + '/Pictures/data/pic0001.png'
+    if not myutil.isfile(fn):
+        print('[ERROR] {} not found...'.format(fn))
+        exit(1)
     image = cv2.imread(fn)
     marker = find_marker(image)
     focalLength = (marker[1][0] * KNOWN_DISTANCE) / KNOWN_WIDTH

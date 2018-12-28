@@ -21,30 +21,26 @@ int main(int argc, char *argv[])
     CommandLineParser cmd_parser(argc, argv, keys);
 
     cmd_parser.about("This program detects the QR-codes from camera or images using the OpenCV library.");
-    if (cmd_parser.has("help"))
-    {
+    if (cmd_parser.has("help")) {
         cmd_parser.printMessage();
         return 0;
     }
 
     string in_file_name  = cmd_parser.get<string>("in");    // input  path to image
     string out_file_name;
-    if (cmd_parser.has("out"))
+    if (cmd_parser.has("out")) {
         out_file_name = cmd_parser.get<string>("out");   // output path to image
+    }
 
-    if (!cmd_parser.check())
-    {
+    if (!cmd_parser.check()) {
         cmd_parser.printErrors();
         return -1;
     }
 
     int return_code = 0;
-    if (in_file_name.empty())
-    {
+    if (in_file_name.empty()) {
         return_code = liveQRCodeDetect(out_file_name);
-    }
-    else
-    {
+    } else {
         return_code = imageQRCodeDetect(samples::findFile(in_file_name), out_file_name);
     }
     return return_code;
@@ -55,8 +51,7 @@ void drawQRCodeContour(cv::Mat &color_image, std::vector<cv::Point> transform)
     using namespace std;
     using namespace cv;
 
-    if (!transform.empty())
-    {
+    if (!transform.empty()) {
         double show_radius = (color_image.rows  > color_image.cols)
                    ? (2.813 * color_image.rows) / color_image.cols
                    : (2.813 * color_image.cols) / color_image.rows;
@@ -67,8 +62,7 @@ void drawQRCodeContour(cv::Mat &color_image, std::vector<cv::Point> transform)
         drawContours(color_image, contours, 0, Scalar(211, 0, 148), cvRound(contour_radius));
 
         RNG rng(1000);
-        for (size_t i = 0; i < 4; i++)
-        {
+        for (size_t i = 0; i < 4; i++) {
             Scalar color = Scalar(rng.uniform(0,255), rng.uniform(0, 255), rng.uniform(0, 255));
             circle(color_image, transform[i], cvRound(show_radius), color, -1);
         }
