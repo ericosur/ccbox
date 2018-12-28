@@ -15,5 +15,5 @@ if(NOT ${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
 endif()
 
-add_executable(qrcode qrcode.cpp)
-target_link_libraries(qrcode ${OpenCV_LIBS})
+add_executable(${PN} qrcode.cpp)
+target_link_libraries(${PN} ${OpenCV_LIBS})
