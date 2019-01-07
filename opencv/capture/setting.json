@@ -14,8 +14,8 @@
     "realsense": {
         "find_edge": true,
         "blur_radius": 3,
-        "canny_threshold_min": 25,
-        "canny_threshold_max": 50,
+        "canny_threshold_min": 10,
+        "canny_threshold_max": 20,
         "hough_threshold": 70,
         "hough_minlength": 130,
         "hough_maxlinegap": 45,
@@ -33,6 +33,6 @@
 
         "max_degree": 60,
         "max_show_answer": 1,
-        "ignore_margin": 40
+        "ignore_margin": 20
     }
 }

@@ -339,13 +339,13 @@ bool check_point(int x1, int y1, int x2, int y2, double& degree, bool debug)
     bool ret = get_angle_from_dx_dy(deg, dx, dy);
 
     if (!ret || (deg > ang_too_slope || deg < -ang_too_slope)) {
-        cout << "ang_too_slope: " << deg << endl;
+        //cout << "ang_too_slope: " << deg << endl;
         return false;
     }
     degree = deg;
     return true;
 }
-#endif
+#endif  // USE_REALSENSE
 
 /// [in] depth_data: raw data buffer of depth
 /// [in] vector to store points
