@@ -33,6 +33,7 @@ void print_help()
 {
     printf("help!\n"
         "-i just show specified image\n"
+        "-b input bag file\n"
         "-c color image\n"
         "-d depth image\n"
         "-h help message\n"
@@ -63,7 +64,7 @@ bool handleOpt(int argc, char** argv)
         }
 
         while(1) {
-            int cmd_opt = getopt(argc, argv, "hi:c:d:p:");
+            int cmd_opt = getopt(argc, argv, "hi:b:c:d:p:");
             if (cmd_opt == -1) {
                 //qDebug() << "cmd_opt == -1";
                 break;
@@ -78,6 +79,13 @@ bool handleOpt(int argc, char** argv)
                     cout << "input image:" << optarg << endl;
                 }
                 sett->input_image = optarg;
+                configured = true;
+                break;
+            case 'b': // input bag file
+                if (debug) {
+                    cout << "input bag file:" << optarg << endl;
+                }
+                sett->input_bag = optarg;
                 configured = true;
                 break;
             case 'p':   // prefix

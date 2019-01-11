@@ -43,6 +43,10 @@ public:
     void show(const std::string &str, int val);
     void show(const std::string& str, float val);
 
+    bool useBagFile() const {
+        return !input_bag.empty();
+    }
+
 protected:
     static ReadSetting* _instance;
     ReadSetting();
@@ -92,6 +96,7 @@ public:
     int ignore_margin = 40;
 
     std::string input_image = "";
+    std::string input_bag = "";
     std::string color_image = "";
     std::string depth_image = "";
     std::string depth_data = "";

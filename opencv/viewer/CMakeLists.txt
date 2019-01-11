@@ -11,9 +11,16 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unknown-pragmas")
 set(CMAKE_CXX_STANDARD 11)
 set(APPLY_JSON         1)
 
-# opencv is MUST
-set(OpenCV_DIR    "/opt/intel/opencv/share/OpenCV")
-#set(OpenCV_DIR    "/usr/local/share/OpenCV")
+# turn it to 1 to use intel optimized opencv
+set(APPLY_INTEL_OPENCV     1)
+
+if(APPLY_INTEL_OPENCV)
+    set(OpenCV_DIR    "/opt/intel/opencv/share/OpenCV")
+else()
+    set(OpenCV_DIR    "/usr/local/share/OpenCV")
+endif()
+
+message("OpenCV_DIR: ${OpenCV_DIR}")
 find_package( OpenCV REQUIRED )
 
 # if support c++11, turn on json.hpp

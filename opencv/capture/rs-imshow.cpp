@@ -1,7 +1,7 @@
 // License: Apache 2.0. See LICENSE file in root directory.
 // Copyright(c) 2017 Intel Corporation. All Rights Reserved.
 
-//#define USE_UIPRESENT
+#define USE_UIPRESENT
 
 #define SLEEP_DURATION      (500*1000)
 
@@ -270,13 +270,13 @@ void preprocess_for_edge(cv::Mat& input, cv::Mat& output)
 {
     using namespace cv;
 
-    ReadSetting* settings = ReadSetting::getInstance();
-    Canny(input, output, settings->canny_threshold_min, settings->canny_threshold_max);
+    ReadSetting* sett = ReadSetting::getInstance();
+    Canny(input, output, sett->canny_threshold_min, sett->canny_threshold_max);
 }
 
 void save_procedure(const cv::Mat& color_image, const cv::Mat& depth_image, const cv::Mat& edge_image, const void* depth_data)
 {
-    ReadSetting* settings = ReadSetting::getInstance();
+    ReadSetting* sett = ReadSetting::getInstance();
     string fn;
     int serial = cvutil::get_timeepoch();
 
@@ -288,7 +288,7 @@ void save_procedure(const cv::Mat& color_image, const cv::Mat& depth_image, cons
     cout << "output depth file to: " << fn << endl;
     cvutil::save_mat_to_file(depth_image, fn);
 
-    if (settings->find_edge) {
+    if (sett->find_edge) {
         fn = cvutil::compose_image_fn("edged", serial);
         cvutil::save_mat_to_file(edge_image, fn);
     }
@@ -309,13 +309,15 @@ void find_edge(cv::Mat& color_image, const void* depth_data, cv::Mat& edge_image
 {
     using namespace cv;
 
+    //cout << __func__ << __LINE__ << endl;
+
     if (color_image.total() == 0) {
         std::cout << "[ERROR] color_image is size 0\n";
         return;
     }
 
-    // cout << "cols: " << color_image.cols << endl
-    //      << "rows: " << color_image.rows << endl;
+    // cout << "find_edge: cols: " << color_image.cols << endl
+    //      << "           rows: " << color_image.rows << endl;
 
     ReadSetting* sett = ReadSetting::getInstance();
     Mat gray_image;
@@ -589,7 +591,7 @@ int test_realsense() try
 {
     using namespace cv;
 
-    ReadSetting* settings = ReadSetting::getInstance();
+    ReadSetting* sett = ReadSetting::getInstance();
 
 #ifdef USE_UIPRESENT
     init_windows();
@@ -609,7 +611,7 @@ int test_realsense() try
     rs2::pipeline pipe;
     float depth_scale = 0.0;
 
-    if (!settings->apply_sleep) {
+    if (!sett->apply_sleep) {
         // Start streaming with default recommended configuration
         rs2::pipeline_profile profile = pipe.start(cfg);
         depth_scale = rsutil::get_depth_scale(profile.get_device());
@@ -621,7 +623,7 @@ int test_realsense() try
     rs2::align align_to(RS2_STREAM_COLOR);
 
     // Declare depth colorizer for pretty visualization of depth data
-    rs2::colorizer color_map(settings->color_scheme);    // 2: white to black
+    rs2::colorizer color_map(sett->color_scheme);    // 2: white to black
 
     rs2::decimation_filter dec;
     dec.set_option(RS2_OPTION_FILTER_MAGNITUDE, 2);
@@ -632,39 +634,45 @@ int test_realsense() try
     rs2::temporal_filter temp;
     rs2::hole_filling_filter hole;
 
-    if (settings->show_dist) {
+    if (sett->show_dist) {
         std::cout << "press to continue..." << std::endl;
         waitKey(0);
     }
+
+    rs2::frameset frameset;
 
     while (true) {
 #ifdef USE_UIPRESENT
         int64 e1 = cv::getTickCount();
 #endif
-        if (!settings->apply_sleep) {
-            rs2::frameset frameset = pipe.wait_for_frames(); // Wait for next set of frames from the camera
+        if (!sett->apply_sleep) {
+          if (!pipe.poll_for_frames(&frameset)) {
+            continue;
+          }
+#if 0
+            frameset = pipe.wait_for_frames(); // Wait for next set of frames from the camera
             if (!frameset) {
                 cout << "no frameset...\n";
                 continue;
             }
-
-            if (settings->apply_align) {
+#endif
+            if (sett->apply_align) {
                 frameset = frameset.apply_filter(align_to);
             }
-            if (settings->apply_disparity) {
+            if (sett->apply_disparity) {
                 frameset = frameset.apply_filter(depth2disparity);
-                if (settings->apply_dec) {
+                if (sett->apply_dec) {
                     frameset = frameset.apply_filter(dec);
                 }
-                if (settings->apply_spatial) {
+                if (sett->apply_spatial) {
                     // Apply spatial filtering
                     frameset = frameset.apply_filter(spat);
                 }
-                if (settings->apply_temporal) {
+                if (sett->apply_temporal) {
                     // Apply temporal filtering
                     frameset = frameset.apply_filter(temp);
                 }
-                if (settings->apply_holefill) {
+                if (sett->apply_holefill) {
                     frameset = frameset.apply_filter(hole);
                 }
                 frameset = frameset.apply_filter(disparity2depth);
@@ -675,8 +683,9 @@ int test_realsense() try
             rs2::depth_frame depth = frameset.get_depth_frame();
             rs2::video_frame color = frameset.get_color_frame();
 
-            if (settings->distance_limit > 0.0) {
-                rsutil::remove_background(color, depth, depth_scale, settings->distance_limit);
+            //cout << "frame got\n";
+            if (sett->distance_limit > 0.0) {
+                rsutil::remove_background(color, depth, depth_scale, sett->distance_limit);
             }
             auto colorized_depth = frameset.first(RS2_STREAM_DEPTH, RS2_FORMAT_RGB8);
 
@@ -686,12 +695,13 @@ int test_realsense() try
             int w = DEFAULT_WIDTH;
             int h = DEFAULT_HEIGHT;
 #if 0
-            if (settings->show_dist) {
+            if (sett->show_dist) {
                 // get distance of center point
                 float dist = depth.get_distance(w/2, h/2);
                 printf("from aligned depth: dist@(%d,%d) => %f\n", w/2, h/2, dist);
             }
 #endif
+            //cout << __LINE__ << "\n";
             // Create OpenCV matrix of size (w,h) from the colorized depth data
             Mat depth_image(Size(w, h), CV_8UC3, (void*)colorized_depth.get_data());
             Mat color_image(Size(w, h), CV_8UC3, (void*)color.get_data());
@@ -699,13 +709,16 @@ int test_realsense() try
             Mat orig_color_image = color_image.clone();
             Mat edge_image;
 
-            if (settings->find_edge) {
+            //cout << __LINE__ << "\n";
+            if (sett->find_edge) {
 /// try to find edge of table ... {
                 vector<Vec4i> p_lines;
                 find_edge(depth_image, depth.get_data(), edge_image, p_lines);
 
                 // get xyz vector angle...
-                get_3d_angle(depth);
+                if (p_lines.size()) {
+                    get_3d_angle(depth);
+                }
             }
 #ifdef USE_UIPRESENT
             /// to show depth data with mouse pointer
@@ -714,13 +727,13 @@ int test_realsense() try
             int64 e2 = cv::getTickCount();
             double elapse_time = (e2 - e1) / cv::getTickFrequency();
             //double time = cv::getTickFrequency() / (e2 - e1);
-            if (settings->show_fps) {
+            if (sett->show_fps) {
                 show_cvfps(color_image, elapse_time);
                 //printf("fps: %.3f\n", elapse_time);
             }
 
             Mat combined;
-            if (settings->find_edge) {
+            if (sett->find_edge) {
                 hconcat(edge_image, depth_image, combined);
                 hconcat(combined, color_image, combined);
             } else {
@@ -744,7 +757,7 @@ int test_realsense() try
         }
     }
 
-    if (!settings->apply_sleep) {
+    if (!sett->apply_sleep) {
         pipe.stop();
     }
 
