@@ -603,13 +603,24 @@ int test_realsense() try
 
     //Create a configuration for configuring the pipeline with a non default profile
     rs2::config cfg;
-    //Add desired streams to configuration
-    cfg.enable_stream(RS2_STREAM_COLOR, DEFAULT_WIDTH, DEFAULT_HEIGHT, RS2_FORMAT_BGR8, 15);
-    cfg.enable_stream(RS2_STREAM_DEPTH, DEFAULT_WIDTH, DEFAULT_HEIGHT, RS2_FORMAT_Z16, 15);
-
     // Declare RealSense pipeline, encapsulating the actual device and sensors
     rs2::pipeline pipe;
     float depth_scale = 0.0;
+
+    if (sett->useBagFile()) {
+        cout << "bag file: " << sett->input_bag << endl;
+        cfg.enable_device_from_file(sett->input_bag);
+    } else {
+        if ( !rsutil::show_rsinfo() ) {
+            printf("no Intel Realsense camera, exit...\n");
+            exit(-1);
+        }
+
+        //Add desired streams to configuration
+        cfg.enable_stream(RS2_STREAM_COLOR, DEFAULT_WIDTH, DEFAULT_HEIGHT, RS2_FORMAT_BGR8, 15);
+        cfg.enable_stream(RS2_STREAM_DEPTH, DEFAULT_WIDTH, DEFAULT_HEIGHT, RS2_FORMAT_Z16, 15);
+    }
+
 
     if (!sett->apply_sleep) {
         // Start streaming with default recommended configuration
