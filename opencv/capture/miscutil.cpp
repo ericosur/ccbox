@@ -36,6 +36,7 @@ void print_help()
         "-b input bag file\n"
         "-c color image\n"
         "-d depth image\n"
+        "-p specify prefix, auto fetch color,depth,raw data\n"
         "-h help message\n"
         );
 }
