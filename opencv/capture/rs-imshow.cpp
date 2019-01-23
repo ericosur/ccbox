@@ -396,7 +396,7 @@ void find_edge(cv::Mat& color_image, const void* depth_data, cv::Mat& edge_image
             // get depth from center of line
             r[8] = z1;
             r[9] = z2;
-            int tmp = get_dpeth_pt(depth_data, r[0]+r[2]/2, r[1]+r[3]/2);
+            int tmp = get_dpeth_pt(depth_data, (r[0]+r[2])/2, (r[1]+r[3])/2);
             if (tmp != 0) {
                 r[5] = tmp;
                 results.push_back(r);
