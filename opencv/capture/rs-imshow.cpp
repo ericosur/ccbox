@@ -6,6 +6,7 @@
 #define SLEEP_DURATION      (500*1000)
 
 #ifdef USE_REALSENSE
+#define USE_GET_3DANGLE
 
 #include "readsetting.h"
 #include "cvutil.h"
@@ -725,11 +726,12 @@ int test_realsense() try
 /// try to find edge of table ... {
                 vector<Vec4i> p_lines;
                 find_edge(depth_image, depth.get_data(), edge_image, p_lines);
-
+                #ifdef USE_GET_3DANGLE
                 // get xyz vector angle...
                 if (p_lines.size()) {
                     get_3d_angle(depth);
                 }
+                #endif
             }
 #ifdef USE_UIPRESENT
             /// to show depth data with mouse pointer
