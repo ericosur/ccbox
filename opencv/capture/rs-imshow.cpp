@@ -275,29 +275,30 @@ void preprocess_for_edge(cv::Mat& input, cv::Mat& output)
     Canny(input, output, sett->canny_threshold_min, sett->canny_threshold_max);
 }
 
-void save_procedure(const cv::Mat& color_image, const cv::Mat& depth_image, const cv::Mat& edge_image, const void* depth_data)
+void save_procedure(const cv::Mat& color_image, const cv::Mat& depth_image, const cv::Mat& edge_image, const void* depth_data, bool isFromImage=false)
 {
     ReadSetting* sett = ReadSetting::getInstance();
     string fn;
     int serial = cvutil::get_timeepoch();
 
-    fn = cvutil::compose_image_fn("color", serial);
-    cout << "output color file to: " << fn << endl;
-    cvutil::save_mat_to_file(color_image, fn);
+    if (!isFromImage) {
+        fn = cvutil::compose_image_fn("color", serial);
+        cout << "output color file to: " << fn << endl;
+        cvutil::save_mat_to_file(color_image, fn);
 
-    fn = cvutil::compose_image_fn("depth", serial);
-    cout << "output depth file to: " << fn << endl;
-    cvutil::save_mat_to_file(depth_image, fn);
+        fn = cvutil::compose_image_fn("depth", serial);
+        cout << "output depth file to: " << fn << endl;
+        cvutil::save_mat_to_file(depth_image, fn);
+
+        fn = cvutil::compose_depth_bin("depth", serial);
+        save_depth_to_bin(fn, (void*)depth_data, depth_image.cols, depth_image.rows);
+        cout << "output depth bin to: " << fn << endl;
+    }
 
     if (sett->find_edge) {
         fn = cvutil::compose_image_fn("edged", serial);
         cvutil::save_mat_to_file(edge_image, fn);
     }
-
-    fn = cvutil::compose_depth_bin("depth", serial);
-    save_depth_to_bin(fn, (void*)depth_data, depth_image.cols, depth_image.rows);
-
-    cout << "output depth bin to: " << fn << endl;
 }
 
 ///
@@ -528,7 +529,12 @@ int test_from_image()
     find_edge(color_img, dep_buffer, edge_img, p_lines);
     imshow(edge2_win, edge_img);
 #endif
-    waitKey(0);
+    int key = waitKey(0);
+    if (key == 0x1B) {
+        cout << "user break" << endl;
+    } else if (key == 's') {
+        save_procedure(color_img, depth_img, edge_img, dep_buffer, true);
+    }
 
     return 0;
 }
@@ -597,10 +603,6 @@ int test_realsense() try
 #ifdef USE_UIPRESENT
     init_windows();
 #endif  // USE_UIPRESENT
-    if ( !rsutil::show_rsinfo() ) {
-        printf("no Intel Realsense camera, exit...\n");
-        exit(-1);
-    }
 
     //Create a configuration for configuring the pipeline with a non default profile
     rs2::config cfg;
