@@ -4,10 +4,27 @@ source code refers to:
 https://github.com/IntelRealSense/librealsense/blob/master/doc/stepbystep/getting_started_with_openCV.md
 
 
+## build
+
+use *_*cmake*_* first, if not work, use *_*build.sh*_*
+
 ## opencv path
 
+In CMakeLists.txt, use Intel's opencv:
+```
+set(OpenCV_DIR    "/opt/intel/opencv/share/OpenCV")
+```
+
+Use my own build:
+```
+set(OpenCV_DIR    "/usr/local/share/OpenCV")
+```
+
+reference file location:
+```
 /usr/local/lib/libopencv_highgui.so.3.4
-/opt/intel/computer_vision_sdk_2018.2.319/opencv/lib/libopencv_highgui.so.3.4
+/opt/intel/computer_vision_sdk/opencv/lib/libopencv_highgui.so.3.4
+```
 
 ## using rs2 api to record/playback
 
