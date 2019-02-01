@@ -13,11 +13,12 @@ def find_marker(image):
     # convert the image to grayscale, blur it, and detect edges
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     gray = cv2.GaussianBlur(gray, (5, 5), 0)
-    edged = cv2.Canny(gray, 35, 125)
+    edged = cv2.Canny(gray, 25, 50)
 
     # find the contours in the edged image and keep the largest one;
     # we'll assume that this is our piece of paper in the image
-    (_, cnts, _) = cv2.findContours(edged.copy(), cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+    #(_, cnts, _) = cv2.findContours(edged.copy(), cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+    (cnts, hirachy) = cv2.findContours(edged.copy(), cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
     # 求最大面积
     c = max(cnts, key = cv2.contourArea)
 
