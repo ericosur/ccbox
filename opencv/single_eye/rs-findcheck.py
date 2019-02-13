@@ -8,7 +8,14 @@ import numpy as np
 import cv2
 import pyrealsense2 as rs
 
+# checker board size 7 by 9
 SIZE = (7, 9)
+
+# size that restored from distortion
+# need to be 7x, 9x
+DST_W = 210
+DST_H = 270
+
 #BAG_FILE = '/home/rasmus/Documents/checker.bag'
 BAG_FILE = '/home/rasmus/Documents/bucket.bag'
 
@@ -71,6 +78,20 @@ def getmm(p):
     return q
 
 
+def get_ppts(marker):
+    #id = [0, 6, 62, 56]
+    ppts = np.array([marker[0], marker[6], marker[62], marker[56]], dtype="float32")
+    #print("ppts:{}".format(ppts))
+    return ppts
+
+
+def get_perspective_mat(src_points):
+    #src_points = np.array([[270., 69.], [690.,164.], [273.,458.], [694.,518.]], dtype="float32")
+    dst_points = np.array([[0.,0.], [DST_W-1.,0.], [DST_W-1.,DST_H-1], [0.,DST_H-1.]], dtype="float32")
+    M = cv2.getPerspectiveTransform(src_points, dst_points)
+    return M
+
+
 def get_poi_rs_dist(fourc, depth_frame, depth_intrinsics):
     fourxyz = []
     for cc in fourc:
@@ -84,10 +105,18 @@ def get_poi_rs_dist(fourc, depth_frame, depth_intrinsics):
         #print("(x,y,z) = ({:.2f},{:.2f},{:.2f}".format(p[0], p[1], [2]))
         #print("{:.2f},{:.2f},{:.2f}".format(q[0],q[1],q[2]))
         fourxyz.append(q)
-    print("[0-1] uv({:.2f}) xyz({:.2f})".format(px_dist(fourc[0], fourc[1]), px_3d_dist(fourxyz[0], fourxyz[1])))
-    print("[1-2] uv({:.2f}) xyz({:.2f})".format(px_dist(fourc[1], fourc[2]), px_3d_dist(fourxyz[1], fourxyz[2])))
-
+    '''
+    msg0 = "[0-1] uv({:.2f}) xyz({:.2f})".format(px_dist(fourc[0], fourc[1]), px_3d_dist(fourxyz[0], fourxyz[1]))
+    msg1 = "[1-2] uv({:.2f}) xyz({:.2f})".format(px_dist(fourc[1], fourc[2]), px_3d_dist(fourxyz[1], fourxyz[2]))
+    print(msg0)
+    print(msg1)
+    '''
     return fourxyz
+
+
+def put_mytext(img, text):
+    cv2.putText(img, text, (img.shape[1] - 500, img.shape[0] - 20),
+                cv2.FONT_HERSHEY_SIMPLEX, 1.1, (0, 255, 255), 3)
 
 
 # u, v is 2D pixel coordinate
@@ -100,7 +129,9 @@ def uv_to_xyz(u, v, depth_frame, depth_intrinsics):
 
 def main():
     window_name = 'capture'
+    result_name = 'perspective'
     USE_REAL_CAMERA = False
+
     try:
         # Configure depth and color streams
         pipeline = rs.pipeline()
@@ -117,6 +148,8 @@ def main():
 
         cv2.namedWindow(window_name, cv2.WINDOW_AUTOSIZE)
         cv2.moveWindow(window_name, 0, 0)
+        cv2.namedWindow(result_name, cv2.WINDOW_AUTOSIZE)
+        cv2.moveWindow(result_name, 640, 0)
 
         cnt = 0
 
@@ -143,14 +176,28 @@ def main():
             ret, crnrs = cv2.findChessboardCorners(color_image, SIZE, cv2.CALIB_CB_FAST_CHECK)
             #cv2.drawChessboardCorners(color_image, SIZE, crnrs, ret)
 
+            # draw point of corners
             if ret:
                 fourc = get_poi(crnrs)
-                #print(fourc)
                 draw_poi(color_image, fourc)
-                get_poi_rs_dist(fourc, depth_frame, depth_intrinsics)
+                fourxyz = get_poi_rs_dist(fourc, depth_frame, depth_intrinsics)
+                msg0 = "{:.2f} x {:.2f} mm".format(px_3d_dist(fourxyz[0], fourxyz[1]), px_3d_dist(fourxyz[1], fourxyz[2]))
+                put_mytext(color_image, msg0)
 
-            if False:
-                dist_from_rs = depth_frame.get_distance(int(marker[0][0]), int(marker[0][1]))
+            # perfrom warp perspective distortion
+            if ret:
+                cppts = get_ppts(crnrs)
+                M = get_perspective_mat(cppts)
+                perspective = cv2.warpPerspective(color_image, M, (DST_W, DST_H), cv2.INTER_LINEAR)
+                cv2.imshow(result_name, perspective)
+
+
+            if False and ret:
+                p0 = crnrs[0][0]
+                p1 = crnrs[1][0]
+                print("p0:{} p1:{}".format(p0, p1))
+                #dist_from_rs = depth_frame.get_distance(int(marker[0][0]), int(marker[0][1]))
+                dist_from_rs = depth_frame.get_distance(p0[0], p0[1])
                 dist_from_rs *= 1000
 
                 #print('marker:{} dist_rs:{}'.format(marker, dist_from_rs))
@@ -162,7 +209,7 @@ def main():
                 cv2.putText(color_image, "%4dmm" % dist_from_rs,
                             (color_image.shape[1] - 500, color_image.shape[0] - 20),
                             cv2.FONT_HERSHEY_SIMPLEX,
-                            1.2, (0, 255, 255), 3)
+                            1.1, (0, 255, 255), 3)
 
             # show a frame
             cv2.imshow(window_name, color_image)

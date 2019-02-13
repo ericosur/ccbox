@@ -7,7 +7,10 @@ import math
 import numpy as np
 import cv2
 
+# checker board size 7 by 9
 SIZE = (7, 9)
+
+# size that restored from distortion
 DST_W = 280
 DST_H = 360
 
@@ -44,7 +47,7 @@ def get_poi(marker):
     return corners
 
 def get_ppts(marker):
-    id = [0, 6, 62, 56]
+    #id = [0, 6, 62, 56]
     ppts = np.array([marker[0], marker[6], marker[62], marker[56]], dtype="float32")
     #print("ppts:{}".format(ppts))
     return ppts
@@ -100,19 +103,18 @@ def main():
             ret, crnrs = cv2.findChessboardCorners(image, SIZE, cv2.CALIB_CB_FAST_CHECK)
             #cv2.drawChessboardCorners(color_image, SIZE, crnrs, ret)
 
-            perspective = None
             if ret:
                 fourc = get_poi(crnrs)
-                cppts = get_ppts(crnrs)
-                #print(fourc)
                 draw_poi(image, fourc)
+
+                cppts = get_ppts(crnrs)
                 M = get_perspective_mat(cppts)
                 perspective = cv2.warpPerspective(image, M, (DST_W, DST_H), cv2.INTER_LINEAR)
+                cv2.imshow(result_name, perspective)
 
             # show a frame
             cv2.imshow(window_name, image)
-            if perspective is not None:
-                cv2.imshow(result_name, perspective)
+
             key = cv2.waitKey(1)
             if key & 0xFF == ord('q') or key == 0x1B:
                 break
