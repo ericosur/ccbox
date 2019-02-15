@@ -1,24 +1,29 @@
 #include <opencv2/opencv.hpp>
-//#include <opencv2/core/core.hpp>
-//#include <opencv2/highgui/highgui.hpp>
-using namespace cv;
 
-#define WINNAME     "image"
-
-int test()
+cv::Scalar get_color(int i, int j)
 {
+    return cv::Scalar(80+i*10, 80+j*12, 20+i+j);
+}
+
+void test()
+{
+    using namespace cv;
+
+    const char WINNAME[] = "result";
+    const int colsize = 36;
+    const int rowsize = 24;
+    const int spacew = 0;
+    const int spaceh = 4;
+
     // Create black empty images
-    int maxx = 640;
-    int maxy = 480;
+    const int maxx = 480;
+    const int maxy = 400;
+    const int w = 10;
+    const int h = 6;
+
     Mat image = Mat::zeros( maxy, maxx, CV_8UC3 );
-    int w = 10;
-    int h = 6;
     int startx = 0;
     int starty = 0;
-    int colsize = 32;
-    int rowsize = 32;
-    int spacew = 0;
-    int spaceh = 4;
 
     namedWindow(WINNAME, WINDOW_NORMAL);
     moveWindow(WINNAME, 50, 50);
@@ -33,15 +38,14 @@ int test()
         y = starty + h*j + 5;
         for (i=0; i<colsize; ++i) {
             x = startx + i * (w + spacew);
-            rectangle(image, Point(x, y), Point(x+w, y+h), Scalar(80+i*10, 80+j*12, 20+i+j), 1, 8);
+            rectangle(image, Point(x, y), Point(x+w, y+h), get_color(i, j), 1, 8);
             imshow(WINNAME, image);
         }
         starty += spaceh;
     }
 
-
-    waitKey( 0 );
-    return(0);
+    waitKey(0);
+    destroyAllWindows();
 }
 
 int main()
