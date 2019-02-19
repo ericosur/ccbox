@@ -8,6 +8,8 @@ import numpy as np
 import cv2
 import pyrealsense2 as rs
 
+import checkerutil as ck
+
 # find marker
 def find_marker(image):
     # convert the image to grayscale, blur it, and detect edges
@@ -17,7 +19,8 @@ def find_marker(image):
 
     # find the contours in the edged image and keep the largest one;
     # we'll assume that this is our piece of paper in the image
-    (_, cnts, _) = cv2.findContours(edged.copy(), cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+    #(_, cnts, _) = cv2.findContours(edged.copy(), cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+    (cnts, hirachy) = cv2.findContours(edged.copy(), cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
     # 求最大面积
     c = max(cnts, key = cv2.contourArea)
 
@@ -25,22 +28,6 @@ def find_marker(image):
     # cv2.minAreaRect() c代表点集，返回rect[0]是最小外接矩形中心点坐标，
     # rect[1][0]是width，rect[1][1]是height，rect[2]是角度
     return cv2.minAreaRect(c)
-
-# get distance from known width and focal length
-def distance_to_camera(knownWidth, focalLength, perWidth):
-    # compute and return the distance from the maker to the camera
-    return (knownWidth * focalLength) / perWidth
-
-
-def draw_bounding_box(frame, marker):
-    # draw a bounding box around the image and display it
-    #box = np.int0(cv2.cv.BoxPoints(marker))
-    box = cv2.boxPoints(marker)
-    #print('box:{} {}'.format(type(box), box))
-    box = np.int0(box)
-    #print('box: {}'.format(box))
-    cv2.drawContours(frame, [box], -1, (0, 255, 0), 2)
-
 
 
 def main():
@@ -105,7 +92,7 @@ def main():
 
             #dist = distance_to_camera(KNOWN_WIDTH, focalLength, marker[1][0])
 
-            draw_bounding_box(color_image, marker)
+            ck.draw_bounding_box(color_image, marker)
 
             depth_intrinsics = rs.video_stream_profile(depth_frame.profile).get_intrinsics()
             # u, v is 2D pixel coordinate
@@ -141,11 +128,11 @@ def main():
             #             cv2.FONT_HERSHEY_SIMPLEX,
             #             1.2, (0, 255, 0), 3)
 
-            cv2.putText(color_image, "p0d: %4dmm" % dist_from_rs,
+            cv2.putText(color_image, "rs: %4dmm" % dist_from_rs,
                         (color_image.shape[1] - 500, color_image.shape[0] - 60),
                         cv2.FONT_HERSHEY_SIMPLEX,
                         1.2, (0, 255, 255), 3)
-            cv2.putText(color_image, "w: %4dmm" % d,
+            cv2.putText(color_image, "wc: %4dmm" % d,
                         (color_image.shape[1] - 500, color_image.shape[0] - 20),
                         cv2.FONT_HERSHEY_SIMPLEX,
                         1.2, (0, 255, 127), 3)
