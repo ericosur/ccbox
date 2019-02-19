@@ -54,7 +54,6 @@ inline int my_avg(int m, int n)
     return (m+n)/2;
 }
 
-
 #ifdef USE_UIPRESENT
 // show UI version
 void show_answer(cv::Mat& depth_img, cv::Mat& color_img, const Vec10i& z, const cv::Scalar& color, int idx)
@@ -71,7 +70,7 @@ void show_answer(cv::Mat& depth_img, cv::Mat& color_img, const Vec10i& z, const 
     line(depth_img, Point(z[0], z[1]), Point(z[2], z[3]), color, 2, LINE_AA);
     line(color_img, Point(z[0], z[1]), Point(z[2], z[3]), color, 2, LINE_AA);
 
-    sprintf(msg, "[%d]: %3d,%3d,%4d - %3d,%3d,%4d, [%4d], a[%4d], m[%4d], d:%02d",
+    sprintf(msg, "[%d]: %3d,%3d,%3d - %3d,%3d,%3d, [%4d], a[%4d], m[%4d], d:%02d",
             (int)idx,
             z[0], z[1], z[8],
             z[2], z[3], z[9],
@@ -89,7 +88,7 @@ void show_answer(cv::Mat& depth_img, cv::Mat& color_img, const Vec10i& z, const 
 void show_answer(cv::Mat& depth_img, cv::Mat& color_img, const Vec10i& z, const cv::Scalar& color, int idx)
 {
     char msg[128];
-    sprintf(msg, "[%d]: %3d,%3d,%4d - %3d,%3d,%4d, [%4d], a[%4d], m[%4d], d:%02d",
+    sprintf(msg, "[%d]: %3d,%3d,%3d - %3d,%3d,%3d, [%4d], a[%4d], m[%4d], d:%02d",
             (int)idx,
             z[0], z[1], z[8],
             z[2], z[3], z[9],
@@ -184,7 +183,7 @@ int get_dpeth_pt(const void* buffer, int x, int y)
 {
     int res = 0;
     if ( (x < 0 || x >= DEFAULT_WIDTH) || (y < 0 || y >= DEFAULT_HEIGHT) ) {
-        //printf("%s: OOB %d,%d\n", __func__, x, y);
+        printf("%s: OOB %d,%d\n", __func__, x, y);
         return 0;
     }
 
@@ -192,39 +191,11 @@ int get_dpeth_pt(const void* buffer, int x, int y)
     int cnt = y * DEFAULT_WIDTH + x;
     res = (int)*(pt+cnt);
 
-    if (false)
-        printf("res: %04x\n", res);
+    //printf("res: %04d\n", res);
 
     return res;
 }
-#if 0
-int get_dpeth_pt1(const void* buffer, int x, int y)
-{
-    const int size_dx = 9;
-    int dx[] = {-1, 0, 1, -1, 0, 1, -1, 0, 1};
-    int dy[] = {-1, -1, -1, 0, 0, 0, 1, 1, 1};
-    int tmp = get_dpeth_pt0(buffer, x, y);
-    if (tmp == 0) {
-        printf("retry depth...  ");
-        // try to get depth from around
-        int sum = 0;
-        int cnt = 0;
-        for (int i = 0; i < size_dx; i++) {
-            int _d = get_dpeth_pt(buffer, x+dx[i], y+dy[i]);
-            if (_d) {
-                cnt ++;
-                sum += _d;
-            }
-        }
-        if (cnt == 0) {
-            return 0;
-        }
-        return sum/cnt;
-    }
 
-    return tmp;
-}
-#endif
 /// [in] depth_data: raw data buffer of depth
 /// [in] vector to store points
 /// [out] all depth values for intput points
@@ -233,9 +204,17 @@ void get_all_depth_data(const void* depth_data, const std::vector<cv::Point>& po
     all_depth_results.clear();
     for (auto i=0; i<points.size(); ++i)  {
         int res = get_dpeth_pt(depth_data, points.at(i).x, points.at(i).y);
-        if (res) {
+        if (rsutil::check_depth(res)) {
             all_depth_results.push_back(res);
         }
+    }
+
+    size_t points_size = points.size();
+    if (points_size) {
+        size_t depth_results = all_depth_results.size();
+        printf("usable ratio: %d%%\n", (int)(depth_results*100/points_size));
+    } else {
+        printf("no usable points\n");
     }
 }
 
@@ -397,10 +376,14 @@ void find_edge(cv::Mat& color_image, const void* depth_data, cv::Mat& edge_image
             r[8] = z1;
             r[9] = z2;
             int tmp = get_dpeth_pt(depth_data, (r[0]+r[2])/2, (r[1]+r[3])/2);
-            if (tmp != 0) {
+            if (rsutil::check_depth(tmp)) {
                 r[5] = tmp;
                 results.push_back(r);
+            } else {
+                printf("invalid depth at mid pt\n");
             }
+        } else {
+            //printf("x\n");
         }
     }
 
@@ -448,10 +431,12 @@ void do_click_window(rs2::depth_frame& depth, cv::Mat& color_image, cv::Mat& dep
         cvui::printf(depth_image, printx, printy, print_size, print_color, "Depth is %4d (mm)", _depth_pt, _depth_pt);
         printy += print_inc_y;
 
-        rsutil::query_uv2xyz(depth, cross, xyz);
-        xyz = xyz * 1000;
-        cvui::printf(depth_image, printx, printy, print_size, print_color, "xyz: %.0f,%.0f,%.0f", xyz[0], xyz[1], xyz[2]);
-        printy += print_inc_y;
+        bool ret = rsutil::query_uv2xyz(depth, cross, xyz);
+        if (ret) {
+            xyz = xyz * 1000;
+            cvui::printf(depth_image, printx, printy, print_size, print_color, "xyz: %.0f,%.0f,%.0f", xyz[0], xyz[1], xyz[2]);
+            printy += print_inc_y;
+        }
 
         double dd[3];
         dd[0] = xyz[0];  dd[1] = 0.0;  dd[2] = xyz[2];
@@ -473,8 +458,6 @@ void do_click_window(rs2::depth_frame& depth, cv::Mat& color_image, cv::Mat& dep
             cross.y = y;
             break;
     }
-    //float dist = depth.get_distance(x, y);
-    //cvui::printf(depth_image, 240, 90, "dist is %f", dist);
     cvui::update();
     cvutil::draw_crosshair(depth_image, cross);
     cvutil::draw_crosshair(color_image, cross);
@@ -554,6 +537,7 @@ int show_image(const std::string& fn)
 }
 
 
+
 // Vec8f means a vector with 6 floating numbers
 // 0:x1, y1, x2, y2,
 // 4: degree for 2D
@@ -564,32 +548,47 @@ int show_image(const std::string& fn)
 // 9: rhs depth
 void get_3d_angle(const rs2::depth_frame& depth)
 {
+    if (!depth) {
+        return;
+    }
+    if (results.size() == 0) {
+        return;
+    }
+    //printf("enter %s...\n", __func__);
     cv::Point pt1;
     cv::Vec3f xyz1;
     pt1.x = results[0][0];
     pt1.y = results[0][1];
-    rsutil::query_uv2xyz(depth, pt1, xyz1);
-    xyz1 *= 1000;
-    printf("%s: xyz1: %.0f,%.0f,%.0f  ", __func__, xyz1[0], xyz1[1], xyz1[2]);
 
     cv::Point pt2;
     cv::Vec3f xyz2;
     pt2.x = results[0][2];
     pt2.y = results[0][3];
-    rsutil::query_uv2xyz(depth, pt2, xyz2);
-    xyz2 *= 1000;
-    printf("xyz2: %.0f,%.0f,%.0f  ", xyz2[0], xyz2[1], xyz2[2]);
 
-    double dx = xyz2[0] - xyz1[0];
-    double dz = xyz2[2] - xyz1[2];
 
-    double deg = 0.0;
-    if ( cvutil::get_angle_from_dx_dy(deg, dx, dz) ) {
-        printf("3D deg: %.3f\n", deg);
+    bool ret1 = rsutil::query_uv2xyz(depth, pt1, xyz1);
+    bool ret2 = rsutil::query_uv2xyz(depth, pt2, xyz2);
+
+    if (ret1) {
+        xyz1 *= 1000;
+        printf("%s: xyz1: %.0f,%.0f,%.0f  ", __func__, xyz1[0], xyz1[1], xyz1[2]);
     } else {
-        printf("\n");
+        printf("ret1 failed\n");
+    }
+    if (ret2) {
+        xyz2 *= 1000;
+        printf("xyz2: %.0f,%.0f,%.0f  ", xyz2[0], xyz2[1], xyz2[2]);
+    } else {
+        printf("ret2 failed\n");
     }
 
+    float dx = xyz2[0] - xyz1[0];
+    float dz = xyz2[2] - xyz1[2];
+    float deg = 0.0;
+    if ( cvutil::get_angle_from_dx_dy(deg, dx, dz) ) {
+        printf("3D deg: %.3f\n", deg);
+    }
+    printf("\n");
 }
 
 
@@ -697,6 +696,14 @@ int test_realsense() try
             rs2::depth_frame depth = frameset.get_depth_frame();
             rs2::video_frame color = frameset.get_color_frame();
 
+            if (!depth) {
+                cout << "no depth frame\n";
+                continue;
+            }
+            if (!color) {
+                cout << "no color frame\n";
+                continue;
+            }
             //cout << "frame got\n";
             if (sett->distance_limit > 0.0) {
                 rsutil::remove_background(color, depth, depth_scale, sett->distance_limit);
@@ -730,7 +737,7 @@ int test_realsense() try
                 find_edge(depth_image, depth.get_data(), edge_image, p_lines);
                 #ifdef USE_GET_3DANGLE
                 // get xyz vector angle...
-                if (p_lines.size()) {
+                if (results.size()) {
                     get_3d_angle(depth);
                 }
                 #endif

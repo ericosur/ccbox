@@ -18,7 +18,7 @@
         "canny_threshold_max": 20,
         "hough_threshold": 70,
         "hough_minlength": 130,
-        "hough_maxlinegap": 45,
+        "hough_maxlinegap": 25,
         "show_dist": false,
         "show_fps": true,
         "color_scheme": 2,
@@ -31,7 +31,7 @@
         "apply_temporal": true,
         "apply_holefill": true,
 
-        "max_degree": 60,
+        "max_degree": 55,
         "max_show_answer": 1,
         "ignore_margin": 20
     }

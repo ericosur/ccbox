@@ -1,4 +1,6 @@
+#include "common.h"
 #include "cvutil.h"
+#include "rsutil.h"
 #include "readsetting.h"
 
 #include <stdio.h>
@@ -34,12 +36,12 @@ int get_timeepoch()
     return (int)t;
 }
 
-inline double rad_to_deg(double rad)
+inline float rad_to_deg(float rad)
 {
     return rad * 180.0 / M_PI;
 }
 
-inline double deg_to_rad(double deg)
+inline float deg_to_rad(float deg)
 {
     return deg * M_PI / 180.0;
 }
@@ -249,36 +251,35 @@ void test_get_points_between_two_points()
 #ifdef USE_REALSENSE
 bool check_point2(int x1, int y1, int z1, int x2, int y2, int z2, double& degree, bool debug)
 {
-    if (z1 == 0 || z2 == 0) {
+    if (!rsutil::check_depth(z1))
+        return false;
+    if (!rsutil::check_depth(z2))
+        return false;
+
+    if (abs(z1 - z2) > 500) {
+        // not good
         if (debug) {
-            cout << "0 ";
+            cout << "> ";
         }
-        // useless depth
-    } else {
-        if (abs(z1 - z2) > 500) {
-            // not good
-            if (debug) {
-                cout << "> ";
-            }
-            return false;
-        }
+        return false;
     }
     return check_point(x1, y1, x2, y2, degree);
 }
 
-bool get_angle_from_dx_dy(double& degree, double dx, double dy, bool debug)
+bool get_angle_from_dx_dy(float& degree, float dx, float dy, bool debug)
 {
     //ReadSetting* sett = ReadSetting::getInstance();
-    const double pos_max_degree = 85.0;
-    const double neg_max_degree = -pos_max_degree;
-    const double pos_slope = tan(deg_to_rad(pos_max_degree));
-    const double neg_slope = -pos_slope;
+    const float pos_max_degree = 85.0;
+    const float neg_max_degree = -pos_max_degree;
+    const float pos_slope = tan(deg_to_rad(pos_max_degree));
+    const float neg_slope = -pos_slope;
 
     if (fabs(dx) < 10.0 || fabs(dy) < 1.0) {
         if (debug) {
             cout << "x ";
         }
         degree = pos_max_degree;
+        //printf("reach max degree...\n");
         return false;
     }
 
@@ -293,7 +294,7 @@ bool get_angle_from_dx_dy(double& degree, double dx, double dy, bool debug)
         }
     }
 
-    double slope = dy / dx;
+    float slope = dy / dx;
     if (debug) {
         cout << "dx " << dx << " dy " << dy << " slope: " << slope << endl;
     }
@@ -303,7 +304,7 @@ bool get_angle_from_dx_dy(double& degree, double dx, double dy, bool debug)
     } else if (slope < neg_slope) {
         degree = neg_max_degree;
     } else {
-        double _a = atan(slope);
+        float _a = atan(slope);
         (void)_a;
         //cout << "_a: " << _a << endl;
         degree = rad_to_deg(_a);
@@ -322,20 +323,20 @@ bool check_point(int x1, int y1, int x2, int y2, double& degree, bool debug)
     // area #1
     if (y1<margin && y2<margin)
         return false;
-    if (y1>DEFAULT_HEIGHT-margin && y2>DEFAULT_HEIGHT-margin)
+    if (y1>DEFAULT_HEIGHT-margin || y2>DEFAULT_HEIGHT-margin)
         return false;
     if (x1<margin && x2<margin)
         return false;
-    if (x1>DEFAULT_WIDTH-margin && x2>DEFAULT_WIDTH-margin)
+    if (x1>DEFAULT_WIDTH-margin || x2>DEFAULT_WIDTH-margin)
         return false;
 
     if (x1 == x2) {
         return false;
     }
 
-    double dy = y2 - y1;
-    double dx = x2 - x1;
-    double deg = 0.0;
+    float dy = y2 - y1;
+    float dx = x2 - x1;
+    float deg = 0.0;
     bool ret = get_angle_from_dx_dy(deg, dx, dy);
 
     if (!ret || (deg > ang_too_slope || deg < -ang_too_slope)) {

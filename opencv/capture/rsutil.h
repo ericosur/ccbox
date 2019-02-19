@@ -10,6 +10,7 @@
 #include <librealsense2/rs.hpp>
 #include <librealsense2/rsutil.h>
 
+
 namespace rsutil {
 
 //using namespace std;
@@ -17,12 +18,18 @@ namespace rsutil {
 
 using pixel = std::pair<int, int>;
 
+bool check_depth(float d);
+
+void display_point(float point[3]);
+
+float get_distance_mm(const rs2::depth_frame& frame, int u, int v);
+
+bool query_uv2xyz(const rs2::depth_frame& frame, const cv::Point& pt, cv::Vec3f& xyz, bool debug=false);
+
 // Distance 3D is used to calculate real 3D distance between two pixels
 float dist_3d(const rs2::depth_frame& frame, pixel u, pixel v);
 // Distance 2D returns the distance in pixels between two pixels
 float dist_2d(const pixel& a, const pixel& b);
-
-void query_uv2xyz(const rs2::depth_frame& frame, const cv::Point& pt, cv::Vec3f& xyz, bool debug=false);
 
 bool get_vec_deg(cv::Mat& v, double& degree, bool debug=false);
 

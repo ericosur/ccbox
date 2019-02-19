@@ -1,4 +1,7 @@
+#include "common.h"
 #include "rsutil.h"
+
+#include <stdio.h>
 
 #ifdef USE_REALSENSE
 
@@ -7,33 +10,65 @@ namespace rsutil {
 using namespace std;
 using namespace cv;
 
-void display_point(float point[3])
+bool check_depth(float d)
 {
-    cout << "(" << point[0] << "," << point[1] << "," << point[2] << ")\n";
+    if (ISNAN(d) || d < MIN_DEPTH || d > MAX_DEPTH) {
+        return false;
+    }
+    return true;
 }
 
-void query_uv2xyz(const rs2::depth_frame& frame, const cv::Point& pt, cv::Vec3f& xyz, bool debug)
+void display_point(float point[3])
 {
+    printf("(%.2f,%.2f,%.2f)\n", point[0], point[1], point[2]);
+}
+
+float get_distance_mm(const rs2::depth_frame& frame, int u, int v)
+{
+    float d = frame.get_distance(u, v);
+    d *= 1000.0;
+    return d;
+}
+
+bool query_uv2xyz(const rs2::depth_frame& frame, const cv::Point& pt, cv::Vec3f& xyz, bool debug)
+{
+    if (!frame) {
+        printf("no frame\n");
+        return false;
+    }
+
+    //printf("enter %s...\n", __func__);
     float pixel[2]; // From pixel
     float point[3]; // From point (in 3D)
 
     pixel[0] = pt.x;
     pixel[1] = pt.y;
 
-    auto dist = frame.get_distance(pixel[0], pixel[1]);
+    xyz[0] = 0.0;
+    xyz[1] = 0.0;
+    xyz[2] = 0.0;
+
+    float dist = frame.get_distance(pixel[0], pixel[1]);
+    //printf("get_distance: dist: %.2f\n", dist);
+    if (dist < 0.15 || dist > 1.0) {
+        printf("dist failed: %.2f\n", dist);
+        return false;
+    }
 
     // Deproject from pixel to point in 3D
     rs2_intrinsics intr = frame.get_profile().as<rs2::video_stream_profile>().get_intrinsics(); // Calibration data
     rs2_deproject_pixel_to_point(point, &intr, pixel, dist);
     if (debug) {
         cout << "point: ";
-        display_point(point);
+        rsutil::display_point(point);
     }
 
     xyz[0] = point[0];
     xyz[1] = point[1];
     xyz[2] = point[2];
+    return true;
 }
+
 
 float dist_3d(const rs2::depth_frame& frame, pixel u, pixel v)
 {
@@ -54,8 +89,16 @@ float dist_3d(const rs2::depth_frame& frame, pixel u, pixel v)
     // It is not recommended to issue an API call for each pixel
     // (since the compiler can't inline these)
     // However, in this example it is not one of the bottlenecks
-    auto udist = frame.get_distance(upixel[0], upixel[1]);
-    auto vdist = frame.get_distance(vpixel[0], vpixel[1]);
+    float udist = get_distance_mm(frame, upixel[0], upixel[1]);
+    float vdist = get_distance_mm(frame, vpixel[0], vpixel[1]);
+
+    if (!check_depth(udist)) {
+        return 0.0;
+    }
+    if (!check_depth(vdist)) {
+        return 0.0;
+    }
+
 
     // Deproject from pixel to point in 3D
     rs2_intrinsics intr = frame.get_profile().as<rs2::video_stream_profile>().get_intrinsics(); // Calibration data

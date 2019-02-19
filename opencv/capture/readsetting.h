@@ -1,6 +1,8 @@
 #ifndef __UTIL_READ_SETTING_H__
 #define __UTIL_READ_SETTING_H__
 
+#include "common.h"
+
 #include <string>
 #include <iostream>
 #include <memory>

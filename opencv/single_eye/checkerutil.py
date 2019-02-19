@@ -74,3 +74,8 @@ def put_mytext(img, text):
     cv2.putText(img, text, (img.shape[1] - 500, img.shape[0] - 20),
                 cv2.FONT_HERSHEY_SIMPLEX, 1.1, (0, 255, 255), 3)
 
+# get distance from known width and focal length
+def distance_to_camera(knownWidth, focalLength, perWidth):
+    # compute and return the distance from the maker to the camera
+    return (knownWidth * focalLength) / perWidth
+

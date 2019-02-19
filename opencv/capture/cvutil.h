@@ -9,9 +9,6 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/videoio/videoio.hpp>
 
-#define DEFAULT_WIDTH    640
-#define DEFAULT_HEIGHT   360
-
 namespace cvutil {
 
 const int fontface = cv::FONT_HERSHEY_SIMPLEX;
@@ -41,7 +38,7 @@ void test_iou();
 
 int get_points_between_two_points(const cv::Mat& img, const cv::Point& p1, const cv::Point& p2, std::vector<cv::Point>& points);
 
-bool get_angle_from_dx_dy(double& degree, double dx, double dy, bool debug = false);
+bool get_angle_from_dx_dy(float& degree, float dx, float dy, bool debug = false);
 
 #ifdef USE_REALSENSE
 bool check_point2(int x1, int y1, int z1, int x2, int y2, int z2, double& degree, bool debug=false);
