@@ -249,17 +249,44 @@ void test_get_points_between_two_points()
 }
 
 #ifdef USE_REALSENSE
-bool check_point2(int x1, int y1, int z1, int x2, int y2, int z2, double& degree, bool debug)
+bool check_point2(int x1, int y1, int z1, int x2, int y2, int z2, int min_dist, double& degree, bool debug)
 {
-    if (!rsutil::check_depth(z1))
+    if (g_verbose) {
+        printf("check_point2: min(%d) (%d,%d,%d) to (%d,%d,%d) ==========>\n",
+            min_dist, x1, y1, z1, x2, y2, z2);
+    }
+    if (!rsutil::check_depth(z1)) {
+        if (debug || g_verbose) {
+            printf("REJECT: too close/far z1: %d\n", z1);
+        }
         return false;
-    if (!rsutil::check_depth(z2))
+    }
+    if (!rsutil::check_depth(z2)) {
+        if (debug || g_verbose) {
+            printf("REJECT: too close/far: z2: %d\n", z2);
+        }
         return false;
+    }
 
-    if (abs(z1 - z2) > 500) {
+    // if diff between z1, z2 is too large, drop it
+    if (abs(z1 - z2) > DEPTH_DIFF_TOO_LARGE) {
         // not good
-        if (debug) {
-            cout << "> ";
+        if (debug || g_verbose) {
+            printf("REJECT: check_point2: depth diff too large: z1(%d) vs z2(%d)\n", z1, z2);
+        }
+        return false;
+    }
+
+    if (abs(z1 - min_dist) > DEPTH_DIFF_TOO_LARGE) {
+        if (debug || g_verbose) {
+            printf("REJECT: check_point2: depth diff too large: z1(%d) vs min(%d)\n", z1, min_dist);
+        }
+        return false;
+    }
+
+    if (abs(z2 - min_dist) > DEPTH_DIFF_TOO_LARGE) {
+        if (debug || g_verbose) {
+            printf("check_point2: depth diff too large: z2(%d) vs min(%d)\n", z2, min_dist);
         }
         return false;
     }
@@ -274,14 +301,14 @@ bool get_angle_from_dx_dy(float& degree, float dx, float dy, bool debug)
     const float pos_slope = tan(deg_to_rad(pos_max_degree));
     const float neg_slope = -pos_slope;
 
-    if (fabs(dx) < 10.0 || fabs(dy) < 1.0) {
-        if (debug) {
-            cout << "x ";
-        }
-        degree = pos_max_degree;
-        //printf("reach max degree...\n");
-        return false;
-    }
+    // if (fabs(dx) < 10.0 || fabs(dy) < 1.0) {
+    //     if (debug) {
+    //         cout << "x ";
+    //     }
+    //     degree = pos_max_degree;
+    //     //printf("reach max degree...\n");
+    //     return false;
+    // }
 
     if (debug) {
         if (dy > 0 && dx > 0) {
@@ -294,6 +321,11 @@ bool get_angle_from_dx_dy(float& degree, float dx, float dy, bool debug)
         }
     }
 
+    if (dx == 0.0) {
+        printf("get_angle_from_dx_dy: div by 0\n");
+        degree = pos_max_degree;
+        return false;
+    }
     float slope = dy / dx;
     if (debug) {
         cout << "dx " << dx << " dy " << dy << " slope: " << slope << endl;
@@ -320,17 +352,37 @@ bool check_point(int x1, int y1, int x2, int y2, double& degree, bool debug)
     ReadSetting* sett = ReadSetting::getInstance();
     const int margin = sett->ignore_margin;
     const float ang_too_slope = sett->max_degree;
+
     // area #1
-    if (y1<margin && y2<margin)
+    if (y1<margin && y2<margin) {
+        if (debug || g_verbose) {
+            printf("REJECT a): y1(%d) and y2(%d) < margin(%d)\n", y1, y2, margin);
+        }
         return false;
-    if (y1>DEFAULT_HEIGHT-margin || y2>DEFAULT_HEIGHT-margin)
+    }
+    if (y1>DEFAULT_HEIGHT-margin || y2>DEFAULT_HEIGHT-margin) {
+        if (debug || g_verbose) {
+            printf("REJECT b): y1(%d) or y2(%d) > margin(%d)\n", y1, y2, margin);
+        }
         return false;
-    if (x1<margin && x2<margin)
+    }
+    if (x1<margin && x2<margin) {
+        if (debug || g_verbose) {
+            printf("REJECT c): x1(%d) and x2(%d) < margin(%d)\n", x1, x2, margin);
+        }
         return false;
-    if (x1>DEFAULT_WIDTH-margin || x2>DEFAULT_WIDTH-margin)
+    }
+    if (x1>DEFAULT_WIDTH-margin && x2>DEFAULT_WIDTH-margin) {
+        if (debug || g_verbose) {
+            printf("REJECT d): x1(%d) or x2(%d) > margin(%d)\n", x1, x2, margin);
+        }
         return false;
+    }
 
     if (x1 == x2) {
+        if (debug || g_verbose) {
+            printf("REJECT:  x1 == x2\n");
+        }
         return false;
     }
 

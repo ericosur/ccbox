@@ -14,13 +14,13 @@
     "realsense": {
         "find_edge": true,
         "blur_radius": 3,
-        "canny_threshold_min": 10,
-        "canny_threshold_max": 20,
+        "canny_threshold_min": 8,
+        "canny_threshold_max": 16,
         "hough_threshold": 70,
         "hough_minlength": 130,
-        "hough_maxlinegap": 25,
+        "hough_maxlinegap": 28,
         "show_dist": false,
-        "show_fps": true,
+        "show_fps": false,
         "color_scheme": 2,
         "distance_limit": 0.0,
         "apply_sleep": false,
@@ -31,8 +31,8 @@
         "apply_temporal": true,
         "apply_holefill": true,
 
-        "max_degree": 55,
-        "max_show_answer": 1,
-        "ignore_margin": 20
+        "max_degree": 45,
+        "max_show_answer": 5,
+        "ignore_margin": 12
     }
 }

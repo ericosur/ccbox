@@ -41,7 +41,7 @@ int get_points_between_two_points(const cv::Mat& img, const cv::Point& p1, const
 bool get_angle_from_dx_dy(float& degree, float dx, float dy, bool debug = false);
 
 #ifdef USE_REALSENSE
-bool check_point2(int x1, int y1, int z1, int x2, int y2, int z2, double& degree, bool debug=false);
+bool check_point2(int x1, int y1, int z1, int x2, int y2, int z2, int min_dist, double& degree, bool debug=false);
 bool check_point(int x1, int y1, int x2, int y2, double& degree, bool debug=false);
 #endif
 int get_avg_depth_from_points(const std::vector<int>& all_depth_results);

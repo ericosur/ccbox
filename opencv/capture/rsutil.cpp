@@ -12,10 +12,17 @@ using namespace cv;
 
 bool check_depth(float d)
 {
+    bool ret = false;
     if (ISNAN(d) || d < MIN_DEPTH || d > MAX_DEPTH) {
-        return false;
+        ret = false;
+    } else {
+        ret = true;
     }
-    return true;
+
+    // if (!ret) {
+    //     printf("REJECT: check_depth failed while d=%.2f\n", d);
+    // }
+    return ret;
 }
 
 void display_point(float point[3])
@@ -50,7 +57,7 @@ bool query_uv2xyz(const rs2::depth_frame& frame, const cv::Point& pt, cv::Vec3f&
 
     float dist = frame.get_distance(pixel[0], pixel[1]);
     //printf("get_distance: dist: %.2f\n", dist);
-    if (dist < 0.15 || dist > 1.0) {
+    if (dist < MIN_DEPTH_METER) {
         printf("dist failed: %.2f\n", dist);
         return false;
     }
@@ -70,6 +77,15 @@ bool query_uv2xyz(const rs2::depth_frame& frame, const cv::Point& pt, cv::Vec3f&
 }
 
 
+float dist_3d_xyz(const cv::Vec3f xyz1, const cv::Vec3f xyz2)
+{
+    return sqrt(pow(xyz1[0] - xyz2[0], 2) +
+                pow(xyz1[1] - xyz2[1], 2) +
+                pow(xyz1[2] - xyz2[2], 2));
+}
+
+
+// given pixel u, v, internally transfer to xyz and calculate distance
 float dist_3d(const rs2::depth_frame& frame, pixel u, pixel v)
 {
     float upixel[2]; // From pixel

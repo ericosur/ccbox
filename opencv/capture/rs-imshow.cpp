@@ -18,6 +18,7 @@
 #endif
 
 #include <stdint.h>
+#include <stdlib.h>
 #include <cstdio>
 #include <iostream>
 #include <iomanip>
@@ -48,6 +49,10 @@
 // 8: lhs depth
 // 9: rhs depth
 vector<Vec10i> results;
+std::vector<Vec10i> trace_z;
+
+int g_min_dist = -1;
+bool g_verbose = false;
 
 inline int my_avg(int m, int n)
 {
@@ -56,46 +61,68 @@ inline int my_avg(int m, int n)
 
 #ifdef USE_UIPRESENT
 // show UI version
-void show_answer(cv::Mat& depth_img, cv::Mat& color_img, const Vec10i& z, const cv::Scalar& color, int idx)
+void draw_answer_line(cv::Mat& img, const Vec10i& z, const cv::Scalar& color)
 {
     using namespace cv;
 
-    if (depth_img.total() == 0)
-        cout << "[WARNING] depth_img is 0\n";
-    if (color_img.total() == 0)
-        cout << "[WARNING] color_img is 0\n";
+    if (img.total() == 0) {
+        cout << "[WARNING] img is invalid\n";
+        return;
+    } else {
 
-    char msg[128];
-
-    line(depth_img, Point(z[0], z[1]), Point(z[2], z[3]), color, 2, LINE_AA);
-    line(color_img, Point(z[0], z[1]), Point(z[2], z[3]), color, 2, LINE_AA);
-
-    sprintf(msg, "[%d]: %3d,%3d,%3d - %3d,%3d,%3d, [%4d], a[%4d], m[%4d], d:%02d",
-            (int)idx,
-            z[0], z[1], z[8],
-            z[2], z[3], z[9],
-            z[5], z[6], z[7], z[4]);
-
-    rectangle(depth_img, Point(45, 45), Point(500, 80), cv::Scalar(52, 52, 52), cv::FILLED);
-    cvui::printf(depth_img, 50, 50, msg);
-
-    circle(depth_img, Point(my_avg(z[0], z[2]), my_avg(z[1], z[3])), 3, Scalar(0xff, 0, 0));
-    circle(color_img, Point(my_avg(z[0], z[2]), my_avg(z[1], z[3])), 3, Scalar(0xff, 0, 0));
-    printf("%s\n", msg);
-}
-#else
-// stdout version
-void show_answer(cv::Mat& depth_img, cv::Mat& color_img, const Vec10i& z, const cv::Scalar& color, int idx)
-{
-    char msg[128];
-    sprintf(msg, "[%d]: %3d,%3d,%3d - %3d,%3d,%3d, [%4d], a[%4d], m[%4d], d:%02d",
-            (int)idx,
-            z[0], z[1], z[8],
-            z[2], z[3], z[9],
-            z[5], z[6], z[7], z[4]);
-    printf("%s\n", msg);
+        line(img, Point(z[0], z[1]), Point(z[2], z[3]), color, 1.5, LINE_AA);
+        circle(img, Point(my_avg(z[0], z[2]), my_avg(z[1], z[3])), 3, Scalar(0xff, 0, 0));
+    }
 }
 #endif  // USE_UIPRESENT
+
+// stdout version
+void print_answer_string(const Vec10i& z, int idx, int min_dist=0)
+{
+    char msg[128];
+
+    if (g_verbose) {
+        sprintf(msg, "[%d]:%3d,%3d, %3d-%3d,%3d, %3d, ",
+            idx,
+            z[0], z[1], z[8],
+            z[2], z[3], z[9]);
+    } else {
+        sprintf(msg, "[%d]: %3d - %3d, ",
+            idx, z[8], z[9]);
+
+    }
+
+    if (min_dist != 0) {
+        sprintf(msg, "%s <%d> [%d] a[%d] m[%d],deg:%d",
+                msg, min_dist, z[5], z[6], z[7], z[4]);
+    } else {
+        sprintf(msg, "%s [%d] a[%d] m[%d], d:%02d",
+                msg, z[5], z[6], z[7], z[4]);
+    }
+    printf("%s\n", msg);
+}
+
+Vec10i handle_lastz(const Vec10i& z)
+{
+    const int slide_win = 10;
+    Vec10i last_z;
+    Vec10i avg_z;
+
+    if (trace_z.size() < slide_win) {
+        trace_z.push_back(z);
+    }
+
+     else {
+        last_z = trace_z[trace_z.size()-1];
+        if ( (abs(z[8] - last_z[8]) < DEPTH_SMALL_DIFF)
+            && (abs(z[9] - last_z[9]) < DEPTH_SMALL_DIFF) ) {
+            trace_z.push_back(z);
+        } else {
+            printf("handle_lastz: rejected\n");
+        }
+    }
+    return avg_z;
+}
 
 
 #ifdef USE_UIPRESENT
@@ -133,7 +160,7 @@ void init_windows()
 bool show_cvfps(cv::Mat& cv_img, double elapsed_time)
 {
     int fontface = cv::FONT_HERSHEY_SIMPLEX;
-    double scale = 0.75;
+    const double scale = 0.75;
     int baseline = 0;
     int thickness = 2;
     const int BUFFER_SIZE = 80;
@@ -208,13 +235,14 @@ void get_all_depth_data(const void* depth_data, const std::vector<cv::Point>& po
             all_depth_results.push_back(res);
         }
     }
-
-    size_t points_size = points.size();
-    if (points_size) {
-        size_t depth_results = all_depth_results.size();
-        printf("usable ratio: %d%%\n", (int)(depth_results*100/points_size));
+    const float usable_limit = 60.0;
+    if (points.empty()) {
+        printf("[WARN] no usable points\n");
     } else {
-        printf("no usable points\n");
+        float usable_ratio = (float)all_depth_results.size()*100.0/(float)points.size();
+        if (usable_ratio < usable_limit) {
+            printf("[WARN] usable ratio < %.0f%%: %.0f\n", usable_limit, usable_ratio);
+        }
     }
 }
 
@@ -280,6 +308,60 @@ void save_procedure(const cv::Mat& color_image, const cv::Mat& depth_image, cons
     }
 }
 
+int find_small_dist(const void* depth_data)
+{
+    int smallest_dist = -1;
+    for (int x = 0 ; x < DEFAULT_WIDTH; ++x) {
+        for (int y = 0; y < DEFAULT_HEIGHT; ++y) {
+            int dist = get_dpeth_pt(depth_data, x, y);
+            if (dist != 0) {
+                if (smallest_dist == -1 || (dist < smallest_dist)) {
+                    smallest_dist = dist;
+                }
+            }
+            if (dist != 0 && dist < smallest_dist) {
+                smallest_dist = dist;
+            }
+        }
+    }
+    //printf("find_small_dist: %d\n", smallest_dist);
+    return smallest_dist;
+}
+
+void find_small_dot(const void* depth_data, const int small_dst, std::vector<cv::Point>& dots)
+{
+    const int SMALL_RANGE = 4;
+    const int margin = ReadSetting::getInstance()->ignore_margin;
+    dots.clear();
+    cv::Point pt;
+    for (int x = 0 ; x < DEFAULT_WIDTH; ++x) {
+        for (int y = margin; y < DEFAULT_HEIGHT-margin; ++y) {
+            int dist = get_dpeth_pt(depth_data, x, y);
+            if (abs(dist - small_dst) < SMALL_RANGE) {
+                pt.x = x;
+                pt.y = y;
+                dots.push_back(pt);
+            }
+        }
+    }
+    if (g_verbose) {
+        printf("find_small_dot: %d dots\n", (int)dots.size());
+    }
+}
+
+cv::Mat resize_forward_and_backward(const cv::Mat& input)
+{
+    const float ratio = 0.5;
+    cv::Mat tmp;
+    cv::Mat ret;
+    // resize to a smaller size
+    cv::resize(input, tmp, cv::Size(), ratio, ratio, cv::INTER_AREA);
+    // resize to original size
+    cv::resize(tmp, ret, cv::Size(), 1.0/ratio, 1.0/ratio, cv::INTER_LINEAR);
+
+    return ret;
+}
+
 ///
 /// [in]  color_image
 /// [in]  depth_data
@@ -315,15 +397,13 @@ void find_edge(cv::Mat& color_image, const void* depth_data, cv::Mat& edge_image
 
     Mat canny_output;
 
-    //Canny(gray_image, canny_output, settings->canny_threshold_min, settings->canny_threshold_max);
+    if (g_verbose) {
+        printf("canny_threshold ==> min: %d, max: %d\n",
+            sett->canny_threshold_min, sett->canny_threshold_max);
+    }
     Canny(gray_image, canny_output, sett->canny_threshold_min, sett->canny_threshold_max);
 
-    Mat dst;
-    float ratio = 0.25;
-    // resize to 25%
-    resize(canny_output, dst, Size(), ratio, ratio, INTER_AREA);
-    // resize to original size
-    resize(dst, canny_output, Size(), 1.0/ratio, 1.0/ratio, INTER_LINEAR);
+    //Mat back = resize_forward_and_backward(canny_output);
 
     //canny_output = gauss;   // hacks
     cvtColor(canny_output, edge_image, COLOR_GRAY2BGR);
@@ -337,6 +417,10 @@ void find_edge(cv::Mat& color_image, const void* depth_data, cv::Mat& edge_image
     HoughLinesP(canny_output, p_lines, 1, CV_PI/180,
                 sett->hough_threshold, sett->hough_minlength, sett->hough_maxlinegap);
 
+    if (g_verbose) {
+        printf("p_lines.size: %d, hough_threshold: %d, hough_minlength: %d, hough_maxlinegap: %d\n",
+           (int)p_lines.size(), sett->hough_threshold, sett->hough_minlength, sett->hough_maxlinegap);
+    }
     //Scalar color = Scalar(0xff, 0x66, 0xff);
 
     /// Show the result
@@ -352,7 +436,7 @@ void find_edge(cv::Mat& color_image, const void* depth_data, cv::Mat& edge_image
         double degree = 0.0;
         int z1 = get_dpeth_pt(depth_data, l[0], l[1]);
         int z2 = get_dpeth_pt(depth_data, l[2], l[3]);
-        if (cvutil::check_point2(l[0], l[1], z1, l[2], l[3], z2, degree)) {
+        if (cvutil::check_point2(l[0], l[1], z1, l[2], l[3], z2, g_min_dist, degree)) {
             Vec10i r;
             r[0] = l[0];  r[1] = l[1];  r[2] = l[2];  r[3] = l[3];
             //r[4] = get_length_from_vec4i(l);
@@ -380,37 +464,28 @@ void find_edge(cv::Mat& color_image, const void* depth_data, cv::Mat& edge_image
                 r[5] = tmp;
                 results.push_back(r);
             } else {
-                printf("invalid depth at mid pt\n");
+                printf("REJECT: find_edge: invalid depth at mid pt\n");
             }
         } else {
-            //printf("x\n");
+            if (g_verbose) {
+                printf("REJECT: p_lines(%d)\n", (int)i);
+            }
+            //printf("")
         }
     }
 
-    //printf("size of results: %d ===>", (int)results.size());
-
+    ////////// sort lines //////////
     // find the longest line and show
     //sort(results.begin(), results.end(), cmp_by_length);
     // find the nearest line and show
     //sort(results.begin(), results.end(), cmp_by_depth);
     sort(results.begin(), results.end(), cmp_by_med_depth);
-    size_t results_size = results.size();
-    if (results_size) {
-        // show answers
-        for (size_t ii = 0; ii < std::min(results_size, (size_t)sett->max_show_answer); ii++) {
-            //printf("size of results: %d\t", (int)results.size());
-            Vec10i z = results.at(ii);
-            //cout << z << endl;
-            show_answer(edge_image, color_image, z, Scalar(((ii&&ii%2)?0x7f:0), (ii?0x7f:0), 0xff), ii);
-            //line( edge_image, Point(l[0], l[1]), Point(l[2], l[3]), color, 3, LINE_AA);
-        }
-    }
 }
 
 #ifdef USE_UIPRESENT
 void do_click_window(rs2::depth_frame& depth, cv::Mat& color_image, cv::Mat& depth_image)
 {
-    const int printx = 180;
+    const int printx = 30;
     const int print_inc_y = 20;
     const int print_color = 0xffff00;
     const float print_size = 0.6;
@@ -469,6 +544,8 @@ int test_from_image()
 //#define USE_EDGE2
     using namespace cv;
 
+    g_verbose = true;
+
     ReadSetting* sett = ReadSetting::getInstance();
     const std::string& cfn = sett->color_image;
     const std::string& dfn = sett->depth_image;
@@ -481,42 +558,75 @@ int test_from_image()
     const int dep_buffer_size = DEFAULT_WIDTH * DEFAULT_HEIGHT * 2;
     uint8_t dep_buffer[dep_buffer_size];
 
-    Mat color_img;
-    Mat depth_img;
-    Mat edge_img;
-
     string edge1_win = "edge1";
     namedWindow(edge1_win);
     moveWindow(edge1_win, 0, 0);
     string dep_win = "colorized depth";
     namedWindow(dep_win);
-    moveWindow(dep_win, 0, 400);
+    moveWindow(dep_win, 960, 0);
+    string color_win = "rgb";
+    namedWindow(color_win);
+    moveWindow(color_win, 500, 0);
 #ifdef USE_EDGE2
     string edge2_win = "edge2";
     namedWindow(edge2_win);
     moveWindow(edge2_win, 660, 0);
 #endif
 
-    color_img = imread(cfn);
-    depth_img = imread(dfn);
+    Mat color_image = imread(cfn);
+    Mat depth_image = imread(dfn);
+    Mat edge_image;
 
-    imshow(dep_win, depth_img);
+    imshow(dep_win, depth_image);
 
     load_bin_to_buffer(datfn, dep_buffer, dep_buffer_size);
     vector<Vec4i> p_lines;
-    cout << "from depth_img:\n";
-    find_edge(depth_img, dep_buffer, edge_img, p_lines);
-    imshow(edge1_win, edge_img);
+    cout << "from depth_img ==>\n";
+    g_min_dist = find_small_dist(dep_buffer);
+    find_edge(depth_image, dep_buffer, edge_image, p_lines);
+
+    size_t results_size = results.size();
+    //printf("size of results: %d ===>", (int)results_size);
+
+    // draw small dots
+    std::vector<Point> dots;
+    cv::Scalar khaki = cv::Scalar(0, 0x80, 0x80);
+    find_small_dot(dep_buffer, g_min_dist, dots);
+    char msg[80];
+    sprintf(msg, "%04d", g_min_dist);
+    cv::putText(color_image, msg, dots.at(0), cv::FONT_HERSHEY_SIMPLEX, 1, khaki);
+    for (size_t jj=0; jj<dots.size(); ++jj) {
+        cv::circle(color_image, dots[jj], 2, khaki);
+        cv::circle(edge_image, dots[jj], 2, khaki);
+    }
+
+    // show answers
+    for (size_t ii = 0; ii < std::min(results_size, (size_t)sett->max_show_answer); ii++) {
+        //printf("size of results: %d\t", (int)results.size());
+        Vec10i z = results.at(ii);
+        print_answer_string(z, ii);
+        Scalar clr = Scalar(((ii&&ii%2)?0x7f:0), (ii?0x7f:0), 0xff);
+        draw_answer_line(edge_image, z, clr);
+        draw_answer_line(color_image, z, clr);
+        draw_answer_line(depth_image, z, clr);
+    }
+
+    imshow(edge1_win, edge_image);
+    imshow(color_win, color_image);
 #ifdef USE_EDGE2
     cout << "from color_img:\n";
-    find_edge(color_img, dep_buffer, edge_img, p_lines);
-    imshow(edge2_win, edge_img);
+    find_edge(color_image, dep_buffer, edge_image, p_lines);
+    imshow(edge2_win, edge_image);
 #endif
+
+
     int key = waitKey(0);
     if (key == 0x1B) {
         cout << "user break" << endl;
     } else if (key == 's') {
-        save_procedure(color_img, depth_img, edge_img, dep_buffer, true);
+        save_procedure(color_image, depth_image, edge_image, dep_buffer, true);
+    } else if (key == ' ') {
+
     }
 
     return 0;
@@ -546,13 +656,14 @@ int show_image(const std::string& fn)
 // 7: median depth data
 // 8: lhs depth
 // 9: rhs depth
-void get_3d_angle(const rs2::depth_frame& depth)
+bool get_3d_angle(const rs2::depth_frame& depth, float& degree)
 {
+    degree = INVALID_DEGREE;
     if (!depth) {
-        return;
+        return false;
     }
     if (results.size() == 0) {
-        return;
+        return false;
     }
     //printf("enter %s...\n", __func__);
     cv::Point pt1;
@@ -571,26 +682,28 @@ void get_3d_angle(const rs2::depth_frame& depth)
 
     if (ret1) {
         xyz1 *= 1000;
-        printf("%s: xyz1: %.0f,%.0f,%.0f  ", __func__, xyz1[0], xyz1[1], xyz1[2]);
+        //printf("%s: xyz1: %.0f,%.0f,%.0f  ", __func__, xyz1[0], xyz1[1], xyz1[2]);
     } else {
         printf("ret1 failed\n");
+        return false;
     }
     if (ret2) {
         xyz2 *= 1000;
-        printf("xyz2: %.0f,%.0f,%.0f  ", xyz2[0], xyz2[1], xyz2[2]);
+        //printf("xyz2: %.0f,%.0f,%.0f  ", xyz2[0], xyz2[1], xyz2[2]);
     } else {
         printf("ret2 failed\n");
+        return false;
     }
+
+    float dist3d = rsutil::dist_3d_xyz(xyz1, xyz2);
+    printf(" dist3d: %.2f ", dist3d);
 
     float dx = xyz2[0] - xyz1[0];
     float dz = xyz2[2] - xyz1[2];
-    float deg = 0.0;
-    if ( cvutil::get_angle_from_dx_dy(deg, dx, dz) ) {
-        printf("3D deg: %.3f\n", deg);
-    }
-    printf("\n");
-}
 
+    bool ret = cvutil::get_angle_from_dx_dy(degree, dx, dz, false);
+    return ret;
+}
 
 // main entry for realsense table edge finding
 int test_realsense() try
@@ -653,6 +766,7 @@ int test_realsense() try
     }
 
     rs2::frameset frameset;
+
 
     while (true) {
 #ifdef USE_UIPRESENT
@@ -725,22 +839,69 @@ int test_realsense() try
             //cout << __LINE__ << "\n";
             // Create OpenCV matrix of size (w,h) from the colorized depth data
             Mat depth_image(Size(w, h), CV_8UC3, (void*)colorized_depth.get_data());
-            Mat color_image(Size(w, h), CV_8UC3, (void*)color.get_data());
+            Mat raw_color_image(Size(w, h), CV_8UC3, (void*)color.get_data());
             Mat orig_depth_image = depth_image.clone();
-            Mat orig_color_image = color_image.clone();
             Mat edge_image;
+
+            Mat color_image;
+            //cvtColor(raw_color_image, color_image, COLOR_BGR2RGB);
+            Mat orig_color_image = color_image.clone();
+
+            g_min_dist = find_small_dist(depth.get_data());
+
+            // draw small dots
+            std::vector<Point> dots;
+            cv::Scalar khaki = cv::Scalar(0, 0x80, 0x80);
+            find_small_dot(depth.get_data(), g_min_dist, dots);
+            char msg[80];
+            sprintf(msg, "%04d", g_min_dist);
+            cv::putText(color_image, msg, cv::Point(50,50), cv::FONT_HERSHEY_SIMPLEX, 0.75, khaki, 1.2);
+            for (size_t jj=0; jj<dots.size(); ++jj) {
+                cv::circle(color_image, dots[jj], 2, khaki);
+                cv::circle(edge_image, dots[jj], 2, khaki);
+            }
+
 
             //cout << __LINE__ << "\n";
             if (sett->find_edge) {
 /// try to find edge of table ... {
                 vector<Vec4i> p_lines;
                 find_edge(depth_image, depth.get_data(), edge_image, p_lines);
-                #ifdef USE_GET_3DANGLE
-                // get xyz vector angle...
-                if (results.size()) {
-                    get_3d_angle(depth);
+                size_t results_size = results.size();
+                Vec10i last_z;
+                for (size_t ii=0; ii<std::min(results_size, (size_t)sett->max_show_answer); ++ii) {
+                    Vec10i z = results.at(ii);
+                    print_answer_string(z, ii, g_min_dist);
+                    Scalar clr = Scalar(((ii&&ii%2)?0x7f:0), (ii?0x7f:0), 0xff);
+                    draw_answer_line(edge_image, z, clr);
+                    //draw_answer_line(color_image, z, clr);
+                    draw_answer_line(depth_image, z, clr);
+
+                    #ifdef USE_GET_3DANGLE
+                    // get xyz vector angle...
+                    float degree3d = INVALID_DEGREE;
+                    if ( get_3d_angle(depth, degree3d) ) {
+                        printf("3d deg:%.2f\n", degree3d);
+                        if (fabs(degree3d) > MAX_DEGREE_LIMIT) {
+                            printf("[trapped] degree too large\n");
+                        } else {
+                            if (ii==0) {
+                                last_z = handle_lastz(z);
+                            }
+                        }
+
+                    } else {
+                        printf("invalid 3d degree\n");
+                    }
+                    #endif
+
+                    clr = cv::Scalar(0x6c, 0x33, 0x65);
+                    //draw_answer_line(edge_image, last_z, clr);
+                    draw_answer_line(color_image, last_z, clr);
+                    //draw_answer_line(depth_image, last_z, clr);
+
                 }
-                #endif
+
             }
 #ifdef USE_UIPRESENT
             /// to show depth data with mouse pointer
@@ -770,8 +931,10 @@ int test_realsense() try
                 break;
             } else if (key == 's') {
                 save_procedure(color_image, depth_image, edge_image, depth.get_data());
-            } else if (key == 'c') {
+            } else if (key == 'c' || key == 0x0D) {
                 save_procedure(orig_color_image, orig_depth_image, edge_image, depth.get_data());
+            } else if (key == ' ') {
+                waitKey(0);
             }
 #endif  // USE_UIPRESENT
         } else {

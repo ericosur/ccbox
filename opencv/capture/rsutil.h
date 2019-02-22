@@ -26,6 +26,8 @@ float get_distance_mm(const rs2::depth_frame& frame, int u, int v);
 
 bool query_uv2xyz(const rs2::depth_frame& frame, const cv::Point& pt, cv::Vec3f& xyz, bool debug=false);
 
+float dist_3d_xyz(const cv::Vec3f xyz1, const cv::Vec3f xyz2);
+
 // Distance 3D is used to calculate real 3D distance between two pixels
 float dist_3d(const rs2::depth_frame& frame, pixel u, pixel v);
 // Distance 2D returns the distance in pixels between two pixels
