@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 #import the necessary packages
@@ -19,7 +19,8 @@ def find_marker(image):
 
     # find the contours in the edged image and keep the largest one;
     # we'll assume that this is our piece of paper in the image
-    (_, cnts, _) = cv2.findContours(edged.copy(), cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+    #(_, cnts, _) = cv2.findContours(edged.copy(), cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+    (cnts, hirachy) = cv2.findContours(edged.copy(), cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
     # 求最大面积
     c = max(cnts, key = cv2.contourArea)
 
