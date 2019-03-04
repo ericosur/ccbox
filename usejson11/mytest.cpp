@@ -9,11 +9,15 @@ using namespace std;
 
 #define JSON_FILE   "../all.json"
 
+#define PRINT_FUNC_NAME() \
+    std::cout << __func__ << " =====>>>" << std::endl
+
 bool read_file_into_string(const std::string& fn, std::string& str);
 bool write_string_into_file(const std::string& fn, const std::string& str);
 
 void test0()
 {
+    PRINT_FUNC_NAME();
     const string simple_test = R"({"k1":"v1", "k2":42, "k3":["a",123,true,false,null]})";
 
     string err;
@@ -30,6 +34,7 @@ void test0()
 
 void test1()
 {
+    PRINT_FUNC_NAME();
     string whole_content;
     string err;
 
@@ -58,7 +63,7 @@ void test1()
 
 void test2()
 {
-    cout << __func__ << endl;
+    PRINT_FUNC_NAME();
     std::map<string, string> m1 { { "a", "apple" }, { "d", "dog" } };
     m1.insert(std::pair<string, string>("e", "egg"));
     m1.insert(std::pair<string, string>("t", "tiger"));
