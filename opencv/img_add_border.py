@@ -7,16 +7,20 @@ path: opencv/python/add_border.py
 '''
 
 import os
+import sys
 import cv2
 
-def main():
-    desired_size = 700
+def get_default_image_path():
     home = os.environ["HOME"]
     im_pth = home + "/Pictures/data/avril1.jpg"
-    print('im_pth: {}'.format(im_pth))
+    return im_pth
+
+def main(fn):
+    desired_size = 700
+    print('image path: {}'.format(fn))
 
     ## opencv has copyMakeBorder() method which is handy for making borders
-    im = cv2.imread(im_pth)
+    im = cv2.imread(fn)
     if im is None:
         print("failed to load image")
         return
@@ -45,4 +49,9 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    if len(sys.argv) > 1:
+        fn = sys.argv[1]
+    else:
+        print('argv not specified, use default image path...')
+        fn = get_default_image_path()
+    main(fn)
