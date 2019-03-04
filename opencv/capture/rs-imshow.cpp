@@ -606,8 +606,11 @@ int test_from_image()
         Vec10i z = results.at(ii);
         print_answer_string(z, ii);
         Scalar clr = Scalar(((ii&&ii%2)?0x7f:0), (ii?0x7f:0), 0xff);
+        //printf("draw_answer_line: edge_image\n");
         draw_answer_line(edge_image, z, clr);
+        //printf("draw_answer_line: color_image\n");
         draw_answer_line(color_image, z, clr);
+        //printf("draw_answer_line: depth_image\n");
         draw_answer_line(depth_image, z, clr);
     }
 
@@ -844,8 +847,13 @@ int test_realsense() try
             Mat edge_image;
 
             Mat color_image;
-            //cvtColor(raw_color_image, color_image, COLOR_BGR2RGB);
-            Mat orig_color_image = color_image.clone();
+            Mat orig_color_image;
+            if (sett->useBagFile()) {
+                cvtColor(raw_color_image, color_image, COLOR_BGR2RGB);
+            } else {
+                color_image = raw_color_image.clone();
+            }
+            orig_color_image = color_image.clone();
 
             g_min_dist = find_small_dist(depth.get_data());
 
@@ -873,8 +881,9 @@ int test_realsense() try
                     Vec10i z = results.at(ii);
                     print_answer_string(z, ii, g_min_dist);
                     Scalar clr = Scalar(((ii&&ii%2)?0x7f:0), (ii?0x7f:0), 0xff);
+                    //printf("draw_answer_line: edge_image\n");
                     draw_answer_line(edge_image, z, clr);
-                    //draw_answer_line(color_image, z, clr);
+                    //printf("draw_answer_line: depth_image\n");
                     draw_answer_line(depth_image, z, clr);
 
                     #ifdef USE_GET_3DANGLE
@@ -897,6 +906,7 @@ int test_realsense() try
 
                     clr = cv::Scalar(0x6c, 0x33, 0x65);
                     //draw_answer_line(edge_image, last_z, clr);
+                    //printf("draw_answer_line: color_image\n");
                     draw_answer_line(color_image, last_z, clr);
                     //draw_answer_line(depth_image, last_z, clr);
 
