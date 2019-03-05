@@ -75,7 +75,6 @@ For above example, it will use search for RGB image, colorized depth image, dept
         "show_fps": true,
         "color_scheme": 2,
         "distance_limit": 0.0,
-        "apply_sleep": false,
         "apply_align": true,
         "apply_disparity": true,
         "apply_dec": true,

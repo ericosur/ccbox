@@ -111,8 +111,6 @@ bool ReadSetting::load_json(const std::string& json_file)
         distance_limit = jsub.at("distance_limit");
         show("distance_limit", distance_limit);
 
-        apply_sleep = jsub.at("apply_sleep");
-        show("apply_sleep", apply_sleep);
         apply_align = jsub.at("apply_align");
         show("apply_align", apply_align);
         apply_dec = jsub.at("apply_dec");

@@ -714,6 +714,7 @@ int test_realsense() try
     using namespace cv;
 
     ReadSetting* sett = ReadSetting::getInstance();
+    bool isPaused = false;
 
 #ifdef USE_UIPRESENT
     init_windows();
@@ -740,14 +741,12 @@ int test_realsense() try
     }
 
 
-    if (!sett->apply_sleep) {
-        // Start streaming with default recommended configuration
-        rs2::pipeline_profile profile = pipe.start(cfg);
-        depth_scale = rsutil::get_depth_scale(profile.get_device());
-        cout << "depth scale:" << depth_scale << endl;
-    } else {
-        std::cout << "pipe is sleeping..." << std::endl;
-    }
+    // Start streaming with default recommended configuration
+    rs2::pipeline_profile profile = pipe.start(cfg);
+    auto device = pipe.get_active_profile().get_device();
+    depth_scale = rsutil::get_depth_scale(device);
+    cout << "depth scale:" << depth_scale << endl;
+
 
     rs2::align align_to(RS2_STREAM_COLOR);
 
@@ -775,186 +774,194 @@ int test_realsense() try
 #ifdef USE_UIPRESENT
         int64 e1 = cv::getTickCount();
 #endif
-        if (!sett->apply_sleep) {
-          if (!pipe.poll_for_frames(&frameset)) {
-            continue;
-          }
-#if 0
-            frameset = pipe.wait_for_frames(); // Wait for next set of frames from the camera
-            if (!frameset) {
-                cout << "no frameset...\n";
-                continue;
-            }
-#endif
-            if (sett->apply_align) {
-                frameset = frameset.apply_filter(align_to);
-            }
-            if (sett->apply_disparity) {
-                frameset = frameset.apply_filter(depth2disparity);
-                if (sett->apply_dec) {
-                    frameset = frameset.apply_filter(dec);
-                }
-                if (sett->apply_spatial) {
-                    // Apply spatial filtering
-                    frameset = frameset.apply_filter(spat);
-                }
-                if (sett->apply_temporal) {
-                    // Apply temporal filtering
-                    frameset = frameset.apply_filter(temp);
-                }
-                if (sett->apply_holefill) {
-                    frameset = frameset.apply_filter(hole);
-                }
-                frameset = frameset.apply_filter(disparity2depth);
-            }
-
-            frameset = frameset.apply_filter(color_map);
-
-            rs2::depth_frame depth = frameset.get_depth_frame();
-            rs2::video_frame color = frameset.get_color_frame();
-
-            if (!depth) {
-                cout << "no depth frame\n";
-                continue;
-            }
-            if (!color) {
-                cout << "no color frame\n";
-                continue;
-            }
-            //cout << "frame got\n";
-            if (sett->distance_limit > 0.0) {
-                rsutil::remove_background(color, depth, depth_scale, sett->distance_limit);
-            }
-            auto colorized_depth = frameset.first(RS2_STREAM_DEPTH, RS2_FORMAT_RGB8);
-
-            // Query frame size (width and height)
-            //const int w = color.as<rs2::video_frame>().get_width();
-            //const int h = color.as<rs2::video_frame>().get_height();
-            int w = DEFAULT_WIDTH;
-            int h = DEFAULT_HEIGHT;
-#if 0
-            if (sett->show_dist) {
-                // get distance of center point
-                float dist = depth.get_distance(w/2, h/2);
-                printf("from aligned depth: dist@(%d,%d) => %f\n", w/2, h/2, dist);
-            }
-#endif
-            //cout << __LINE__ << "\n";
-            // Create OpenCV matrix of size (w,h) from the colorized depth data
-            Mat depth_image(Size(w, h), CV_8UC3, (void*)colorized_depth.get_data());
-            Mat raw_color_image(Size(w, h), CV_8UC3, (void*)color.get_data());
-            Mat orig_depth_image = depth_image.clone();
-            Mat edge_image;
-
-            Mat color_image;
-            Mat orig_color_image;
-            if (sett->useBagFile()) {
-                cvtColor(raw_color_image, color_image, COLOR_BGR2RGB);
-            } else {
-                color_image = raw_color_image.clone();
-            }
-            orig_color_image = color_image.clone();
-
-            g_min_dist = find_small_dist(depth.get_data());
-
-            // draw small dots
-            std::vector<Point> dots;
-            cv::Scalar khaki = cv::Scalar(0, 0x80, 0x80);
-            find_small_dot(depth.get_data(), g_min_dist, dots);
-            char msg[80];
-            sprintf(msg, "%04d", g_min_dist);
-            cv::putText(color_image, msg, cv::Point(50,50), cv::FONT_HERSHEY_SIMPLEX, 0.75, khaki, 1.2);
-            for (size_t jj=0; jj<dots.size(); ++jj) {
-                cv::circle(color_image, dots[jj], 2, khaki);
-                cv::circle(edge_image, dots[jj], 2, khaki);
-            }
-
-
-            //cout << __LINE__ << "\n";
-            if (sett->find_edge) {
-/// try to find edge of table ... {
-                vector<Vec4i> p_lines;
-                find_edge(depth_image, depth.get_data(), edge_image, p_lines);
-                size_t results_size = results.size();
-                Vec10i last_z;
-                for (size_t ii=0; ii<std::min(results_size, (size_t)sett->max_show_answer); ++ii) {
-                    Vec10i z = results.at(ii);
-                    print_answer_string(z, ii, g_min_dist);
-                    Scalar clr = Scalar(((ii&&ii%2)?0x7f:0), (ii?0x7f:0), 0xff);
-                    //printf("draw_answer_line: edge_image\n");
-                    draw_answer_line(edge_image, z, clr);
-                    //printf("draw_answer_line: depth_image\n");
-                    draw_answer_line(depth_image, z, clr);
-
-                    #ifdef USE_GET_3DANGLE
-                    // get xyz vector angle...
-                    float degree3d = INVALID_DEGREE;
-                    if ( get_3d_angle(depth, degree3d) ) {
-                        printf("3d deg:%.2f\n", degree3d);
-                        if (fabs(degree3d) > MAX_DEGREE_LIMIT) {
-                            printf("[trapped] degree too large\n");
-                        } else {
-                            if (ii==0) {
-                                last_z = handle_lastz(z);
-                            }
-                        }
-
-                    } else {
-                        printf("invalid 3d degree\n");
-                    }
-                    #endif
-
-                    clr = cv::Scalar(0x6c, 0x33, 0x65);
-                    //draw_answer_line(edge_image, last_z, clr);
-                    //printf("draw_answer_line: color_image\n");
-                    draw_answer_line(color_image, last_z, clr);
-                    //draw_answer_line(depth_image, last_z, clr);
-
-                }
-
-            }
-#ifdef USE_UIPRESENT
-            /// to show depth data with mouse pointer
-            do_click_window(depth, color_image, depth_image);
-
-            int64 e2 = cv::getTickCount();
-            double elapse_time = (e2 - e1) / cv::getTickFrequency();
-            //double time = cv::getTickFrequency() / (e2 - e1);
-            if (sett->show_fps) {
-                show_cvfps(color_image, elapse_time);
-                //printf("fps: %.3f\n", elapse_time);
-            }
-
-            Mat combined;
-            if (sett->find_edge) {
-                hconcat(edge_image, depth_image, combined);
-                hconcat(combined, color_image, combined);
-            } else {
-                hconcat(depth_image, color_image, combined);
-            }
-
-            //imshow(rgb_window, combined);
-            imshow(depth_window, combined);
+        if (device.as<rs2::playback>() && isPaused) {
             int key = waitKey(1);
-            if (key == 0x1B) {
-                cout << "break" << endl;
+            if (key == ' ') {
+                device.as<rs2::playback>().resume();
+                isPaused = false;
+            } else if (key == 0x1B) {
+                printf("break from paused\n");
                 break;
-            } else if (key == 's') {
-                save_procedure(color_image, depth_image, edge_image, depth.get_data());
-            } else if (key == 'c' || key == 0x0D) {
-                save_procedure(orig_color_image, orig_depth_image, edge_image, depth.get_data());
-            } else if (key == ' ') {
-                waitKey(0);
             }
-#endif  // USE_UIPRESENT
-        } else {
-            usleep(SLEEP_DURATION);
         }
+        if (!pipe.poll_for_frames(&frameset)) {
+            continue;
+        }
+
+        if (sett->apply_align) {
+            frameset = frameset.apply_filter(align_to);
+        }
+        if (sett->apply_disparity) {
+            frameset = frameset.apply_filter(depth2disparity);
+            if (sett->apply_dec) {
+                frameset = frameset.apply_filter(dec);
+            }
+            if (sett->apply_spatial) {
+                // Apply spatial filtering
+                frameset = frameset.apply_filter(spat);
+            }
+            if (sett->apply_temporal) {
+                // Apply temporal filtering
+                frameset = frameset.apply_filter(temp);
+            }
+            if (sett->apply_holefill) {
+                frameset = frameset.apply_filter(hole);
+            }
+            frameset = frameset.apply_filter(disparity2depth);
+        }
+
+        frameset = frameset.apply_filter(color_map);
+
+        rs2::depth_frame depth = frameset.get_depth_frame();
+        rs2::video_frame color = frameset.get_color_frame();
+
+        if (!depth) {
+            cout << "no depth frame\n";
+            continue;
+        }
+        if (!color) {
+            cout << "no color frame\n";
+            continue;
+        }
+        //cout << "frame got\n";
+        if (sett->distance_limit > 0.0) {
+            rsutil::remove_background(color, depth, depth_scale, sett->distance_limit);
+        }
+        auto colorized_depth = frameset.first(RS2_STREAM_DEPTH, RS2_FORMAT_RGB8);
+
+        // Query frame size (width and height)
+        //const int w = color.as<rs2::video_frame>().get_width();
+        //const int h = color.as<rs2::video_frame>().get_height();
+        int w = DEFAULT_WIDTH;
+        int h = DEFAULT_HEIGHT;
+#if 0
+        if (sett->show_dist) {
+            // get distance of center point
+            float dist = depth.get_distance(w/2, h/2);
+            printf("from aligned depth: dist@(%d,%d) => %f\n", w/2, h/2, dist);
+        }
+#endif
+        //cout << __LINE__ << "\n";
+        // Create OpenCV matrix of size (w,h) from the colorized depth data
+        Mat depth_image(Size(w, h), CV_8UC3, (void*)colorized_depth.get_data());
+        Mat raw_color_image(Size(w, h), CV_8UC3, (void*)color.get_data());
+        Mat orig_depth_image = depth_image.clone();
+        Mat edge_image;
+
+        Mat color_image;
+        Mat orig_color_image;
+        if (sett->useBagFile()) {
+            cvtColor(raw_color_image, color_image, COLOR_BGR2RGB);
+        } else {
+            color_image = raw_color_image.clone();
+        }
+        orig_color_image = color_image.clone();
+
+        cv::Point small_pt;
+        int min_dist = find_small_dist(depth.get_data(), small_pt);
+
+        // draw small dots
+        std::vector<Point> dots;
+        find_small_dot(depth.get_data(), min_dist, dots);
+        char msg[80];
+        sprintf(msg, "%03d (%d)pts", min_dist, static_cast<int>(dots.size()));
+        cv::putText(color_image, msg, cv::Point(50,50), cv::FONT_HERSHEY_SIMPLEX, 0.75, khaki, 2);
+        for (size_t jj=0; jj<dots.size(); ++jj) {
+            cv::circle(color_image, dots[jj], 2, khaki);
+            cv::circle(edge_image, dots[jj], 2, khaki);
+        }
+
+        if (sett->find_edge) {
+/// try to find edge of table ... {
+            vector<Vec4i> p_lines;
+            find_edge(depth_image, depth.get_data(), edge_image, p_lines, min_dist);
+            size_t results_size = results.size();
+            Vec10i last_z;
+            for (size_t ii=0; ii<std::min(results_size, (size_t)sett->max_show_answer); ++ii) {
+                Vec10i z = results.at(ii);
+                print_answer_string(z, ii, min_dist);
+                Scalar clr = Scalar(((ii&&ii%2)?0x7f:0), (ii?0x7f:0), 0xff);
+                //printf("draw_answer_line: edge_image\n");
+                draw_answer_line(edge_image, z, clr);
+                //printf("draw_answer_line: depth_image\n");
+                draw_answer_line(depth_image, z, clr);
+
+                #ifdef USE_GET_3DANGLE
+                // get xyz vector angle...
+                float degree3d = INVALID_DEGREE;
+                if ( get_3d_angle(depth, degree3d) ) {
+                    printf("3d deg:%.2f\n", degree3d);
+                    if (fabs(degree3d) > MAX_DEGREE_LIMIT) {
+                        printf("[trapped] degree too large\n");
+                    } else {
+                        if (ii==0) {
+                            last_z = handle_lastz(z);
+                        }
+                    }
+
+                } else {
+                    printf("invalid 3d degree\n");
+                }
+                #endif
+
+                clr = cv::Scalar(0x6c, 0x33, 0x65);
+                //draw_answer_line(edge_image, last_z, clr);
+                //printf("draw_answer_line: color_image\n");
+                draw_answer_line(color_image, last_z, clr);
+                //draw_answer_line(depth_image, last_z, clr);
+
+            }
+
+        }
+#ifdef USE_UIPRESENT
+        /// to show depth data with mouse pointer
+        do_click_window(depth, color_image, depth_image);
+
+        int64 e2 = cv::getTickCount();
+        double elapse_time = (e2 - e1) / cv::getTickFrequency();
+        //double time = cv::getTickFrequency() / (e2 - e1);
+        if (sett->show_fps) {
+            show_cvfps(color_image, elapse_time);
+            //printf("fps: %.3f\n", elapse_time);
+        }
+
+        // draw it after all other drawings
+        cv::circle(depth_image, small_pt, 3, medlavendar);
+
+        Mat combined;
+        if (sett->find_edge) {
+            hconcat(edge_image, depth_image, combined);
+            hconcat(combined, color_image, combined);
+        } else {
+            hconcat(depth_image, color_image, combined);
+        }
+
+        //imshow(rgb_window, combined);
+        imshow(depth_window, combined);
+        int key = waitKey(1);
+        if (key == 0x1B) {
+            cout << "break" << endl;
+            break;
+        } else if (key == 's') {
+            save_procedure(color_image, depth_image, edge_image, depth.get_data());
+        } else if (key == 'c' || key == 0x0D) {
+            save_procedure(orig_color_image, orig_depth_image, edge_image, depth.get_data());
+        } else if (key == ' ') {
+            if (device.as<rs2::playback>()) {
+                if (isPaused) {
+                    device.as<rs2::playback>().resume();
+                    isPaused = false;
+                } else {
+                    device.as<rs2::playback>().pause();
+                    isPaused = true;
+                }
+            }
+
+        }
+#endif  // USE_UIPRESENT
     }
 
-    if (!sett->apply_sleep) {
-        pipe.stop();
-    }
+    pipe.stop();
 
     destroyAllWindows();
     return EXIT_SUCCESS;

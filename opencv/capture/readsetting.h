@@ -85,7 +85,6 @@ public:
     bool show_fps = true;
     int color_scheme = 2;
     float distance_limit = 0.0; // if 0, this feature will be disabled
-    bool apply_sleep = false;
     bool apply_align = true;
     bool apply_dec = true;
     bool apply_disparity = true;
