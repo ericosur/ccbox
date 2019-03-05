@@ -37,6 +37,10 @@
 #define show_line()
 #endif
 
+cv::Scalar khaki = cv::Scalar(0, 0x80, 0x80);
+cv::Scalar medlavendar = cv::Scalar(0xB9, 0x6E, 0xA0);
+
+
 // all kinds of values will push into this data structure
 // Vec10i means a vector with 10 numbers
 // 0,1: x1, y1, #8 is its depth
@@ -51,7 +55,6 @@
 vector<Vec10i> results;
 std::vector<Vec10i> trace_z;
 
-int g_min_dist = -1;
 bool g_verbose = false;
 
 inline int my_avg(int m, int n)
@@ -308,23 +311,26 @@ void save_procedure(const cv::Mat& color_image, const cv::Mat& depth_image, cons
     }
 }
 
-int find_small_dist(const void* depth_data)
+int find_small_dist(const void* depth_data, cv::Point& small_pt)
 {
     int smallest_dist = -1;
+
+    small_pt.x = 0;
+    small_pt.y = 0;
+
     for (int x = 0 ; x < DEFAULT_WIDTH; ++x) {
         for (int y = 0; y < DEFAULT_HEIGHT; ++y) {
             int dist = get_dpeth_pt(depth_data, x, y);
             if (dist != 0) {
-                if (smallest_dist == -1 || (dist < smallest_dist)) {
+                if (smallest_dist == -1 || (dist <= smallest_dist)) {
                     smallest_dist = dist;
+                    small_pt.x = x;
+                    small_pt.y = y;
                 }
-            }
-            if (dist != 0 && dist < smallest_dist) {
-                smallest_dist = dist;
             }
         }
     }
-    //printf("find_small_dist: %d\n", smallest_dist);
+    //printf("find_small_dist: %d @(%d,%d)\n", smallest_dist, small_pt.x, small_pt.y);
     return smallest_dist;
 }
 
@@ -345,7 +351,7 @@ void find_small_dot(const void* depth_data, const int small_dst, std::vector<cv:
         }
     }
     if (g_verbose) {
-        printf("find_small_dot: %d dots\n", (int)dots.size());
+        printf("find_small_dot: %d dots\n", static_cast<int>(dots.size()));
     }
 }
 
@@ -368,7 +374,7 @@ cv::Mat resize_forward_and_backward(const cv::Mat& input)
 /// [out] edge_image
 /// [out] p_lines
 ///
-void find_edge(cv::Mat& color_image, const void* depth_data, cv::Mat& edge_image, vector<cv::Vec4i>& p_lines)
+void find_edge(cv::Mat& color_image, const void* depth_data, cv::Mat& edge_image, vector<cv::Vec4i>& p_lines, const int mini_dist)
 {
     using namespace cv;
 
@@ -436,7 +442,7 @@ void find_edge(cv::Mat& color_image, const void* depth_data, cv::Mat& edge_image
         double degree = 0.0;
         int z1 = get_dpeth_pt(depth_data, l[0], l[1]);
         int z2 = get_dpeth_pt(depth_data, l[2], l[3]);
-        if (cvutil::check_point2(l[0], l[1], z1, l[2], l[3], z2, g_min_dist, degree)) {
+        if (cvutil::check_point2(l[0], l[1], z1, l[2], l[3], z2, mini_dist, degree)) {
             Vec10i r;
             r[0] = l[0];  r[1] = l[1];  r[2] = l[2];  r[3] = l[3];
             //r[4] = get_length_from_vec4i(l);
@@ -576,25 +582,26 @@ int test_from_image()
     Mat color_image = imread(cfn);
     Mat depth_image = imread(dfn);
     Mat edge_image;
+    int min_dist = -1;
 
     imshow(dep_win, depth_image);
 
     load_bin_to_buffer(datfn, dep_buffer, dep_buffer_size);
     vector<Vec4i> p_lines;
     cout << "from depth_img ==>\n";
-    g_min_dist = find_small_dist(dep_buffer);
-    find_edge(depth_image, dep_buffer, edge_image, p_lines);
+    cv::Point small_pt;
+    min_dist = find_small_dist(dep_buffer, small_pt);
+    find_edge(depth_image, dep_buffer, edge_image, p_lines, min_dist);
 
     size_t results_size = results.size();
     //printf("size of results: %d ===>", (int)results_size);
 
     // draw small dots
     std::vector<Point> dots;
-    cv::Scalar khaki = cv::Scalar(0, 0x80, 0x80);
-    find_small_dot(dep_buffer, g_min_dist, dots);
+    find_small_dot(dep_buffer, min_dist, dots);
     char msg[80];
-    sprintf(msg, "%04d", g_min_dist);
-    cv::putText(color_image, msg, dots.at(0), cv::FONT_HERSHEY_SIMPLEX, 1, khaki);
+    sprintf(msg, "%04d", min_dist);
+    cv::putText(color_image, msg, dots.at(0), cv::FONT_HERSHEY_SIMPLEX, 1.5, khaki);
     for (size_t jj=0; jj<dots.size(); ++jj) {
         cv::circle(color_image, dots[jj], 2, khaki);
         cv::circle(edge_image, dots[jj], 2, khaki);
@@ -613,6 +620,9 @@ int test_from_image()
         //printf("draw_answer_line: depth_image\n");
         draw_answer_line(depth_image, z, clr);
     }
+
+    // draw it after all other drawings
+    cv::circle(depth_image, small_pt, 3, medlavendar);
 
     imshow(edge1_win, edge_image);
     imshow(color_win, color_image);
