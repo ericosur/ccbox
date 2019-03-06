@@ -41,6 +41,160 @@ cv::Scalar khaki = cv::Scalar(0, 0x80, 0x80);
 cv::Scalar medlavendar = cv::Scalar(0xB9, 0x6E, 0xA0);
 cv::Scalar color_answer = cv::Scalar(0x6c, 0x33, 0x65);
 
+bool g_verbose = false;
+
+int get_dpeth_pt(const void* buffer, int x, int y);
+
+inline int my_avg(int m, int n)
+{
+    return (m+n)/2;
+}
+
+
+class SmallDots
+{
+public:
+    SmallDots(cv::Mat& cimg, cv::Mat& dimg, const void* ddata) {
+        color_image = cimg;
+        depth_image = dimg;
+        depth_data = ddata;
+    }
+
+    void go();
+    int find_small_dist();
+    void find_small_dot();
+    void show_small_dots();
+
+    void edge_from_small_dots();
+
+protected:
+    float dist_2d(const cv::Point& p, const cv::Point& q);
+
+public:
+    int min_dist = -1;
+    cv::Point small_pt;
+    std::vector<cv::Point> dots;
+
+    cv::Mat color_image;
+    cv::Mat depth_image;
+    const void* depth_data;
+
+    const size_t NUM_LIMIT = 150;
+};
+
+void SmallDots::go()
+{
+    // find mini dist
+    min_dist = find_small_dist();
+    // find small dots
+    find_small_dot();
+    //show_small_dots();
+    edge_from_small_dots();
+}
+
+int SmallDots::find_small_dist()
+{
+    int smallest_dist = -1;
+
+    small_pt.x = 0;
+    small_pt.y = 0;
+
+    for (int x = 0 ; x < DEFAULT_WIDTH; ++x) {
+        for (int y = 0; y < DEFAULT_HEIGHT; ++y) {
+            int dist = get_dpeth_pt(depth_data, x, y);
+            if (dist != 0) {
+                if (smallest_dist == -1 || (dist <= smallest_dist)) {
+                    smallest_dist = dist;
+                    small_pt.x = x;
+                    small_pt.y = y;
+                }
+            }
+        }
+    }
+    //printf("find_small_dist: %d @(%d,%d)\n", smallest_dist, small_pt.x, small_pt.y);
+    return smallest_dist;
+}
+
+void SmallDots::find_small_dot()
+{
+    const int SMALL_RANGE = 5;
+    const int margin = ReadSetting::getInstance()->ignore_margin;
+    dots.clear();
+    cv::Point pt;
+    for (int x = 0 ; x < DEFAULT_WIDTH; ++x) {
+        for (int y = margin; y < DEFAULT_HEIGHT-margin; ++y) {
+            int dist = get_dpeth_pt(depth_data, x, y);
+            if (abs(dist - min_dist) < SMALL_RANGE) {
+                pt.x = x;
+                pt.y = y;
+                dots.push_back(pt);
+            }
+        }
+    }
+    if (g_verbose) {
+        printf("find_small_dot: %d dots\n", static_cast<int>(dots.size()));
+    }
+}
+
+void SmallDots::show_small_dots()
+{
+    char msg[80];
+    sprintf(msg, "%03d (%d)pts", min_dist, static_cast<int>(dots.size()));
+    cv::putText(color_image, msg, cv::Point(50,50), cv::FONT_HERSHEY_SIMPLEX, 0.75, khaki, 2);
+
+    for (size_t jj=0; jj<dots.size(); ++jj) {
+        cv::circle(color_image, dots[jj], 2, khaki);
+        cv::circle(depth_image, dots[jj], 2, khaki);
+    }
+}
+
+float SmallDots::dist_2d(const cv::Point& p, const cv::Point& q)
+{
+    return sqrt( pow(p.x - p.y, 2) + pow(q.x - q.y, 2) );
+}
+
+void SmallDots::edge_from_small_dots()
+{
+    if (dots.size() < NUM_LIMIT) {
+        //printf("drop, size: %d\n", static_cast<int>(dots.size()));
+        return;
+    }
+    int min_x = -1;
+    int max_x = -1;
+    int min_y = -1;
+    int max_y = -1;
+    for (size_t i=0; i<dots.size(); ++i) {
+        cv::Point p = dots.at(i);
+        if (min_x == -1 || p.x <= min_x) {
+            min_x = p.x;
+        }
+        if (max_x == -1 || p.x >= max_x) {
+            max_x = p.x;
+        }
+        if (min_y == -1 || p.y <= min_y) {
+            min_y = p.y;
+        }
+        if (max_y == -1 || p.y >= max_y) {
+            max_y = p.y;
+        }
+    }
+    if (min_x < 0 || max_y < 0 || min_y < 0 || max_y < 0)
+        return;
+
+    cv::Point p0 = cv::Point(min_x, my_avg(min_y, max_y));
+    cv::Point p1 = cv::Point(max_x, my_avg(min_y, max_y));
+    cv::Point m = cv::Point(my_avg(p0.x, p1.x), my_avg(p0.y, p1.y));
+    int dist = get_dpeth_pt(depth_data, m.x, m.y);
+    printf("dots(%d):L(%.2f) D(%d) %d,%d - %d,%d\n",
+        static_cast<int>(dots.size()),
+        dist_2d(p0, p1),
+        dist,
+        min_x, min_y, max_x, max_y);
+    cv::line(color_image, p0, p1, cv::Scalar(0,0,255), 2, cv::LINE_AA);
+    cv::line(depth_image, p0, p1, cv::Scalar(0,0,255), 2, cv::LINE_AA);
+    cv::circle(color_image, m, 2, khaki);
+}
+
 // all kinds of values will push into this data structure
 // Vec10i means a vector with 10 numbers
 // 0,1: x1, y1, #8 is its depth
@@ -55,12 +209,6 @@ cv::Scalar color_answer = cv::Scalar(0x6c, 0x33, 0x65);
 vector<Vec10i> results;
 std::vector<Vec10i> trace_z;
 
-bool g_verbose = false;
-
-inline int my_avg(int m, int n)
-{
-    return (m+n)/2;
-}
 
 #ifdef USE_UIPRESENT
 // show UI version
@@ -75,18 +223,6 @@ void draw_answer_line(cv::Mat& img, const Vec10i& z, const cv::Scalar& color)
 
         line(img, Point(z[0], z[1]), Point(z[2], z[3]), color, 1.5, LINE_AA);
         circle(img, Point(my_avg(z[0], z[2]), my_avg(z[1], z[3])), 3, Scalar(0xff, 0, 0));
-    }
-}
-
-void show_small_dots(cv::Mat& img, cv::Mat& img2, const std::vector<cv::Point>& dots, int min_dist)
-{
-    char msg[80];
-    sprintf(msg, "%03d (%d)pts", min_dist, static_cast<int>(dots.size()));
-    cv::putText(img, msg, cv::Point(50,50), cv::FONT_HERSHEY_SIMPLEX, 0.75, khaki, 2);
-
-    for (size_t jj=0; jj<dots.size(); ++jj) {
-        cv::circle(img, dots[jj], 2, khaki);
-        cv::circle(img2, dots[jj], 2, khaki);
     }
 }
 
@@ -324,49 +460,7 @@ void save_procedure(const cv::Mat& color_image, const cv::Mat& depth_image, cons
     }
 }
 
-int find_small_dist(const void* depth_data, cv::Point& small_pt)
-{
-    int smallest_dist = -1;
 
-    small_pt.x = 0;
-    small_pt.y = 0;
-
-    for (int x = 0 ; x < DEFAULT_WIDTH; ++x) {
-        for (int y = 0; y < DEFAULT_HEIGHT; ++y) {
-            int dist = get_dpeth_pt(depth_data, x, y);
-            if (dist != 0) {
-                if (smallest_dist == -1 || (dist <= smallest_dist)) {
-                    smallest_dist = dist;
-                    small_pt.x = x;
-                    small_pt.y = y;
-                }
-            }
-        }
-    }
-    //printf("find_small_dist: %d @(%d,%d)\n", smallest_dist, small_pt.x, small_pt.y);
-    return smallest_dist;
-}
-
-void find_small_dot(const void* depth_data, const int small_dst, std::vector<cv::Point>& dots)
-{
-    const int SMALL_RANGE = 4;
-    const int margin = ReadSetting::getInstance()->ignore_margin;
-    dots.clear();
-    cv::Point pt;
-    for (int x = 0 ; x < DEFAULT_WIDTH; ++x) {
-        for (int y = margin; y < DEFAULT_HEIGHT-margin; ++y) {
-            int dist = get_dpeth_pt(depth_data, x, y);
-            if (abs(dist - small_dst) < SMALL_RANGE) {
-                pt.x = x;
-                pt.y = y;
-                dots.push_back(pt);
-            }
-        }
-    }
-    if (g_verbose) {
-        printf("find_small_dot: %d dots\n", static_cast<int>(dots.size()));
-    }
-}
 
 cv::Mat resize_forward_and_backward(const cv::Mat& input)
 {
@@ -595,24 +689,21 @@ int test_from_image()
     Mat color_image = imread(cfn);
     Mat depth_image = imread(dfn);
     Mat edge_image;
-    int min_dist = -1;
 
     imshow(dep_win, depth_image);
 
     load_bin_to_buffer(datfn, dep_buffer, dep_buffer_size);
     vector<Vec4i> p_lines;
     cout << "from depth_img ==>\n";
-    cv::Point small_pt;
-    min_dist = find_small_dist(dep_buffer, small_pt);
-    find_edge(depth_image, dep_buffer, edge_image, p_lines, min_dist);
+
+    SmallDots sm(color_image, depth_image, dep_buffer);
+    sm.go();
+
+    // HERE: find edge
+    find_edge(depth_image, dep_buffer, edge_image, p_lines, sm.min_dist);
 
     size_t results_size = results.size();
     //printf("size of results: %d ===>", (int)results_size);
-
-    // draw small dots
-    std::vector<Point> dots;
-    find_small_dot(dep_buffer, min_dist, dots);
-    show_small_dots(color_image, depth_image, dots, min_dist);
 
     // show answers
     for (size_t ii = 0; ii < std::min(results_size, (size_t)sett->max_show_answer); ii++) {
@@ -629,7 +720,7 @@ int test_from_image()
     }
 
     // draw it after all other drawings
-    cv::circle(depth_image, small_pt, 3, medlavendar);
+    cv::circle(depth_image, sm.small_pt, 3, medlavendar);
 
     imshow(edge1_win, edge_image);
     imshow(color_win, color_image);
@@ -871,23 +962,18 @@ int test_realsense() try
         }
         orig_color_image = color_image.clone();
 
-        cv::Point small_pt;
-        int min_dist = find_small_dist(depth.get_data(), small_pt);
-
-        // draw small dots
-        std::vector<Point> dots;
-        find_small_dot(depth.get_data(), min_dist, dots);
-        show_small_dots(color_image, depth_image, dots, min_dist);
+        SmallDots sm(color_image, depth_image, depth.get_data());
+        sm.go();
 
         /// HERE try to find edge of table ... {
         if (sett->find_edge) {
             vector<Vec4i> p_lines;
-            find_edge(depth_image, depth.get_data(), edge_image, p_lines, min_dist);
+            find_edge(depth_image, depth.get_data(), edge_image, p_lines, sm.min_dist);
             size_t results_size = results.size();
             Vec10i last_z;
             for (size_t ii=0; ii<std::min(results_size, (size_t)sett->max_show_answer); ++ii) {
                 Vec10i z = results.at(ii);
-                print_answer_string(z, ii, min_dist);
+                print_answer_string(z, ii, sm.min_dist);
                 Scalar clr = Scalar(((ii&&ii%2)?0x7f:0), (ii?0x7f:0), 0xff);
                 //printf("draw_answer_line: edge_image\n");
                 draw_answer_line(edge_image, z, clr);
@@ -930,7 +1016,7 @@ int test_realsense() try
         }
 
         // draw it after all other drawings
-        cv::circle(depth_image, small_pt, 3, medlavendar);
+        cv::circle(depth_image, sm.small_pt, 3, medlavendar);
 
         Mat combined;
         if (sett->find_edge) {
