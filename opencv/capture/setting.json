@@ -31,7 +31,7 @@
         "apply_holefill": true,
 
         "max_degree": 45,
-        "max_show_answer": 5,
+        "max_show_answer": 3,
         "ignore_margin": 12
     }
 }

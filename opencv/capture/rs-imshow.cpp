@@ -39,7 +39,7 @@
 
 cv::Scalar khaki = cv::Scalar(0, 0x80, 0x80);
 cv::Scalar medlavendar = cv::Scalar(0xB9, 0x6E, 0xA0);
-
+cv::Scalar color_answer = cv::Scalar(0x6c, 0x33, 0x65);
 
 // all kinds of values will push into this data structure
 // Vec10i means a vector with 10 numbers
@@ -77,6 +77,19 @@ void draw_answer_line(cv::Mat& img, const Vec10i& z, const cv::Scalar& color)
         circle(img, Point(my_avg(z[0], z[2]), my_avg(z[1], z[3])), 3, Scalar(0xff, 0, 0));
     }
 }
+
+void show_small_dots(cv::Mat& img, cv::Mat& img2, const std::vector<cv::Point>& dots, int min_dist)
+{
+    char msg[80];
+    sprintf(msg, "%03d (%d)pts", min_dist, static_cast<int>(dots.size()));
+    cv::putText(img, msg, cv::Point(50,50), cv::FONT_HERSHEY_SIMPLEX, 0.75, khaki, 2);
+
+    for (size_t jj=0; jj<dots.size(); ++jj) {
+        cv::circle(img, dots[jj], 2, khaki);
+        cv::circle(img2, dots[jj], 2, khaki);
+    }
+}
+
 #endif  // USE_UIPRESENT
 
 // stdout version
@@ -599,13 +612,7 @@ int test_from_image()
     // draw small dots
     std::vector<Point> dots;
     find_small_dot(dep_buffer, min_dist, dots);
-    char msg[80];
-    sprintf(msg, "%04d", min_dist);
-    cv::putText(color_image, msg, dots.at(0), cv::FONT_HERSHEY_SIMPLEX, 1.5, khaki);
-    for (size_t jj=0; jj<dots.size(); ++jj) {
-        cv::circle(color_image, dots[jj], 2, khaki);
-        cv::circle(edge_image, dots[jj], 2, khaki);
-    }
+    show_small_dots(color_image, depth_image, dots, min_dist);
 
     // show answers
     for (size_t ii = 0; ii < std::min(results_size, (size_t)sett->max_show_answer); ii++) {
@@ -793,6 +800,7 @@ int test_realsense() try
                 printf("break from paused\n");
                 break;
             }
+            continue;
         }
         if (!pipe.poll_for_frames(&frameset)) {
             continue;
@@ -825,12 +833,8 @@ int test_realsense() try
         rs2::depth_frame depth = frameset.get_depth_frame();
         rs2::video_frame color = frameset.get_color_frame();
 
-        if (!depth) {
-            cout << "no depth frame\n";
-            continue;
-        }
-        if (!color) {
-            cout << "no color frame\n";
+        if (!depth || !color) {
+            cout << "no depth or color frame\n";
             continue;
         }
         //cout << "frame got\n";
@@ -873,16 +877,10 @@ int test_realsense() try
         // draw small dots
         std::vector<Point> dots;
         find_small_dot(depth.get_data(), min_dist, dots);
-        char msg[80];
-        sprintf(msg, "%03d (%d)pts", min_dist, static_cast<int>(dots.size()));
-        cv::putText(color_image, msg, cv::Point(50,50), cv::FONT_HERSHEY_SIMPLEX, 0.75, khaki, 2);
-        for (size_t jj=0; jj<dots.size(); ++jj) {
-            cv::circle(color_image, dots[jj], 2, khaki);
-            cv::circle(edge_image, dots[jj], 2, khaki);
-        }
+        show_small_dots(color_image, depth_image, dots, min_dist);
 
+        /// HERE try to find edge of table ... {
         if (sett->find_edge) {
-/// try to find edge of table ... {
             vector<Vec4i> p_lines;
             find_edge(depth_image, depth.get_data(), edge_image, p_lines, min_dist);
             size_t results_size = results.size();
@@ -914,12 +912,8 @@ int test_realsense() try
                 }
                 #endif
 
-                clr = cv::Scalar(0x6c, 0x33, 0x65);
-                //draw_answer_line(edge_image, last_z, clr);
                 //printf("draw_answer_line: color_image\n");
-                draw_answer_line(color_image, last_z, clr);
-                //draw_answer_line(depth_image, last_z, clr);
-
+                draw_answer_line(color_image, last_z, color_answer);
             }
 
         }
@@ -966,7 +960,6 @@ int test_realsense() try
                     isPaused = true;
                 }
             }
-
         }
 #endif  // USE_UIPRESENT
     }
