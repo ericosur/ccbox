@@ -58,7 +58,9 @@ bool query_uv2xyz(const rs2::depth_frame& frame, const cv::Point& pt, cv::Vec3f&
     float dist = frame.get_distance(pixel[0], pixel[1]);
     //printf("get_distance: dist: %.2f\n", dist);
     if (dist < MIN_DEPTH_METER) {
-        printf("dist failed: %.2f\n", dist);
+        if (g_verbose) {
+            printf("dist failed: %.2f\n", dist);
+        }
         return false;
     }
 

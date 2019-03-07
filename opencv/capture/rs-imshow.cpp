@@ -54,10 +54,10 @@ inline int my_avg(int m, int n)
 class SmallDots
 {
 public:
-    SmallDots(cv::Mat& cimg, cv::Mat& dimg, const void* ddata) {
+    SmallDots(cv::Mat& cimg, cv::Mat& dimg, const void* buf) {
         color_image = cimg;
         depth_image = dimg;
-        depth_data = ddata;
+        depth_data = buf;
     }
 
     void go();
@@ -65,19 +65,27 @@ public:
     void find_small_dot();
     void show_small_dots();
 
-    void edge_from_small_dots();
+    bool edge_from_small_dots();
+
+    bool get_3d_angle(const rs2::depth_frame& depth, float& deg3d);
 
 protected:
     float dist_2d(const cv::Point& p, const cv::Point& q);
 
 public:
+    bool pass_check = false;
+
     int min_dist = -1;
     cv::Point small_pt;
     std::vector<cv::Point> dots;
 
+    cv::Point p0;
+    cv::Point p1;
+    double degree = -1;
+
     cv::Mat color_image;
     cv::Mat depth_image;
-    const void* depth_data;
+    const void* depth_data = NULL;
 
     const size_t NUM_LIMIT = 150;
 };
@@ -89,7 +97,7 @@ void SmallDots::go()
     // find small dots
     find_small_dot();
     //show_small_dots();
-    edge_from_small_dots();
+    pass_check = edge_from_small_dots();
 }
 
 int SmallDots::find_small_dist()
@@ -153,11 +161,11 @@ float SmallDots::dist_2d(const cv::Point& p, const cv::Point& q)
     return sqrt( pow(p.x - p.y, 2) + pow(q.x - q.y, 2) );
 }
 
-void SmallDots::edge_from_small_dots()
+bool SmallDots::edge_from_small_dots()
 {
     if (dots.size() < NUM_LIMIT) {
         //printf("drop, size: %d\n", static_cast<int>(dots.size()));
-        return;
+        return false;
     }
     int min_x = -1;
     int max_x = -1;
@@ -178,22 +186,86 @@ void SmallDots::edge_from_small_dots()
             max_y = p.y;
         }
     }
-    if (min_x < 0 || max_y < 0 || min_y < 0 || max_y < 0)
-        return;
+    if (min_x < 0 || max_y < 0 || min_y < 0 || max_y < 0) {
+        return false;
+    }
 
-    cv::Point p0 = cv::Point(min_x, my_avg(min_y, max_y));
-    cv::Point p1 = cv::Point(max_x, my_avg(min_y, max_y));
+    p0 = cv::Point(min_x, my_avg(min_y, max_y));
+    p1 = cv::Point(max_x, my_avg(min_y, max_y));
     cv::Point m = cv::Point(my_avg(p0.x, p1.x), my_avg(p0.y, p1.y));
-    int dist = get_dpeth_pt(depth_data, m.x, m.y);
-    printf("dots(%d):L(%.2f) D(%d) %d,%d - %d,%d\n",
-        static_cast<int>(dots.size()),
-        dist_2d(p0, p1),
-        dist,
-        min_x, min_y, max_x, max_y);
-    cv::line(color_image, p0, p1, cv::Scalar(0,0,255), 2, cv::LINE_AA);
-    cv::line(depth_image, p0, p1, cv::Scalar(0,0,255), 2, cv::LINE_AA);
-    cv::circle(color_image, m, 2, khaki);
+    int dist_m = get_dpeth_pt(depth_data, m.x, m.y);
+
+    int d0 = get_dpeth_pt(depth_data, p0.x, p0.y);
+    int d1 = get_dpeth_pt(depth_data, p1.x, p1.y);
+
+    if (cvutil::check_point2(p0.x, p0.y, d0, p1.x, p1.y, d1, min_dist, degree)) {
+        printf(/* "dots(%d):" */ "2D: dist(%.0f) Dmid(%d) minD(%d) deg(%.f) %d,%d-%d,%d\n",
+            //static_cast<int>(dots.size()),
+            dist_2d(p0, p1),    // 2d distance of p0, p1
+            dist_m,             // z depth of midpoint
+            min_dist,           // z depth minimum
+            degree,             // deg
+            min_x, min_y, max_x, max_y);
+        cv::line(color_image, p0, p1, cv::Scalar(0,0,255), 2, cv::LINE_AA);
+        cv::line(depth_image, p0, p1, cv::Scalar(0,0,255), 2, cv::LINE_AA);
+        cv::circle(color_image, m, 2, khaki);
+        return true;
+    } else {
+        //printf("failed to pass check\n");
+        return false;
+    }
 }
+
+#if 1
+bool SmallDots::get_3d_angle(const rs2::depth_frame& depth, float& deg3d)
+{
+    deg3d = INVALID_DEGREE;
+    if (!depth) {
+        return false;
+    }
+    //printf("enter %s...\n", __func__);
+    cv::Point pt1;
+    cv::Vec3f xyz1;
+    pt1.x = p0.x;
+    pt1.y = p0.y;
+
+    cv::Point pt2;
+    cv::Vec3f xyz2;
+    pt2.x = p1.x;
+    pt2.y = p1.y;
+
+    bool ret1 = rsutil::query_uv2xyz(depth, pt1, xyz1);
+    bool ret2 = rsutil::query_uv2xyz(depth, pt2, xyz2);
+
+    if (ret1) {
+        xyz1 *= 1000;
+        //printf("%s: xyz1: %.0f,%.0f,%.0f  ", __func__, xyz1[0], xyz1[1], xyz1[2]);
+    } else {
+        if (g_verbose) {
+            printf("ret1 failed\n");
+        }
+        return false;
+    }
+    if (ret2) {
+        xyz2 *= 1000;
+        //printf("xyz2: %.0f,%.0f,%.0f  ", xyz2[0], xyz2[1], xyz2[2]);
+    } else {
+        if (g_verbose) {
+            printf("ret2 failed\n");
+        }
+        return false;
+    }
+
+    float dist3d = rsutil::dist_3d_xyz(xyz1, xyz2);
+    printf(" dist3d: %.2f ", dist3d);
+
+    float dx = xyz2[0] - xyz1[0];
+    float dz = xyz2[2] - xyz1[2];
+
+    bool ret = cvutil::get_angle_from_dx_dy(deg3d, dx, dz, false);
+    return ret;
+}
+#endif
 
 // all kinds of values will push into this data structure
 // Vec10i means a vector with 10 numbers
@@ -699,30 +771,32 @@ int test_from_image()
     SmallDots sm(color_image, depth_image, dep_buffer);
     sm.go();
 
-    // HERE: find edge
-    find_edge(depth_image, dep_buffer, edge_image, p_lines, sm.min_dist);
+    if (sett->find_edge) {
+        // HERE: find edge
+        find_edge(depth_image, dep_buffer, edge_image, p_lines, sm.min_dist);
 
-    size_t results_size = results.size();
-    //printf("size of results: %d ===>", (int)results_size);
+        size_t results_size = results.size();
+        //printf("size of results: %d ===>", (int)results_size);
 
-    // show answers
-    for (size_t ii = 0; ii < std::min(results_size, (size_t)sett->max_show_answer); ii++) {
-        //printf("size of results: %d\t", (int)results.size());
-        Vec10i z = results.at(ii);
-        print_answer_string(z, ii);
-        Scalar clr = Scalar(((ii&&ii%2)?0x7f:0), (ii?0x7f:0), 0xff);
-        //printf("draw_answer_line: edge_image\n");
-        draw_answer_line(edge_image, z, clr);
-        //printf("draw_answer_line: color_image\n");
-        draw_answer_line(color_image, z, clr);
-        //printf("draw_answer_line: depth_image\n");
-        draw_answer_line(depth_image, z, clr);
+        // show answers
+        for (size_t ii = 0; ii < std::min(results_size, (size_t)sett->max_show_answer); ii++) {
+            //printf("size of results: %d\t", (int)results.size());
+            Vec10i z = results.at(ii);
+            print_answer_string(z, ii);
+            Scalar clr = Scalar(((ii&&ii%2)?0x7f:0), (ii?0x7f:0), 0xff);
+            //printf("draw_answer_line: edge_image\n");
+            draw_answer_line(edge_image, z, clr);
+            //printf("draw_answer_line: color_image\n");
+            draw_answer_line(color_image, z, clr);
+            //printf("draw_answer_line: depth_image\n");
+            draw_answer_line(depth_image, z, clr);
+        }
+        imshow(edge1_win, edge_image);
     }
 
     // draw it after all other drawings
     cv::circle(depth_image, sm.small_pt, 3, medlavendar);
 
-    imshow(edge1_win, edge_image);
     imshow(color_win, color_image);
 #ifdef USE_EDGE2
     cout << "from color_img:\n";
@@ -735,7 +809,9 @@ int test_from_image()
     if (key == 0x1B) {
         cout << "user break" << endl;
     } else if (key == 's') {
-        save_procedure(color_image, depth_image, edge_image, dep_buffer, true);
+        string fn = "test_from_image.jpg";
+        cout << "save to " << fn << endl;
+        cv::imwrite(fn, color_image);
     } else if (key == ' ') {
 
     }
@@ -964,6 +1040,13 @@ int test_realsense() try
 
         SmallDots sm(color_image, depth_image, depth.get_data());
         sm.go();
+
+        if (sm.pass_check) {
+            float degree3d = INVALID_DEGREE;
+            if ( sm.get_3d_angle(depth, degree3d) ) {
+                printf("sm.get 3d angle: %.2f\n", degree3d);
+            }
+        }
 
         /// HERE try to find edge of table ... {
         if (sett->find_edge) {
