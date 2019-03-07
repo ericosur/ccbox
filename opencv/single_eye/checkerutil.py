@@ -20,6 +20,11 @@ def px_3d_dist(p1, p2):
     d = math.sqrt((p1[0]-p2[0])**2 + (p1[1]-p2[1])**2 + (p1[2]-p2[2])**2)
     return d
 
+def px_center(p1, p2, p3):
+    xx = int((p1[0] + p2[0]) / 2);
+    yy = int((p2[1] + p3[1]) / 2);
+    return (xx, yy)
+
 # ret: corners np.int64
 def get_poi(marker):
     # print(type(marker))
@@ -74,7 +79,9 @@ def getmm(p):
     return q
 
 def put_mytext(img, text):
-    cv2.putText(img, text, (img.shape[1] - 500, img.shape[0] - 20),
+    px = img.shape[1] - 500
+    py = img.shape[0] - 20
+    cv2.putText(img, text, (20, img.shape[0] - 20),
                 cv2.FONT_HERSHEY_SIMPLEX, 1.1, (0, 255, 255), 3)
 
 # get distance from known width and focal length
@@ -82,3 +89,7 @@ def distance_to_camera(knownWidth, focalLength, perWidth):
     # compute and return the distance from the maker to the camera
     return (knownWidth * focalLength) / perWidth
 
+def put_text2(img, text, pt):
+    cv2.circle(img, pt, 3, (0,255,0), -1)
+    cv2.putText(img, text, (pt[0]+10,pt[1]),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 1)
