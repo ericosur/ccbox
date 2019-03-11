@@ -199,9 +199,9 @@ bool SmallDots::edge_from_small_dots()
     int d1 = get_dpeth_pt(depth_data, p1.x, p1.y);
 
     if (cvutil::check_point2(p0.x, p0.y, d0, p1.x, p1.y, d1, min_dist, degree)) {
-        printf(/* "dots(%d):" */ "2D: dist(%.0f) Dmid(%d) minD(%d) deg(%.f) %d,%d-%d,%d\n",
+        printf(/* "dots(%d):" dist(%.0f) */ "2D: Dmid(%d) minD(%d) deg(%.f) %d,%d-%d,%d\n",
             //static_cast<int>(dots.size()),
-            dist_2d(p0, p1),    // 2d distance of p0, p1
+            //dist_2d(p0, p1),    // 2d distance of p0, p1
             dist_m,             // z depth of midpoint
             min_dist,           // z depth minimum
             degree,             // deg
@@ -216,10 +216,9 @@ bool SmallDots::edge_from_small_dots()
     }
 }
 
-#if 1
-bool SmallDots::get_3d_angle(const rs2::depth_frame& depth, float& deg3d)
+bool SmallDots::get_3d_angle(const rs2::depth_frame& depth, float& degree3d)
 {
-    deg3d = INVALID_DEGREE;
+    degree3d = INVALID_DEGREE;
     if (!depth) {
         return false;
     }
@@ -257,15 +256,22 @@ bool SmallDots::get_3d_angle(const rs2::depth_frame& depth, float& deg3d)
     }
 
     float dist3d = rsutil::dist_3d_xyz(xyz1, xyz2);
-    printf(" dist3d: %.2f ", dist3d);
+    printf("3D dist:  %.2f ", dist3d);
+    if (dist3d < 100.0) {
+        printf(" *** ");
+    }
 
     float dx = xyz2[0] - xyz1[0];
     float dz = xyz2[2] - xyz1[2];
 
-    bool ret = cvutil::get_angle_from_dx_dy(deg3d, dx, dz, false);
+    bool ret = cvutil::get_angle_from_dx_dy(degree3d, dx, dz, false);
+    if (ret) {
+        printf("  angle: %.2f\n", degree3d);
+    } else {
+        printf("\n");
+    }
     return ret;
 }
-#endif
 
 // all kinds of values will push into this data structure
 // Vec10i means a vector with 10 numbers
@@ -1044,7 +1050,8 @@ int test_realsense() try
         if (sm.pass_check) {
             float degree3d = INVALID_DEGREE;
             if ( sm.get_3d_angle(depth, degree3d) ) {
-                printf("sm.get 3d angle: %.2f\n", degree3d);
+                // then we got a more confident answer here
+                //printf("3D: angle: %.2f\n", degree3d);
             }
         }
 
