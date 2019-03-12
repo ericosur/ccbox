@@ -16,7 +16,9 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_JSON")
 
 add_executable(
     ${PN}
-    mycurl.cpp
+    main.cpp
+    qweather.cpp
+    curlutil.cpp
 )
 
 target_link_libraries(
