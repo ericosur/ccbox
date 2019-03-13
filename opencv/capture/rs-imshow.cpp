@@ -51,6 +51,23 @@ inline int my_avg(int m, int n)
 }
 
 
+class RcAnswer {
+public:
+    RcAnswer(const cv::Point& m, const cv::Point& n) {
+        p0 = m;
+        p1 = n;
+        p_mid = cv::Point(my_avg(m.x, n.x), my_avg(m.y, n.y));
+    }
+    // 2D points
+    cv::Point p0;
+    cv::Point p1;
+    cv::Point p_mid;
+    int center_depth = 0;
+    int average_depth = 0;
+    int median_depth = 0;
+};
+
+
 class SmallDots
 {
 public:
@@ -64,13 +81,14 @@ public:
     int find_small_dist();
     void find_small_dot();
     void show_small_dots();
+    int find_overlap(const std::vector<cv::Point>& pol);
 
     bool edge_from_small_dots();
 
     bool get_3d_angle(const rs2::depth_frame& depth, float& deg3d);
 
-protected:
-    float dist_2d(const cv::Point& p, const cv::Point& q);
+    static float dist_2d(const cv::Point& p, const cv::Point& q);
+    static float find_small_value(const std::vector<float>& v);
 
 public:
     bool pass_check = false;
@@ -90,13 +108,30 @@ public:
     const size_t NUM_LIMIT = 150;
 };
 
+int SmallDots::find_overlap(const std::vector<cv::Point>& pol)
+{
+    int count = 0;
+    for (size_t ii=0; ii<pol.size(); ++ii) {
+        cv::Point foo = pol.at(ii);
+        std::vector<cv::Point>::iterator it;
+        it = std::find(dots.begin(), dots.end(), foo);
+        if (it != dots.end()) {
+            count ++;
+        }
+    }
+
+    //printf("overlap: %d from %d\n", count, static_cast<int>(pol.size()));
+
+    return count;
+}
+
 void SmallDots::go()
 {
     // find mini dist
     min_dist = find_small_dist();
     // find small dots
     find_small_dot();
-    //show_small_dots();
+    show_small_dots();
     pass_check = edge_from_small_dots();
 }
 
@@ -161,6 +196,17 @@ float SmallDots::dist_2d(const cv::Point& p, const cv::Point& q)
     return sqrt( pow(p.x - p.y, 2) + pow(q.x - q.y, 2) );
 }
 
+float SmallDots::find_small_value(const std::vector<float>& v)
+{
+    float res = -1;
+    for (size_t ii=0; ii < v.size(); ++ii) {
+        if (res == -1 || v.at(ii) <= res) {
+            res = v.at(ii);
+        }
+    }
+    return res;
+}
+
 bool SmallDots::edge_from_small_dots()
 {
     if (dots.size() < NUM_LIMIT) {
@@ -199,11 +245,11 @@ bool SmallDots::edge_from_small_dots()
     int d1 = get_dpeth_pt(depth_data, p1.x, p1.y);
 
     if (cvutil::check_point2(p0.x, p0.y, d0, p1.x, p1.y, d1, min_dist, degree)) {
-        printf(/* "dots(%d):" dist(%.0f) */ "2D: Dmid(%d) minD(%d) deg(%.f) %d,%d-%d,%d\n",
-            //static_cast<int>(dots.size()),
+        printf("2D: SMALLDOTS: minD(%d) sz(%d) Dmid(%d) deg(%.f) %d,%d-%d,%d\n",
             //dist_2d(p0, p1),    // 2d distance of p0, p1
+             min_dist,           // z depth minimum
+            static_cast<int>(dots.size()),
             dist_m,             // z depth of midpoint
-            min_dist,           // z depth minimum
             degree,             // deg
             min_x, min_y, max_x, max_y);
         cv::line(color_image, p0, p1, cv::Scalar(0,0,255), 2, cv::LINE_AA);
@@ -256,10 +302,7 @@ bool SmallDots::get_3d_angle(const rs2::depth_frame& depth, float& degree3d)
     }
 
     float dist3d = rsutil::dist_3d_xyz(xyz1, xyz2);
-    printf("3D dist:  %.2f ", dist3d);
-    if (dist3d < 100.0) {
-        printf(" *** ");
-    }
+    printf("    dist3d: %.2f ", dist3d);
 
     float dx = xyz2[0] - xyz1[0];
     float dz = xyz2[2] - xyz1[2];
@@ -273,8 +316,33 @@ bool SmallDots::get_3d_angle(const rs2::depth_frame& depth, float& degree3d)
     return ret;
 }
 
+void dd2d(const Vec11i& r, const SmallDots& sm)
+{
+    const float PIXEL_LIMIT = 100.0;
+    // calculate distance between first line to smallest pt
+    RcAnswer ans(cv::Point(r[0],r[1]), cv::Point(r[2], r[3]));
+    ans.center_depth = r[5];
+    ans.average_depth = r[6];
+    ans.median_depth = r[7];
+
+    std::vector<float> vv;
+    float d2f = SmallDots::dist_2d(ans.p_mid, sm.small_pt);
+    vv.push_back(d2f);
+    d2f = SmallDots::dist_2d(cv::Point(r[0], r[1]), sm.small_pt);
+    vv.push_back(d2f);
+    d2f = SmallDots::dist_2d(cv::Point(r[2], r[2]), sm.small_pt);
+    vv.push_back(d2f);
+
+    float s2f = SmallDots::find_small_value(vv);
+
+    printf("[INFO] dd2d: %.0f  *****  ", s2f);
+    if (d2f > PIXEL_LIMIT) {
+        printf("[WARNING] too far to small point...\n");
+    }
+}
+
 // all kinds of values will push into this data structure
-// Vec10i means a vector with 10 numbers
+// Vec11i means a vector with 11 numbers
 // 0,1: x1, y1, #8 is its depth
 // 2,3: x2, y2, #9 is its depth
 // 4: 2D degree
@@ -284,13 +352,14 @@ bool SmallDots::get_3d_angle(const rs2::depth_frame& depth, float& degree3d)
 ///
 // 8: lhs depth
 // 9: rhs depth
-vector<Vec10i> results;
-std::vector<Vec10i> trace_z;
+// 10: overlapped counts
+vector<Vec11i> results;
+std::vector<Vec11i> trace_z;
 
 
 #ifdef USE_UIPRESENT
 // show UI version
-void draw_answer_line(cv::Mat& img, const Vec10i& z, const cv::Scalar& color)
+void draw_answer_line(cv::Mat& img, const Vec11i& z, const cv::Scalar& color)
 {
     using namespace cv;
 
@@ -307,7 +376,7 @@ void draw_answer_line(cv::Mat& img, const Vec10i& z, const cv::Scalar& color)
 #endif  // USE_UIPRESENT
 
 // stdout version
-void print_answer_string(const Vec10i& z, int idx, int min_dist=0)
+void print_answer_string(const Vec11i& z, int idx, int min_dist=0)
 {
     char msg[128];
 
@@ -319,24 +388,23 @@ void print_answer_string(const Vec10i& z, int idx, int min_dist=0)
     } else {
         sprintf(msg, "[%d]: %3d - %3d, ",
             idx, z[8], z[9]);
-
     }
 
-    if (min_dist != 0) {
-        sprintf(msg, "%s <%d> [%d] a[%d] m[%d],deg:%d",
-                msg, min_dist, z[5], z[6], z[7], z[4]);
-    } else {
-        sprintf(msg, "%s [%d] a[%d] m[%d], d:%02d",
-                msg, z[5], z[6], z[7], z[4]);
+    if (z[10]) {
+        printf(" <oooo> ");
     }
+
+    sprintf(msg, "%s minD<%d> [%d] a[%d] m[%d], 2D deg:%d",
+            msg, min_dist, z[5], z[6], z[7], z[4]);
+
     printf("%s\n", msg);
 }
 
-Vec10i handle_lastz(const Vec10i& z)
+Vec11i handle_lastz(const Vec11i& z)
 {
     const int slide_win = 10;
-    Vec10i last_z;
-    Vec10i avg_z;
+    Vec11i last_z;
+    Vec11i avg_z;
 
     if (trace_z.size() < slide_win) {
         trace_z.push_back(z);
@@ -484,22 +552,22 @@ float get_length_from_vec4i(const cv::Vec4i& v)
     return ans;
 }
 
-bool cmp_by_length(Vec10i& m, Vec10i& n)
+bool cmp_by_length(Vec11i& m, Vec11i& n)
 {
     return m[4] > n[4];
 }
 
-bool cmp_by_depth(Vec10i& m, Vec10i& n)
+bool cmp_by_depth(Vec11i& m, Vec11i& n)
 {
     return m[5] < n[5];
 }
 
-bool cmp_by_avg_depth(Vec10i& m, Vec10i& n)
+bool cmp_by_avg_depth(Vec11i& m, Vec11i& n)
 {
     return m[6] < n[6];
 }
 
-bool cmp_by_med_depth(Vec10i& m, Vec10i& n)
+bool cmp_by_med_depth(Vec11i& m, Vec11i& n)
 {
     return m[7] < n[7];
 }
@@ -559,7 +627,7 @@ cv::Mat resize_forward_and_backward(const cv::Mat& input)
 /// [out] edge_image
 /// [out] p_lines
 ///
-void find_edge(cv::Mat& color_image, const void* depth_data, cv::Mat& edge_image, vector<cv::Vec4i>& p_lines, const int mini_dist)
+void find_edge(cv::Mat& color_image, const void* depth_data, cv::Mat& edge_image, vector<cv::Vec4i>& p_lines, SmallDots& sm)
 {
     using namespace cv;
 
@@ -614,6 +682,7 @@ void find_edge(cv::Mat& color_image, const void* depth_data, cv::Mat& edge_image
     }
     //Scalar color = Scalar(0xff, 0x66, 0xff);
 
+
     /// Show the result
     for( size_t i = 0; i < p_lines.size(); i++ ) {
         Vec4i l = p_lines[i];
@@ -627,8 +696,8 @@ void find_edge(cv::Mat& color_image, const void* depth_data, cv::Mat& edge_image
         double degree = 0.0;
         int z1 = get_dpeth_pt(depth_data, l[0], l[1]);
         int z2 = get_dpeth_pt(depth_data, l[2], l[3]);
-        if (cvutil::check_point2(l[0], l[1], z1, l[2], l[3], z2, mini_dist, degree)) {
-            Vec10i r;
+        if (cvutil::check_point2(l[0], l[1], z1, l[2], l[3], z2, sm.min_dist, degree)) {
+            Vec11i r;
             r[0] = l[0];  r[1] = l[1];  r[2] = l[2];  r[3] = l[3];
             //r[4] = get_length_from_vec4i(l);
             r[4] = degree;
@@ -636,16 +705,22 @@ void find_edge(cv::Mat& color_image, const void* depth_data, cv::Mat& edge_image
             // get points from two end points
             Point p1 = Point(r[0], r[1]);
             Point p2 = Point(r[2], r[3]);
-            std::vector<cv::Point> points;
+            std::vector<cv::Point> pol;
             std::vector<int> all_depth_results;
-            int ret = cvutil::get_points_between_two_points(canny_output, p1, p2, points);
+            int ret = cvutil::get_points_between_two_points(canny_output, p1, p2, pol);
             if (ret) {
                 vector<int> all_depth_results;
-                get_all_depth_data(depth_data, points, all_depth_results);
+                get_all_depth_data(depth_data, pol, all_depth_results);
                 int avg = cvutil::get_avg_depth_from_points(all_depth_results);
                 r[6] = avg;
                 int median = cvutil::get_median_depth_from_points(all_depth_results);
                 r[7] = median;
+                if ( sm.find_overlap(pol) ) {
+                    r[10] = 1;
+                }
+            } else {
+                printf("REJECT: NO POINTS OF LINE\n");
+                continue;
             }
             // get depth from center of line
             r[8] = z1;
@@ -654,6 +729,7 @@ void find_edge(cv::Mat& color_image, const void* depth_data, cv::Mat& edge_image
             if (rsutil::check_depth(tmp)) {
                 r[5] = tmp;
                 results.push_back(r);
+                //printf("[INFO] push at %d\n", static_cast<int>(results.size()-1));
             } else {
                 printf("REJECT: find_edge: invalid depth at mid pt\n");
             }
@@ -777,19 +853,24 @@ int test_from_image()
     SmallDots sm(color_image, depth_image, dep_buffer);
     sm.go();
 
+
     if (sett->find_edge) {
         // HERE: find edge
-        find_edge(depth_image, dep_buffer, edge_image, p_lines, sm.min_dist);
+        find_edge(depth_image, dep_buffer, edge_image, p_lines, sm);
 
         size_t results_size = results.size();
         //printf("size of results: %d ===>", (int)results_size);
 
+        // if (results_size) {
+        //     dd2d(results.at(0), sm);
+        // }
+
         // show answers
         for (size_t ii = 0; ii < std::min(results_size, (size_t)sett->max_show_answer); ii++) {
             //printf("size of results: %d\t", (int)results.size());
-            Vec10i z = results.at(ii);
+            Vec11i z = results.at(ii);
             print_answer_string(z, ii);
-            Scalar clr = Scalar(((ii&&ii%2)?0x7f:0), (ii?0x7f:0), 0xff);
+            Scalar clr = Scalar((ii?0x7f:0), ((ii&&ii%2)?0x7f:0), 0xff);
             //printf("draw_answer_line: edge_image\n");
             draw_answer_line(edge_image, z, clr);
             //printf("draw_answer_line: color_image\n");
@@ -801,7 +882,7 @@ int test_from_image()
     }
 
     // draw it after all other drawings
-    cv::circle(depth_image, sm.small_pt, 3, medlavendar);
+    cv::circle(depth_image, sm.small_pt, 5, Scalar(0,255,0), 2);
 
     imshow(color_win, color_image);
 #ifdef USE_EDGE2
@@ -889,7 +970,7 @@ bool get_3d_angle(const rs2::depth_frame& depth, float& degree)
     }
 
     float dist3d = rsutil::dist_3d_xyz(xyz1, xyz2);
-    printf(" dist3d: %.2f ", dist3d);
+    printf("    dist3d: %.2f ", dist3d);
 
     float dx = xyz2[0] - xyz1[0];
     float dz = xyz2[2] - xyz1[2];
@@ -897,6 +978,7 @@ bool get_3d_angle(const rs2::depth_frame& depth, float& degree)
     bool ret = cvutil::get_angle_from_dx_dy(degree, dx, dz, false);
     return ret;
 }
+
 
 // main entry for realsense table edge finding
 int test_realsense() try
@@ -1011,23 +1093,20 @@ int test_realsense() try
             continue;
         }
         //cout << "frame got\n";
-        if (sett->distance_limit > 0.0) {
-            rsutil::remove_background(color, depth, depth_scale, sett->distance_limit);
-        }
-        auto colorized_depth = frameset.first(RS2_STREAM_DEPTH, RS2_FORMAT_RGB8);
+        rs2::frame colorized_depth = frameset.first(RS2_STREAM_DEPTH, RS2_FORMAT_RGB8);
+
+        // if (sett->distance_limit > 0.0) {
+        //     rsutil::remove_background(color, depth, depth_scale, sett->distance_limit);
+        // }
+
+        printf("[EPOCH] %ld =====>\n", cv::getTickCount());
 
         // Query frame size (width and height)
         //const int w = color.as<rs2::video_frame>().get_width();
         //const int h = color.as<rs2::video_frame>().get_height();
         int w = DEFAULT_WIDTH;
         int h = DEFAULT_HEIGHT;
-#if 0
-        if (sett->show_dist) {
-            // get distance of center point
-            float dist = depth.get_distance(w/2, h/2);
-            printf("from aligned depth: dist@(%d,%d) => %f\n", w/2, h/2, dist);
-        }
-#endif
+
         //cout << __LINE__ << "\n";
         // Create OpenCV matrix of size (w,h) from the colorized depth data
         Mat depth_image(Size(w, h), CV_8UC3, (void*)colorized_depth.get_data());
@@ -1037,6 +1116,12 @@ int test_realsense() try
 
         Mat color_image;
         Mat orig_color_image;
+
+        if (sett->distance_limit > 0.0) {
+            rsutil::remove_background(color, depth_image, depth, depth_scale,
+                sett->distance_limit);
+        }
+
         if (sett->useBagFile()) {
             cvtColor(raw_color_image, color_image, COLOR_BGR2RGB);
         } else {
@@ -1050,19 +1135,24 @@ int test_realsense() try
         if (sm.pass_check) {
             float degree3d = INVALID_DEGREE;
             if ( sm.get_3d_angle(depth, degree3d) ) {
-                // then we got a more confident answer here
-                //printf("3D: angle: %.2f\n", degree3d);
+                printf("    sm.get 3d angle: %.2f\n", degree3d);
             }
         }
 
         /// HERE try to find edge of table ... {
         if (sett->find_edge) {
             vector<Vec4i> p_lines;
-            find_edge(depth_image, depth.get_data(), edge_image, p_lines, sm.min_dist);
+            find_edge(depth_image, depth.get_data(), edge_image, p_lines, sm);
             size_t results_size = results.size();
-            Vec10i last_z;
+            Vec11i last_z;
+
+            // if (results_size) {
+            //     dd2d(results.at(0), sm);
+            // }
+
+
             for (size_t ii=0; ii<std::min(results_size, (size_t)sett->max_show_answer); ++ii) {
-                Vec10i z = results.at(ii);
+                Vec11i z = results.at(ii);
                 print_answer_string(z, ii, sm.min_dist);
                 Scalar clr = Scalar(((ii&&ii%2)?0x7f:0), (ii?0x7f:0), 0xff);
                 //printf("draw_answer_line: edge_image\n");
@@ -1106,7 +1196,7 @@ int test_realsense() try
         }
 
         // draw it after all other drawings
-        cv::circle(depth_image, sm.small_pt, 3, medlavendar);
+        cv::circle(depth_image, sm.small_pt, 5, medlavendar, 2);
 
         Mat combined;
         if (sett->find_edge) {

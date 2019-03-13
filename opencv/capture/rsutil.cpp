@@ -206,7 +206,10 @@ float get_depth_scale(rs2::device dev)
     throw std::runtime_error("Device does not have a depth sensor");
 }
 
-void remove_background(rs2::video_frame& other_frame, const rs2::depth_frame& depth_frame, float depth_scale, float clipping_dist)
+/// [OUT] other_frame: output to this frame
+/// [IN] clipping_dist: unit is meter, larger than this distance would be clipped
+void remove_background(rs2::video_frame& other_frame, cv::Mat& depth_image,
+    const rs2::depth_frame& depth_frame, float depth_scale, float clipping_dist)
 {
     const uint16_t* p_depth_frame = reinterpret_cast<const uint16_t*>(depth_frame.get_data());
     uint8_t* p_other_frame = reinterpret_cast<uint8_t*>(const_cast<void*>(other_frame.get_data()));
@@ -232,9 +235,25 @@ void remove_background(rs2::video_frame& other_frame, const rs2::depth_frame& de
 
                 // Set pixel to "background" color (0x999999)
                 std::memset(&p_other_frame[offset], 0x99, other_bpp);
+
+                //printf("remove: (%d,%d)\r", x, y);
             }
         }
     }
+
+    int widthLimit = depth_image.channels() * depth_image.cols;
+    for(int height=0; height < depth_image.rows; height++) {
+        uchar *data = depth_image.ptr<uchar>(height);
+        for(int width=0; width < widthLimit ; width++) {
+            int x = width / depth_image.channels();
+            int y = height;
+            float d = depth_frame.get_distance(x, y);
+            if ( d <= 0 || d > clipping_dist ) {
+                data[width] = 0x11;
+            }
+    }
+}
+
 }
 
 

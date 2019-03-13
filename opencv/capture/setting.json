@@ -22,7 +22,7 @@
         "show_dist": false,
         "show_fps": false,
         "color_scheme": 2,
-        "distance_limit": 0.0,
+        "distance_limit": 0.75,
         "apply_align": true,
         "apply_disparity": true,
         "apply_dec": true,
@@ -31,7 +31,7 @@
         "apply_holefill": true,
 
         "max_degree": 45,
-        "max_show_answer": 3,
+        "max_show_answer": 1,
         "ignore_margin": 12
     }
 }
