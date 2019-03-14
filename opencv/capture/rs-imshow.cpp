@@ -83,6 +83,13 @@ public:
     void show_small_dots();
     int find_overlap(const std::vector<cv::Point>& pol);
 
+    float hausdorff_distance(const std::vector<cv::Point>& other) {
+        return hausdorff_distance(dots, other);
+    }
+
+    static float oneway_hausdorff(const std::vector<cv::Point>& A, const std::vector<cv::Point>& B);
+    static float hausdorff_distance(const std::vector<cv::Point>& A, const std::vector<cv::Point>& B);
+
     bool edge_from_small_dots();
 
     bool get_3d_angle(const rs2::depth_frame& depth, float& deg3d);
@@ -123,6 +130,31 @@ int SmallDots::find_overlap(const std::vector<cv::Point>& pol)
     //printf("overlap: %d from %d\n", count, static_cast<int>(pol.size()));
 
     return count;
+}
+
+float SmallDots::oneway_hausdorff(const std::vector<cv::Point>& A, const std::vector<cv::Point>& B)
+{
+    float dist = 0.0;
+    for (size_t ii=0; ii<A.size(); ++ii) {
+        float shortest = 999999999;
+        for (size_t jj=0; jj<B.size(); ++jj) {
+            float d = dist_2d(A.at(ii), B.at(jj));
+            if (d < shortest) {
+                shortest = d;
+            }
+        }
+        if (shortest > dist) {
+            dist = shortest;
+        }
+    }
+    return dist;
+}
+
+float SmallDots::hausdorff_distance(const std::vector<cv::Point>& A, const std::vector<cv::Point>& B)
+{
+    float dis_a = SmallDots::oneway_hausdorff(A, B);
+    float dis_b = SmallDots::oneway_hausdorff(B, A);
+    return ((dis_a > dis_b) ? dis_a : dis_b);
 }
 
 void SmallDots::go()
@@ -390,12 +422,8 @@ void print_answer_string(const Vec11i& z, int idx, int min_dist=0)
             idx, z[8], z[9]);
     }
 
-    if (z[10]) {
-        printf(" <oooo> ");
-    }
-
-    sprintf(msg, "%s minD<%d> [%d] a[%d] m[%d], 2D deg:%d",
-            msg, min_dist, z[5], z[6], z[7], z[4]);
+    sprintf(msg, "%s minD<%d> [%d] a[%d] m[%d], 2D deg:%d  hausdorff:%d",
+            msg, min_dist, z[5], z[6], z[7], z[4], z[10]);
 
     printf("%s\n", msg);
 }
@@ -610,7 +638,7 @@ void save_procedure(const cv::Mat& color_image, const cv::Mat& depth_image, cons
 
 cv::Mat resize_forward_and_backward(const cv::Mat& input)
 {
-    const float ratio = 0.5;
+    const float ratio = 0.25;
     cv::Mat tmp;
     cv::Mat ret;
     // resize to a smaller size
@@ -647,9 +675,14 @@ void find_edge(cv::Mat& color_image, const void* depth_data, cv::Mat& edge_image
     Mat gauss;
     //gauss = gray_image;
     //GaussianBlur(gray_image, gauss, Size(sett->blur_radius, sett->blur_radius), 3);
+    //GaussianBlur(gray_image, gauss, Size(21, 21), 0, 0);
     GaussianBlur(gray_image, gauss, Size(21, 21), 0, 0);
 
+#if 1
+    gray_image = resize_forward_and_backward(gauss);
+#else
     gray_image = gauss;
+#endif
     //imshow("gauss", gray_image);
     //moveWindow("gauss", 70, 670);
     //gray_image = gauss;
@@ -715,9 +748,7 @@ void find_edge(cv::Mat& color_image, const void* depth_data, cv::Mat& edge_image
                 r[6] = avg;
                 int median = cvutil::get_median_depth_from_points(all_depth_results);
                 r[7] = median;
-                if ( sm.find_overlap(pol) ) {
-                    r[10] = 1;
-                }
+                r[10] = (int)sm.hausdorff_distance(pol);
             } else {
                 printf("REJECT: NO POINTS OF LINE\n");
                 continue;
