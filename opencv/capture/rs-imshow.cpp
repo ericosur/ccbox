@@ -87,11 +87,14 @@ public:
         return hausdorff_distance(dots, other);
     }
 
+    bool getIsCloser() const {
+        return isCloser;
+    }
+
     static float oneway_hausdorff(const std::vector<cv::Point>& A, const std::vector<cv::Point>& B);
     static float hausdorff_distance(const std::vector<cv::Point>& A, const std::vector<cv::Point>& B);
 
     bool edge_from_small_dots();
-
     bool get_3d_angle(const rs2::depth_frame& depth, float& deg3d);
 
     static float dist_2d(const cv::Point& p, const cv::Point& q);
@@ -100,7 +103,12 @@ public:
 public:
     bool pass_check = false;
 
+    int prev_min_dist = -1;
+    int64 prev_epoch = 0;
     int min_dist = -1;
+    int64 curr_epoch = 0;
+    bool isCloser = false;
+
     cv::Point small_pt;
     std::vector<cv::Point> dots;
 
@@ -161,6 +169,15 @@ void SmallDots::go()
 {
     // find mini dist
     min_dist = find_small_dist();
+    curr_epoch = cv::getTickCount();
+
+    if (curr_epoch > prev_epoch) {
+        isCloser = (min_dist < prev_min_dist);
+        prev_min_dist = min_dist;
+        prev_epoch = curr_epoch;
+    }
+
+
     // find small dots
     find_small_dot();
     show_small_dots();
@@ -230,12 +247,16 @@ float SmallDots::dist_2d(const cv::Point& p, const cv::Point& q)
 
 float SmallDots::find_small_value(const std::vector<float>& v)
 {
+#if 0
     float res = -1;
     for (size_t ii=0; ii < v.size(); ++ii) {
         if (res == -1 || v.at(ii) <= res) {
             res = v.at(ii);
         }
     }
+#else
+    float res = *std::min_element(v.cbegin(), v.cend());
+#endif
     return res;
 }
 
@@ -428,7 +449,7 @@ void print_answer_string(const Vec11i& z, int idx, int min_dist=0)
     printf("%s\n", msg);
 }
 
-Vec11i handle_lastz(const Vec11i& z)
+Vec11i handle_lastz(const Vec11i& z, const SmallDots& sm)
 {
     const int slide_win = 10;
     Vec11i last_z;
@@ -437,8 +458,7 @@ Vec11i handle_lastz(const Vec11i& z)
     if (trace_z.size() < slide_win) {
         trace_z.push_back(z);
     }
-
-     else {
+    else {
         last_z = trace_z[trace_z.size()-1];
         if ( (abs(z[8] - last_z[8]) < DEPTH_SMALL_DIFF)
             && (abs(z[9] - last_z[9]) < DEPTH_SMALL_DIFF) ) {
@@ -1200,7 +1220,7 @@ int test_realsense() try
                         printf("[trapped] degree too large\n");
                     } else {
                         if (ii==0) {
-                            last_z = handle_lastz(z);
+                            last_z = handle_lastz(z, sm);
                         }
                     }
 
