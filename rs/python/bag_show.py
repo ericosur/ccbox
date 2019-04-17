@@ -16,11 +16,15 @@ import argparse
 # Import os.path for file path manipulation
 import os.path
 
+
+#def test_depth_data(depth_data):
+
+
 # Create object for parsing command-line options
 parser = argparse.ArgumentParser(description="Read recorded bag file and display depth stream in jet colormap.\
                                 Remember to change the stream resolution, fps and format to match the recorded.")
 # Add argument which takes path to a bag file as an input
-parser.add_argument("-i", "--input", type=str, help="Path to the bag file")
+parser.add_argument("-i", "--input", type=str, help="Path to the bag file", default="~/Documents/bag310.bag")
 # Parse the command line arguments to an object
 args = parser.parse_args()
 # Safety if no parameter have been given
@@ -68,10 +72,10 @@ try:
             continue
 
         # Convert images to numpy arrays
-        depth_image = np.asanyarray(depth_frame.get_data())
+        depth_data = np.asanyarray(depth_frame.get_data())
         color_image = np.asanyarray(color_frame.get_data())
         # Apply colormap on depth image (image must be converted to 8-bit per pixel first)
-        depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(depth_image, alpha=0.03), cv2.COLORMAP_JET)
+        depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(depth_data, alpha=0.03), cv2.COLORMAP_JET)
         # Stack both images horizontally
 
 
@@ -85,21 +89,22 @@ try:
         dist_str = '{:.0f}'.format(dist*1000)
         #print('get dist from center:{}'.format(dist))
 
-        # Colorize depth frame to jet colormap
-        #depth_color_frame = rs.colorizer().colorize(depth_frame)
 
-        # Convert depth_frame to numpy array to render image in opencv
-        #depth_color_image = np.asanyarray(color_frame.get_data())
+        # depth_data
+        #test_depth_data(depth_data)
+
 
         pos = (POIX, POIY)
         cv2.circle(depth_colormap, pos, 5, color=(0, 255, 0), thickness=2)
         cv2.putText(depth_colormap, dist_str, pos, cv2.FONT_HERSHEY_SIMPLEX, 1,
                     (0, 0, 255), 1, cv2.LINE_AA)
 
-        images = np.hstack((color_image, depth_colormap))
+        # need same height if use hstack
+        #images = np.hstack((color_image, depth_colormap))
 
         # Render image in opencv window
-        cv2.imshow("Depth Stream", images)
+        cv2.imshow("color_image", color_image)
+        cv2.imshow("depth_image", depth_colormap)
         key = cv2.waitKey(1)
         # if pressed escape exit program
         if key == 27:
