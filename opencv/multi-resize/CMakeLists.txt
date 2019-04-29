@@ -5,14 +5,13 @@ cmake_minimum_required(VERSION 3.0)
 set(PN "mresize")
 project(${PN})
 
-set(APPLY_INTEL_OPENCV     1)
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_FLAGS "-Wall -O3")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_JSON")
 
-if(APPLY_INTEL_OPENCV)
-    set(OpenCV_DIR    "/opt/intel/opencv/share/OpenCV")
-else()
-    set(OpenCV_DIR    "/usr/local/share/OpenCV")
-endif()
 
+# RECOMMEND:
+# source /opt/intel/openvino/bin/setupvars.sh
 message("OpenCV_DIR: ${OpenCV_DIR}")
 
 # Find OpenCV, you may need to set OpenCV_DIR variable
@@ -20,15 +19,11 @@ message("OpenCV_DIR: ${OpenCV_DIR}")
 # via the command line or GUI
 find_package(OpenCV REQUIRED)
 
+include_directories("/usr/local/include")
 include_directories(${OpenCV_INCLUDE_DIRS})
-#include_directories("/usr/local/include")
 
 # libmytool.so
 link_directories("/usr/local/lib/mytool")
-
-set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_FLAGS "-Wall -O3")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_JSON")
 
 # If the package has been found, several variables will
 # be set, you can find the full list with descriptions

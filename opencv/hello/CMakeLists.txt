@@ -6,11 +6,13 @@ project(${PN})
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_FLAGS "-Wall -O3")
 
-#set(OpenCV_DIR    "/opt/intel/opencv/share/OpenCV")
-set(OpenCV_DIR    "/usr/local/share/OpenCV")
+
+# RECOMMEND:
+# source /opt/intel/openvino/bin/setupvars.sh
 find_package( OpenCV REQUIRED )
 message(STATUS "    version: ${OpenCV_VERSION}")
 
+include_directories(${OpenCV_INCLUDE_DIRS})
 
 add_executable(
     ${PN}

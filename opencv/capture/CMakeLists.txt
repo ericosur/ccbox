@@ -13,25 +13,12 @@ set(CMAKE_CXX_STANDARD 11)
 set(APPLY_JSON         1)
 set(APPLY_REALSENSE    1)
 
-# opencv is MUST
-# turn it to 1 to use intel optimized opencv
-set(APPLY_INTEL_OPENCV     0)
-if(APPLY_INTEL_OPENCV)
-    set(OpenCV_DIR    "/opt/intel/opencv/share/OpenCV")
-else()
-    set(OpenCV_DIR    "/usr/local/share/OpenCV")
-endif()
+# RECOMMEND:
+# source /opt/intel/openvino/bin/setupvars.sh
 message("OpenCV_DIR: ${OpenCV_DIR}")
 find_package( OpenCV REQUIRED )
 message("opencv ver: ${OpenCV_VERSION}")
-
-# if support c++11, turn on json.hpp
-# if(COMPILER_SUPPORTS_CXX11)
-#     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c11")
-#     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-# elseif(COMPILER_SUPPORTS_CXX0X)
-#     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
-# endif()
+include_directories(${OpenCV_INCLUDE_DIRS})
 
 # json.hpp
 if(APPLY_JSON)
