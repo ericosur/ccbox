@@ -5,15 +5,12 @@ cmake_minimum_required(VERSION 3.0)
 set(PN "fileop")
 project(${PN})
 
-# turn it to 1 to use intel optimized opencv
-set(APPLY_INTEL_OPENCV     1)
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_FLAGS "-Wall -O3")
 
-if(APPLY_INTEL_OPENCV)
-    set(OpenCV_DIR    "/opt/intel/opencv/share/OpenCV")
-else()
-    set(OpenCV_DIR    "/usr/local/share/OpenCV")
-endif()
 
+# RECOMMEND:
+# source /opt/intel/openvino/bin/setupvars.sh
 message("OpenCV_DIR: ${OpenCV_DIR}")
 
 # Find OpenCV, you may need to set OpenCV_DIR variable
@@ -21,12 +18,8 @@ message("OpenCV_DIR: ${OpenCV_DIR}")
 # via the command line or GUI
 find_package(OpenCV REQUIRED)
 
+include_directories("/usr/local/include")
 include_directories(${OpenCV_INCLUDE_DIRS})
-#include_directories("/usr/local/include")
-
-set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_FLAGS "-Wall -O3")
-
 
 # If the package has been found, several variables will
 # be set, you can find the full list with descriptions
@@ -34,7 +27,7 @@ set(CMAKE_CXX_FLAGS "-Wall -O3")
 # Print some message showing some of them
 message(STATUS "OpenCV library status:")
 message(STATUS "    version: ${OpenCV_VERSION}")
-message(STATUS "    libraries: ${OpenCV_LIBS}")
+#message(STATUS "    libraries: ${OpenCV_LIBS}")
 message(STATUS "    include path: ${OpenCV_INCLUDE_DIRS}")
 
 # Declare the executable target built from your sources

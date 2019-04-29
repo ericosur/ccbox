@@ -77,7 +77,7 @@ int action(const std::string& binfn, const std::string& imgfn)
         //cvui::rect(frame, rectangle.x, rectangle.y, rectangle.width, rectangle.height, 0x00ff0000);
         cv::Point pt1(230, 40);
         cv::Point pt2(450, 90);
-        cv::rectangle(frame, pt1, pt2, cv::Scalar(49, 52, 49), CV_FILLED);
+        cv::rectangle(frame, pt1, pt2, cv::Scalar(49, 52, 49), cv::FILLED);
 #if 0
         // Check what is the current status of the mouse cursor
         // regarding the previously rendered rectangle.
