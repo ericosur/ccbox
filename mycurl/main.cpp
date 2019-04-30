@@ -22,6 +22,13 @@ void demo2()
     query_via_curl(qstr, "all.json");
 }
 
+void demo3()
+{
+    SHOWHEADER();
+    // fetch image from imgur
+
+}
+
 int main(int argc, char* argv[])
 {
     // web site for demo1 does not exist any more

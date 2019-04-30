@@ -1,5 +1,9 @@
 #!/usr/bin/env python
 
+'''
+NOTE: yahoo weather query service is terminated
+'''
+
 output_file = 'weather.json'
 
 import urllib2, urllib, json
