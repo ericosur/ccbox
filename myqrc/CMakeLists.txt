@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.0)
 
 set(PN  "myqrc")
+project(${PN})
 
 set(CMAKE_VERBOSE_MAKEFILE OFF)
 set(CMAKE_CXX_STANDARD 11)
@@ -10,6 +11,13 @@ set(CMAKE_C_FLAGS "-Wall -O3")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DOPENCV_IMSHOW")
 
 set(USE_LIBPBOX     0)
+
+# opencv
+find_package( OpenCV REQUIRED )
+set(DEPENDENCIES ${OpenCV_LIBS})
+#message("DEPENDENCIES: ${DEPENDENCIES}")
+include_directories(${OpenCV_INCLUDE_DIRS})
+message("opencv ver: ${OpenCV_VERSION}")
 
 # pbox library
 if(USE_LIBPBOX)
@@ -21,11 +29,6 @@ endif()
 # quirc
 include_directories("/usr/local/include")
 link_directories("/usr/local/lib")
-
-find_package( OpenCV REQUIRED )
-set(DEPENDENCIES ${OpenCV_LIBS})
-
-message("DEPENDENCIES: ${DEPENDENCIES}")
 
 add_executable(
     ${PN}

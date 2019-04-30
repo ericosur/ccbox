@@ -1,13 +1,14 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.0)
 
 set(PN "mycurl")
-
 project(${PN})
-
-find_package( CURL REQUIRED )
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_FLAGS "-Wall -O3")
+
+find_package(CURL REQUIRED)
+include_directories(CURL_INCLUDE_DIR)
+message("curl include dir: ${CURL_INCLUDE_DIR}")
 
 # json.hpp
 #include_directories("$ENV{HOME}/src/github/json/single_include/nlohmann")
