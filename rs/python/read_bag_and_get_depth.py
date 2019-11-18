@@ -42,6 +42,7 @@ try:
     # Tell config that we will use a recorded device from filem to be used by the pipeline through playback.
     rs.config.enable_device_from_file(config, args.input)
     # Configure the pipeline to stream the depth stream
+    print('set depth stream with 1280x720, z16')
     config.enable_stream(rs.stream.depth, 1280, 720, rs.format.z16, 30)
 
     # Start streaming from file
