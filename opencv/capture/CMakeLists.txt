@@ -47,7 +47,8 @@ if(APPLY_REALSENSE)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-reorder")
         set(DEPENDENCIES "realsense2;${DEPENDENCIES}")
 
-        include_directories("$ENV{HOME}/src/github/librealsense/include")
+        include_directories("/usr/local/include")
+        #include_directories("$ENV{HOME}/src/github/librealsense/include")
         #include_directories("$ENV{HOME}/src/librealsense/include")
 
         message("rs: ${REALSENSE_LIB}")
@@ -77,6 +78,25 @@ add_executable(
 target_link_libraries(
     ${PN}
     ${DEPENDENCIES}
+)
+endif()
+
+if(1)
+add_executable(
+    fixdep fixdep.cpp
+    cvutil.cpp cvutil.h
+    readsetting.cpp readsetting.h
+)
+target_link_libraries(
+    fixdep ${DEPENDENCIES}
+)
+add_executable(
+    removebg removebg.cpp
+    cvutil.cpp cvutil.h
+    readsetting.cpp readsetting.h
+)
+target_link_libraries(
+    removebg ${DEPENDENCIES}
 )
 endif()
 

@@ -275,7 +275,8 @@ void preprocess_for_edge(cv::Mat& input, cv::Mat& output)
     Canny(input, output, sett->canny_threshold_min, sett->canny_threshold_max);
 }
 
-void save_procedure(const cv::Mat& color_image, const cv::Mat& depth_image, const cv::Mat& edge_image, const void* depth_data, bool isFromImage=false)
+void save_procedure(const cv::Mat& color_image, const cv::Mat& depth_image,
+    const cv::Mat& new_depth_image, const void* depth_data, bool isFromImage=false)
 {
     ReadSetting* sett = ReadSetting::getInstance();
     string fn;
@@ -290,15 +291,15 @@ void save_procedure(const cv::Mat& color_image, const cv::Mat& depth_image, cons
         cout << "output depth file to: " << fn << endl;
         cvutil::save_mat_to_file(depth_image, fn);
 
+        fn = cvutil::compose_image_fn("newdep", serial);
+        cout << "output new depth file to: " << fn << endl;
+        cvutil::save_mat_to_file(new_depth_image, fn);
+
         fn = cvutil::compose_depth_bin("depth", serial);
         save_depth_to_bin(fn, (void*)depth_data, depth_image.cols, depth_image.rows);
         cout << "output depth bin to: " << fn << endl;
     }
 
-    if (sett->find_edge) {
-        fn = cvutil::compose_image_fn("edged", serial);
-        cvutil::save_mat_to_file(edge_image, fn);
-    }
 }
 
 ///
@@ -447,6 +448,7 @@ void do_click_window(rs2::depth_frame& depth, cv::Mat& color_image, cv::Mat& dep
         int _depth_pt = get_dpeth_pt(depth.get_data(), cross.x, cross.y);
         cvui::printf(depth_image, printx, printy, print_size, print_color, "Depth is %4d (mm)", _depth_pt, _depth_pt);
         printy += print_inc_y;
+        printf("depth is %d (mm)\n", _depth_pt);
 
         rsutil::query_uv2xyz(depth, cross, xyz);
         xyz = xyz * 1000;
@@ -701,6 +703,7 @@ int test_realsense() try
             if (sett->distance_limit > 0.0) {
                 rsutil::remove_background(color, depth, depth_scale, sett->distance_limit);
             }
+
             auto colorized_depth = frameset.first(RS2_STREAM_DEPTH, RS2_FORMAT_RGB8);
 
             // Query frame size (width and height)
@@ -708,13 +711,6 @@ int test_realsense() try
             //const int h = color.as<rs2::video_frame>().get_height();
             int w = DEFAULT_WIDTH;
             int h = DEFAULT_HEIGHT;
-#if 0
-            if (sett->show_dist) {
-                // get distance of center point
-                float dist = depth.get_distance(w/2, h/2);
-                printf("from aligned depth: dist@(%d,%d) => %f\n", w/2, h/2, dist);
-            }
-#endif
             //cout << __LINE__ << "\n";
             // Create OpenCV matrix of size (w,h) from the colorized depth data
             Mat depth_image(Size(w, h), CV_8UC3, (void*)colorized_depth.get_data());
@@ -723,21 +719,16 @@ int test_realsense() try
             Mat orig_color_image = color_image.clone();
             Mat edge_image;
 
+            Mat newdep(Size(w, h), CV_16U, (void*)depth.get_data(), Mat::AUTO_STEP);
+            Mat img0;
+            newdep.convertTo(img0, CV_8U, 256.0/65536.0);
+            Mat orig_img0 = img0.clone();
+
+            //applyColorMap(newdep, img0, COLORMAP_HOT);
             //cout << __LINE__ << "\n";
-            if (sett->find_edge) {
-/// try to find edge of table ... {
-                vector<Vec4i> p_lines;
-                find_edge(depth_image, depth.get_data(), edge_image, p_lines);
-                #ifdef USE_GET_3DANGLE
-                // get xyz vector angle...
-                if (p_lines.size()) {
-                    get_3d_angle(depth);
-                }
-                #endif
-            }
 #ifdef USE_UIPRESENT
             /// to show depth data with mouse pointer
-            do_click_window(depth, color_image, depth_image);
+            do_click_window(depth, color_image, img0);
 
             int64 e2 = cv::getTickCount();
             double elapse_time = (e2 - e1) / cv::getTickFrequency();
@@ -747,22 +738,15 @@ int test_realsense() try
                 //printf("fps: %.3f\n", elapse_time);
             }
 
-            Mat combined;
-            if (sett->find_edge) {
-                hconcat(edge_image, depth_image, combined);
-                hconcat(combined, color_image, combined);
-            } else {
-                hconcat(depth_image, color_image, combined);
-            }
-
-            //imshow(rgb_window, combined);
-            imshow(depth_window, combined);
+            imshow(depth_window, color_image);
+            imshow(rgb_window, img0);
             int key = waitKey(1);
             if (key == 0x1B) {
                 cout << "break" << endl;
                 break;
             } else if (key == 's') {
-                save_procedure(color_image, depth_image, edge_image, depth.get_data());
+                save_procedure(orig_color_image, orig_depth_image, orig_img0, depth.get_data());
+                //save_depth_to_bin("newdep.bin", out_depth_buffer,DEFAULT_WIDTH, DEFAULT_HEIGHT);
             } else if (key == 'c') {
                 save_procedure(orig_color_image, orig_depth_image, edge_image, depth.get_data());
             }

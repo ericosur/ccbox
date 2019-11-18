@@ -145,7 +145,8 @@ float get_depth_scale(rs2::device dev)
     throw std::runtime_error("Device does not have a depth sensor");
 }
 
-void remove_background(rs2::video_frame& other_frame, const rs2::depth_frame& depth_frame, float depth_scale, float clipping_dist)
+void remove_background(rs2::video_frame& other_frame, const rs2::depth_frame& depth_frame,
+    float depth_scale, float clipping_dist)
 {
     const uint16_t* p_depth_frame = reinterpret_cast<const uint16_t*>(depth_frame.get_data());
     uint8_t* p_other_frame = reinterpret_cast<uint8_t*>(const_cast<void*>(other_frame.get_data()));
@@ -170,12 +171,32 @@ void remove_background(rs2::video_frame& other_frame, const rs2::depth_frame& de
                 auto offset = depth_pixel_index * other_bpp;
 
                 // Set pixel to "background" color (0x999999)
-                std::memset(&p_other_frame[offset], 0x99, other_bpp);
+                std::memset(&p_other_frame[offset], 0x00, other_bpp);
             }
         }
     }
 }
 
+bool fix_buffer(uint16_t* buffer, const int width, const int height)
+{
+    const uint16_t low = 300;
+    const uint16_t high = 1500;
+    const float range = (float)(high - low);
+    #pragma omp parallel for schedule(dynamic) //Using OpenMP to try to parallelise the loop
+    for (int y = 0; y < height; ++y) {
+        auto dpi = y * width;
+        for (int x = 0; x < width; ++x, ++dpi) {
+            auto di = buffer[dpi];
+            if (di < low || di > high) {
+                buffer[dpi] = 0;
+            } else {
+                float v = (((float)di - (float)low) / range) * 65535;
+                buffer[dpi] = (uint16_t)v;
+            }
+        }
+    }
+    return true;
+}
 
 // must-be-at-end-of-file
 }   // namespace rsutil

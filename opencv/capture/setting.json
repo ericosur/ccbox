@@ -12,7 +12,7 @@
     "debug": false,
 
     "realsense": {
-        "find_edge": true,
+        "find_edge": false,
         "blur_radius": 3,
         "canny_threshold_min": 10,
         "canny_threshold_max": 20,
@@ -22,7 +22,7 @@
         "show_dist": false,
         "show_fps": true,
         "color_scheme": 2,
-        "distance_limit": 0.0,
+        "distance_limit": 1.5,
         "apply_sleep": false,
         "apply_align": true,
         "apply_disparity": true,

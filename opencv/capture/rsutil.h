@@ -30,7 +30,8 @@ bool show_rsinfo();
 
 float get_depth_scale(rs2::device dev);
 
-void remove_background(rs2::video_frame& other_frame, const rs2::depth_frame& depth_frame, float depth_scale, float clipping_dist);
+void remove_background(rs2::video_frame& other_frame, const rs2::depth_frame& depth_frame,
+    float depth_scale, float clipping_dist);
 
 }   // namespace rsutil
 
