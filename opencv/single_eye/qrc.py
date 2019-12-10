@@ -7,9 +7,9 @@ add a function that use PIL to draw text on image for CJK characters
 '''
 
 import sys
-import numpy as np
 import cv2 as cv
 from PIL import Image, ImageDraw, ImageFont
+import numpy as np
 import myutil
 
 
