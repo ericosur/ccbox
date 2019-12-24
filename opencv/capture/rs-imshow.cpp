@@ -101,7 +101,7 @@ void show_answer(cv::Mat& depth_img, cv::Mat& color_img, const Vec10i& z, const 
 
 #ifdef USE_UIPRESENT
 //#define WINDOW_NAME "Viewer to get depth"
-const auto depth_window = "Depth Image";
+const auto depth_window = "Aiming";
 const auto rgb_window = "RGB Image";
 const auto edged_window = "Edged";
 
@@ -116,9 +116,9 @@ void init_windows()
         moveWindow(depth_window, 0, 0);
     }
 
-#if 0
     namedWindow(rgb_window, WINDOW_AUTOSIZE);
     moveWindow(rgb_window, DEFAULT_WIDTH+55, 0);
+#if 0
     namedWindow(edged_window);
     moveWindow(edged_window, 0, 0);
     namedWindow(crop_window, WINDOW_AUTOSIZE);
@@ -739,7 +739,7 @@ int test_realsense() try
             }
 
             imshow(depth_window, color_image);
-            imshow(rgb_window, img0);
+            imshow(rgb_window, depth_image);
             int key = waitKey(1);
             if (key == 0x1B) {
                 cout << "break" << endl;
