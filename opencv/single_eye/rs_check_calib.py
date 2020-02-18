@@ -1,17 +1,19 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
-''' use realsense to calibrate with checker board '''
+''' using realsense to calibrate checker '''
 
-# pylint: disable=import-error
 #import the necessary packages
 #from glob import glob
 #import math
 import cv2
 import numpy as np
 import pyrealsense2 as rs
+
 import checkerutil as ck
 
+# pylint: disable=too-many-locals
+# pylint: disable=too-many-statements
 
 # checker board size 7 by 9
 SIZE = (7, 9)
@@ -24,8 +26,6 @@ DST_H = 270
 #BAG_FILE = '/home/rasmus/Documents/checker.bag'
 BAG_FILE = '/home/rasmus/Documents/bucket.bag'
 
-WINDOW_NAME = 'capture'
-RESULT_NAME = 'perspective'
 
 def get_poi_rs_dist(fourc, depth_frame, depth_intrinsics):
     ''' get_poi_rs_dist '''
@@ -53,16 +53,16 @@ def get_poi_rs_dist(fourc, depth_frame, depth_intrinsics):
 # u, v is 2D pixel coordinate
 # return p is 3D (x, y, z)
 def uv_to_xyz(u, v, depth_frame, depth_intrinsics):
-    ''' uv_to_xyz '''
+    ''' uv to xyz '''
     d = depth_frame.get_distance(u, v)
     p = rs.rs2_deproject_pixel_to_point(depth_intrinsics, [u, v], d)
     return p
 
 
-# pylint: disable=too-many-locals
-# pylint: disable=too-many-statements
 def main():
     ''' main '''
+    window_name = 'capture'
+    result_name = 'perspective'
     USE_REAL_CAMERA = False
 
     try:
@@ -79,10 +79,10 @@ def main():
         # Start streaming
         pipeline.start(config)
 
-        cv2.namedWindow(WINDOW_NAME, cv2.WINDOW_AUTOSIZE)
-        cv2.moveWindow(WINDOW_NAME, 0, 0)
-        cv2.namedWindow(RESULT_NAME, cv2.WINDOW_AUTOSIZE)
-        cv2.moveWindow(RESULT_NAME, 640, 0)
+        cv2.namedWindow(window_name, cv2.WINDOW_AUTOSIZE)
+        cv2.moveWindow(window_name, 0, 0)
+        cv2.namedWindow(result_name, cv2.WINDOW_AUTOSIZE)
+        cv2.moveWindow(result_name, 640, 0)
 
         cnt = 0
 
@@ -99,7 +99,7 @@ def main():
             #depth_image = np.asanyarray(depth_frame.get_data())
             # Apply colormap on depth image (image must be converted to 8-bit per pixel first)
             #depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(depth_image, alpha=0.03),
-            #cv2.COLORMAP_JET)
+            #                                   cv2.COLORMAP_JET)
 
             # Grab new intrinsics (may be changed by decimation)
             depth_intrinsics = rs.video_stream_profile(depth_frame.profile).get_intrinsics()
@@ -131,7 +131,7 @@ def main():
                 cppts = ck.get_ppts(crnrs)
                 M = ck.get_perspective_mat(cppts, DST_W, DST_H)
                 perspective = cv2.warpPerspective(color_image, M, (DST_W, DST_H), cv2.INTER_LINEAR)
-                cv2.imshow(RESULT_NAME, perspective)
+                cv2.imshow(result_name, perspective)
 
 
             if False and ret:
@@ -154,7 +154,7 @@ def main():
                             1.1, (0, 255, 255), 3)
 
             # show a frame
-            cv2.imshow(WINDOW_NAME, color_image)
+            cv2.imshow(window_name, color_image)
             key = cv2.waitKey(1)
             if key & 0xFF == ord('q') or key == 0x1B:
                 break

@@ -95,7 +95,7 @@ def getmm(p):
 
 # get distance from known width and focal length
 def distance_to_camera(knownWidth, focalLength, perWidth):
-    # compute and return the distance from the maker to the camera
+    ''' compute and return the distance from the maker to the camera '''
     return (knownWidth * focalLength) / perWidth
 
 def put_mytext(img, text):
