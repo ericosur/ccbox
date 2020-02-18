@@ -87,3 +87,47 @@ For above example, it will use search for RGB image, colorized depth image, dept
 }
 
 ```
+
+## note
+
+Collecting data task from 2019-11-22.
+
+updated date: 2019-12-04
+
+### collection
+
+1. There is a task that using 'capture' to capture rgb/depth
+   from person located at 600/800/1000 mm distance.
+2. Using 'realsense-viewer' to record a 10-second bag file.
+3. Using iphone to take a selfie.
+4. Using 'capture' to capture rgb/depth with these two conditions:
+    a. sync pictures, put ipad at 300/400/500mm
+    b. print selfie pictures to paper
+        - put flat pictures at 600/800/1000mm (fingers pinch at two upper corners of paper, and behind the paper as possible, MUST NOT show any part of face)
+        - cover paper on face with slightly roll (fingers pinch at two lower corners of paper, and behnd the paper as possble, MUST NOT show any part of face)
+
+collected images are put at ```$HOME/Pictures/giveOut```
+
+### post processing
+
+```
+rsync -av --exclude='*.bag' ./collect/ $HOME/Pictures/giveOut
+```
+
+Do not copy ```*.bag``` to output folder. Still images are
+extracted from bag files and composed into mov video at
+```$HOME/Videos/bag_to_png_to_mov```
+
+
+```bash
+rs-convert -c -p  png -i 20191118_132235.bag --
+
+ffmpeg -framerate 8 -pattern_type glob -i 'png_Color_*.png' -c:v mjpeg -q:v 1 ./out.mov
+```
+
+related folders:
+/home/rasmus/src/ccbox/opencv/capture/collect
+/home/rasmus/Pictures/giveOut/20191203/
+new: rmbg\d{10}.png
+/home/rasmus/Videos/bag_to_png_to_mov/20191203-work
+

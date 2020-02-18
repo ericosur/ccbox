@@ -49,6 +49,8 @@
 // 9: rhs depth
 vector<Vec10i> results;
 
+cv::Mat info_mat(cv::Size(800, 100), CV_8UC3);
+
 inline int my_avg(int m, int n)
 {
     return (m+n)/2;
@@ -104,6 +106,7 @@ void show_answer(cv::Mat& depth_img, cv::Mat& color_img, const Vec10i& z, const 
 const auto depth_window = "Aiming";
 const auto rgb_window = "RGB Image";
 const auto edged_window = "Edged";
+const auto info_window = "info";
 
 //const auto crop_window = "crop";
 bool use_dep_win = true;
@@ -118,6 +121,9 @@ void init_windows()
 
     namedWindow(rgb_window, WINDOW_AUTOSIZE);
     moveWindow(rgb_window, DEFAULT_WIDTH+55, 0);
+
+    namedWindow(info_window, WINDOW_AUTOSIZE);
+    moveWindow(info_window, 0, 400);
 #if 0
     namedWindow(edged_window);
     moveWindow(edged_window, 0, 0);
@@ -130,29 +136,26 @@ void init_windows()
 }
 #endif  // USE_UIPRESENT
 
-#ifdef USE_UIPRESENT
-bool show_cvfps(cv::Mat& cv_img, double elapsed_time)
+//#ifdef USE_UIPRESENT
+bool show_cvtext(cv::Mat& cv_img, uint16_t dist)
 {
     int fontface = cv::FONT_HERSHEY_SIMPLEX;
-    double scale = 0.75;
+    double scale = 2;
     int baseline = 0;
-    int thickness = 2;
+    int thickness = 3;
     const int BUFFER_SIZE = 80;
     char buffer[BUFFER_SIZE];
-    double fps = 1.0 / elapsed_time;
 
-    snprintf(buffer, BUFFER_SIZE, "elapsed: %.3f fps(%.1f)", elapsed_time, fps);
+    snprintf(buffer, BUFFER_SIZE, "distance: %4d mm", dist);
     cv::Size text = cv::getTextSize(buffer, fontface, scale, thickness, &baseline);
     cv::rectangle(cv_img, cv::Point(0, 0),cv::Point(text.width, text.height + baseline),
           CV_RGB(255, 255, 255), cv::FILLED);
     cv::putText(cv_img, buffer, cv::Point(0, text.height + baseline / 2.),
           fontface, scale, CV_RGB(0, 0, 0), thickness, 8);
 
-    //cv::imshow(rgb_window, cv_img);
-
     return true;
 }
-#endif  // USE_UIPRESENT
+//#endif  // USE_UIPRESENT
 
 bool load_bin_to_buffer(const std::string& fn, uint8_t* buffer, size_t buffer_size)
 {
@@ -449,6 +452,7 @@ void do_click_window(rs2::depth_frame& depth, cv::Mat& color_image, cv::Mat& dep
         cvui::printf(depth_image, printx, printy, print_size, print_color, "Depth is %4d (mm)", _depth_pt, _depth_pt);
         printy += print_inc_y;
         printf("depth is %d (mm)\n", _depth_pt);
+        show_cvtext(info_mat, _depth_pt);
 
         rsutil::query_uv2xyz(depth, cross, xyz);
         xyz = xyz * 1000;
@@ -624,17 +628,23 @@ int test_realsense() try
         //Add desired streams to configuration
         cfg.enable_stream(RS2_STREAM_COLOR, DEFAULT_WIDTH, DEFAULT_HEIGHT, RS2_FORMAT_BGR8, 15);
         cfg.enable_stream(RS2_STREAM_DEPTH, DEFAULT_WIDTH, DEFAULT_HEIGHT, RS2_FORMAT_Z16, 15);
+        cfg.enable_stream(RS2_STREAM_INFRARED, 2, DEFAULT_WIDTH, DEFAULT_HEIGHT, RS2_FORMAT_Y8, 15);
     }
 
+    // Start streaming with default recommended configuration
+    rs2::pipeline_profile profile = pipe.start(cfg);
+    depth_scale = rsutil::get_depth_scale(profile.get_device());
+    cout << "depth scale:" << depth_scale << endl;
 
-    if (!sett->apply_sleep) {
-        // Start streaming with default recommended configuration
-        rs2::pipeline_profile profile = pipe.start(cfg);
-        depth_scale = rsutil::get_depth_scale(profile.get_device());
-        cout << "depth scale:" << depth_scale << endl;
-    } else {
-        std::cout << "pipe is sleeping..." << std::endl;
+    // try to turn off IR emitter
+    rs2::device selected_device = profile.get_device();
+    auto depth_sensor = selected_device.first<rs2::depth_sensor>();
+    if (depth_sensor.supports(RS2_OPTION_EMITTER_ENABLED)) {
+        //depth_sensor.set_option(RS2_OPTION_EMITTER_ENABLED, 1.f); // Enable emitter
+        depth_sensor.set_option(RS2_OPTION_EMITTER_ENABLED, 0.f); // Disable emitter
+        cout << "turn off emitter...\n";
     }
+
 
     rs2::align align_to(RS2_STREAM_COLOR);
 
@@ -705,6 +715,7 @@ int test_realsense() try
             }
 
             auto colorized_depth = frameset.first(RS2_STREAM_DEPTH, RS2_FORMAT_RGB8);
+            auto ir_frame = frameset.get_infrared_frame();
 
             // Query frame size (width and height)
             //const int w = color.as<rs2::video_frame>().get_width();
@@ -718,6 +729,7 @@ int test_realsense() try
             Mat orig_depth_image = depth_image.clone();
             Mat orig_color_image = color_image.clone();
             Mat edge_image;
+            Mat ir_image(Size(w, h), CV_8UC1, (void*)ir_frame.get_data());
 
             Mat newdep(Size(w, h), CV_16U, (void*)depth.get_data(), Mat::AUTO_STEP);
             Mat img0;
@@ -733,19 +745,21 @@ int test_realsense() try
             int64 e2 = cv::getTickCount();
             double elapse_time = (e2 - e1) / cv::getTickFrequency();
             //double time = cv::getTickFrequency() / (e2 - e1);
-            if (sett->show_fps) {
-                show_cvfps(color_image, elapse_time);
-                //printf("fps: %.3f\n", elapse_time);
-            }
+            // if (sett->show_fps) {
+            //     show_cvfps(color_image, elapse_time);
+            //     //printf("fps: %.3f\n", elapse_time);
+            // }
 
             imshow(depth_window, color_image);
             imshow(rgb_window, depth_image);
+            imshow(info_window, info_mat);
+            imshow("ir", ir_image);
             int key = waitKey(1);
             if (key == 0x1B) {
                 cout << "break" << endl;
                 break;
             } else if (key == 's') {
-                save_procedure(orig_color_image, orig_depth_image, orig_img0, depth.get_data());
+                save_procedure(orig_color_image, orig_depth_image, ir_image, depth.get_data());
                 //save_depth_to_bin("newdep.bin", out_depth_buffer,DEFAULT_WIDTH, DEFAULT_HEIGHT);
             } else if (key == 'c') {
                 save_procedure(orig_color_image, orig_depth_image, edge_image, depth.get_data());
