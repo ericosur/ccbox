@@ -24,7 +24,8 @@ import os.path
 parser = argparse.ArgumentParser(description="Read recorded bag file and display depth stream in jet colormap.\
                                 Remember to change the stream resolution, fps and format to match the recorded.")
 # Add argument which takes path to a bag file as an input
-parser.add_argument("-i", "--input", type=str, help="Path to the bag file", default="gg.bag")
+parser.add_argument("-i", "--input", type=str, help="Path to the bag file", default="~/Documents/bag310.bag")
+
 # Parse the command line arguments to an object
 args = parser.parse_args()
 # Safety if no parameter have been given

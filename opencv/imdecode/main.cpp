@@ -43,7 +43,7 @@ int main()
 #endif
     vector<unsigned char> buffVec;
     buffVec.insert(buffVec.end(), &buffer[0], &buffer[datalen]);
-    Mat show = imdecode(buffVec, CV_LOAD_IMAGE_COLOR);
+    Mat show = imdecode(buffVec, IMREAD_COLOR);
 
     imshow(winame, show);
     cv::waitKey(0);
