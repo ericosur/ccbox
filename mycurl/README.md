@@ -1,5 +1,12 @@
 # mycurl example
 
+## USELESS
+
+Yahoo stopped providing YQL service. Only for archive purpose.
+DO NOT run this.
+
+## description
+
 A simple C++ example that uses curl to query yahoo weather API for weather at Taipei.
 
 ## notes
