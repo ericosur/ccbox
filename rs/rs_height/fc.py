@@ -119,7 +119,7 @@ class FindContour(object):
     def get_pixel_distance(p1, p2):
         import math
         _dist = math.sqrt(pow(p1[0]-p2[0],2.0) + pow(p1[1]-p2[1],2.0))
-        return _dist;
+        return _dist
 
     def query_length(self, p1, p2, img=None):
 
