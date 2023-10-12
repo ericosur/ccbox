@@ -105,7 +105,7 @@ def main():
             def dist_3d(p1, p2):
                 d = math.sqrt(math.pow(p1[0]-p2[0], 2) +
                               math.pow(p1[1]-p2[1], 2) +
-                              math.pow(p1[2]-p2[2], 2));
+                              math.pow(p1[2]-p2[2], 2))
                 return d
 
             def get_marker_xyz(marker):
