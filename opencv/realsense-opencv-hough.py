@@ -95,8 +95,8 @@ def hough_lines(src, depth_frame):
         #print("longest_idx:{} imax:{}, d_p1:{} d_p2:{}".format(longest_idx, imax, d_p1, d_p2))
         print("d_p1:{:.3f} d_p2:{:.3f} imax:{}".format(d_p1, d_p2, imax))
         cv2.line(cdst, p1, p2, (255, 0, 255), 2, cv2.LINE_AA)
-        msg1 = '{}'.format(d_p1);
-        msg2 = '{}'.format(d_p2);
+        msg1 = '{}'.format(d_p1)
+        msg2 = '{}'.format(d_p2)
         fontface = cv2.FONT_HERSHEY_SIMPLEX
         scale = 0.5
         cv2.putText(cdst, msg1, p1, fontface, scale, (127,0,255), 1, cv2.LINE_AA)
@@ -113,9 +113,9 @@ def process_image(color_img, depth_frame):
     ifrm = color_img.copy()
 
     # Convert image to gray and blur it
-    src_gray = cv2.cvtColor(ifrm, cv2.COLOR_BGR2GRAY);
-    src_gray = cv2.blur(src_gray, (3,3));
-    #blur = cv2.GaussianBlur(ifrm, (5, 5), 1);
+    src_gray = cv2.cvtColor(ifrm, cv2.COLOR_BGR2GRAY)
+    src_gray = cv2.blur(src_gray, (3,3))
+    #blur = cv2.GaussianBlur(ifrm, (5, 5), 1)
 
     cvimg, (p1, p2) = hough_lines(src_gray, depth_frame)
     e1 = cv2.getTickCount()
