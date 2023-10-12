@@ -1,4 +1,5 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
+# coding: utf-8
 
 '''
 refer from: https://gist.github.com/kevinkindom/108ffd675cb9253f8f71
@@ -7,13 +8,14 @@ refer from: https://gist.github.com/kevinkindom/108ffd675cb9253f8f71
 # socket server
 
 import socket
+import time
 import numpy
 import cv2
-import time
 from sockutil import read_jsonfile
 
 def recvall(sock, count):
-    print('recvall, count:{}'.format(count))
+    ''' recvall '''
+    print(f'recvall, count:{count}')
     buf = b''
     while count:
         newbuf = sock.recv(count)
@@ -24,14 +26,15 @@ def recvall(sock, count):
         count -= len(newbuf)
     return buf
 
-
+# pylint: disable=no-member
 def main():
+    ''' main '''
     data = read_jsonfile('setting.json')
 
     HOST = data['host']
     PORT = data['port']
     MAX_CONNECTION = data['max_connection']
-    max_recv_size = data['max_recv_size']
+    #max_recv_size = data['max_recv_size']
     ofn = 'out.jpg'
 
     try:
@@ -41,28 +44,28 @@ def main():
     except socket.error:
         return
 
-    print 'Server start at: %s:%s' %(HOST, PORT)
-    print 'wait for connection...'
+    print(f'Server start at: {HOST}:{PORT}')
+    print('wait for connection...')
 
     cnt = 0
     while True:
         conn, addr = s.accept()
-        print 'Connected by ', addr
+        print('Connected by ', addr)
 
         while True:
             length = recvall(conn, 16)
-            if length == None:
+            if length is None:
                 break
-            print('will recv length: {}'.format(length))
+            print(f'will recv length: {length}')
             strData = recvall(conn, int(length))
-            if strData == None:
+            if strData is None:
                 print('strData is None')
                 break
             data = numpy.fromstring(strData, dtype='uint8')
             decimg = cv2.imdecode(data, 1)
-            ofn = '/tmp/ofn{0:04d}.jpg'.format(cnt)
+            ofn = f'/tmp/ofn{cnt:04d}.jpg'
             cv2.imwrite(ofn, decimg)
-            print('imwrite: {}'.format(ofn))
+            print(f'imwrite: {ofn}')
             cnt += 1
             # busy doing something...
             print('wait 500ms')
