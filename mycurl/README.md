@@ -2,12 +2,14 @@
 
 ## USELESS
 
-Yahoo stopped providing YQL service. Only for archive purpose.
-DO NOT run this.
+The **WOEID** related services are not available now.
+
+Yahoo stopped providing YQL service. Only for archive purposes.
+DO NOT run this. 
 
 ## description
 
-A simple C++ example that uses curl to query yahoo weather API for weather at Taipei.
+A simple C++ example that uses curl to query Yahoo weather API for weather at Taipei.
 
 ## notes
 
