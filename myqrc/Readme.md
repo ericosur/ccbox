@@ -5,11 +5,12 @@ This example refers from [quirc](https://github.com/dlbeer/quirc.git) and
 
 ## install
 
+```
 git clone https://github.com/dlbeer/quirc.git
 cd quirc
 make clean && make
 sudo make install
-
+```
 
 ## download.js
 
